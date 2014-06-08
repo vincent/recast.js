@@ -1,0 +1,197 @@
+diff --git a/Detour/Include/DetourAssert.h b/Detour/Include/DetourAssert.h
+index 3cf6522..de00bb8 100644
+--- a/Detour/Include/DetourAssert.h
++++ b/Detour/Include/DetourAssert.h
+@@ -22,12 +22,7 @@
+ // Note: This header file's only purpose is to include define assert.
+ // Feel free to change the file and include your own implementation instead.
+ 
+-#ifdef NDEBUG
+ // From http://cnicholson.net/2009/02/stupid-c-tricks-adventures-in-assert/
+-#	define dtAssert(x) do { (void)sizeof(x); } while((void)(__LINE__==-1),false)  
+-#else
+-#	include <assert.h> 
+-#	define dtAssert assert
+-#endif
++#define dtAssert(x) do { (void)sizeof(x); } while((void)(__LINE__==-1),false)  
+ 
+ #endif // DETOURASSERT_H
+diff --git a/Recast/Include/RecastAssert.h b/Recast/Include/RecastAssert.h
+index 2aca0d9..0764cd0 100644
+--- a/Recast/Include/RecastAssert.h
++++ b/Recast/Include/RecastAssert.h
+@@ -22,12 +22,7 @@
+ // Note: This header file's only purpose is to include define assert.
+ // Feel free to change the file and include your own implementation instead.
+ 
+-#ifdef NDEBUG
+ // From http://cnicholson.net/2009/02/stupid-c-tricks-adventures-in-assert/
+-#	define rcAssert(x) do { (void)sizeof(x); } while((void)(__LINE__==-1),false)  
+-#else
+-#	include <assert.h> 
+-#	define rcAssert assert
+-#endif
++#define rcAssert(x) do { (void)sizeof(x); } while((void)(__LINE__==-1),false)  
+ 
+ #endif // RECASTASSERT_H
+diff --git a/RecastDemo/Include/InputGeom.h b/RecastDemo/Include/InputGeom.h
+index b508f68..c50657b 100644
+--- a/RecastDemo/Include/InputGeom.h
++++ b/RecastDemo/Include/InputGeom.h
+@@ -64,6 +64,7 @@ public:
+ 	
+ 	bool load(class rcContext* ctx, const char* filepath);
+ 	bool save(const char* filepath);
++	bool loadMeshFromContents(class rcContext* ctx, const char* contents);
+ 	
+ 	/// Method to return static mesh data.
+ 	inline const rcMeshLoaderObj* getMesh() const { return m_mesh; }
+diff --git a/RecastDemo/Include/MeshLoaderObj.h b/RecastDemo/Include/MeshLoaderObj.h
+index 18cb10c..268b374 100644
+--- a/RecastDemo/Include/MeshLoaderObj.h
++++ b/RecastDemo/Include/MeshLoaderObj.h
+@@ -26,6 +26,7 @@ public:
+ 	~rcMeshLoaderObj();
+ 	
+ 	bool load(const char* fileName);
++	bool loadContents(const char* buf);
+ 
+ 	inline const float* getVerts() const { return m_verts; }
+ 	inline const float* getNormals() const { return m_normals; }
+diff --git a/RecastDemo/Source/InputGeom.cpp b/RecastDemo/Source/InputGeom.cpp
+index f1e0186..b138cfd 100644
+--- a/RecastDemo/Source/InputGeom.cpp
++++ b/RecastDemo/Source/InputGeom.cpp
+@@ -514,3 +514,44 @@ void InputGeom::drawConvexVolumes(struct duDebugDraw* dd, bool /*hilight*/)
+ 	
+ 	dd->depthMask(true);
+ }
++
++bool InputGeom::loadMeshFromContents(rcContext* ctx, const char* contents)
++{
++	if (m_mesh)
++	{
++		delete m_chunkyMesh;
++		m_chunkyMesh = 0;
++		delete m_mesh;
++		m_mesh = 0;
++	}
++	m_offMeshConCount = 0;
++	m_volumeCount = 0;
++	
++	m_mesh = new rcMeshLoaderObj;
++	if (!m_mesh)
++	{
++		ctx->log(RC_LOG_ERROR, "loadMesh: Out of memory 'm_mesh'.");
++		return false;
++	}
++	if (!m_mesh->loadContents(contents))
++	{
++		ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not load from contents");
++		return false;
++	}
++
++	rcCalcBounds(m_mesh->getVerts(), m_mesh->getVertCount(), m_meshBMin, m_meshBMax);
++
++	m_chunkyMesh = new rcChunkyTriMesh;
++	if (!m_chunkyMesh)
++	{
++		ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Out of memory 'm_chunkyMesh'.");
++		return false;
++	}
++	if (!rcCreateChunkyTriMesh(m_mesh->getVerts(), m_mesh->getTris(), m_mesh->getTriCount(), 256, m_chunkyMesh))
++	{
++		ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Failed to build chunky mesh.");
++		return false;
++	}		
++
++	return true;
++}
+\ No newline at end of file
+diff --git a/RecastDemo/Source/MeshLoaderObj.cpp b/RecastDemo/Source/MeshLoaderObj.cpp
+index 2ba8fd8..673d517 100644
+--- a/RecastDemo/Source/MeshLoaderObj.cpp
++++ b/RecastDemo/Source/MeshLoaderObj.cpp
+@@ -230,3 +230,81 @@ bool rcMeshLoaderObj::load(const char* filename)
+ 	
+ 	return true;
+ }
++
++bool rcMeshLoaderObj::loadContents(const char* contents)
++{
++	int bufSize = strlen(contents);
++
++	char* buf = const_cast<char*>(contents);
++	
++	char* src = buf;
++	//char* src = 0;
++
++	char* srcEnd = buf + bufSize;
++	char row[512];
++	int face[32];
++	float x,y,z;
++	int nv;
++	int vcap = 0;
++	int tcap = 0;
++	
++	while (src < srcEnd)
++	{
++		// Parse one row
++		row[0] = '\0';
++		src = parseRow(src, srcEnd, row, sizeof(row)/sizeof(char));
++		// Skip comments
++		if (row[0] == '#') continue;
++		if (row[0] == 'v' && row[1] != 'n' && row[1] != 't')
++		{
++			// Vertex pos
++			sscanf(row+1, "%f %f %f", &x, &y, &z);
++			addVertex(x, y, z, vcap);
++		}
++		if (row[0] == 'f')
++		{
++			// Faces
++			nv = parseFace(row+1, face, 32, m_vertCount);
++			for (int i = 2; i < nv; ++i)
++			{
++				const int a = face[0];
++				const int b = face[i-1];
++				const int c = face[i];
++				if (a < 0 || a >= m_vertCount || b < 0 || b >= m_vertCount || c < 0 || c >= m_vertCount)
++					continue;
++				addTriangle(a, b, c, tcap);
++			}
++		}
++	}
++
++	delete [] buf;
++
++	// Calculate normals.
++	m_normals = new float[m_triCount*3];
++	for (int i = 0; i < m_triCount*3; i += 3)
++	{
++		const float* v0 = &m_verts[m_tris[i]*3];
++		const float* v1 = &m_verts[m_tris[i+1]*3];
++		const float* v2 = &m_verts[m_tris[i+2]*3];
++		float e0[3], e1[3];
++		for (int j = 0; j < 3; ++j)
++		{
++			e0[j] = v1[j] - v0[j];
++			e1[j] = v2[j] - v0[j];
++		}
++		float* n = &m_normals[i];
++		n[0] = e0[1]*e1[2] - e0[2]*e1[1];
++		n[1] = e0[2]*e1[0] - e0[0]*e1[2];
++		n[2] = e0[0]*e1[1] - e0[1]*e1[0];
++		float d = sqrtf(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
++		if (d > 0)
++		{
++			d = 1.0f/d;
++			n[0] *= d;
++			n[1] *= d;
++			n[2] *= d;
++		}
++	}
++	
++	return true;
++}
+\ No newline at end of file
