@@ -1,7 +1,4 @@
 
-Module.__RECAST_CALLBACKS = {};
-Module.__RECAST_CALLBACKS.size = 0;
-
 // Node.js
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Module;

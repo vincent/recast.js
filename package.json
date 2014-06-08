@@ -4,7 +4,7 @@
   "description": "A wrapper for the RecastDetour navigation library for node and the browser",
   "main": "./lib/recast",
   "scripts": {
-    "test": "npm test"
+    "test": "cd tests && nodeunit recast.tests.js"
   },
   "repository": {
     "type": "git",

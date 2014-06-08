@@ -16,6 +16,11 @@ var Module = {
 };
 var recast = Module;
 
+
+function in_nodejs () {
+  return (typeof module !== 'undefined' && module.exports);
+}
+
 // global on the server, window in the browser
 var root, previous_recast;
 
@@ -23,6 +28,9 @@ root = this;
 if (root !== null) {
   previous_recast = root.recast;
 }
+
+recast.__RECAST_CALLBACKS = {};
+recast.__RECAST_CALLBACKS.size = 0;
 
 recast.noConflict = function () {
     root.recast = previous_recast;
@@ -111,7 +119,7 @@ var _ajax = function(url, data, callback, type) {
   req.open(type, url, false);
   req.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
   req.onreadystatechange = function() {
-    if (req.readyState === 4 && req.status === 200) {
+    if (req.readyState == 4 && req.status == 200) {
       return callback(req.responseText);
     }
   };
@@ -120,28 +128,12 @@ var _ajax = function(url, data, callback, type) {
   return req;
 };
 
-Module.OBJUrlLoader = function (url, callback) {
-  _ajax(url, {}, function(data) {
-    console.log('ajax success: ' + data.length);
-    Module.initWithFileContent(data);
-    console.log('init success');
-    Module.build();
-    console.log('build success');
-    Module.initCrowd(100, 1.0);
-    console.log('crowd success');
-    callback(Module);
-  });
+var _OBJDataLoader = function (contents, callback) {
+  recast.initWithFileContent(contents.toString());
+  recast.build();
+  recast.initCrowd(100, 1.0);
+  callback(recast);
 };
-
-Module.cb = function (func) {
-  var last = (++Module.__RECAST_CALLBACKS.size) - 1;
-  Module.__RECAST_CALLBACKS[last] = func;
-  return last;
-};
-
-
-
-//// exported recast module functions ////
 
 //// nextTick implementation with browser-compatible fallback ////
 if (typeof process === 'undefined' || !(process.nextTick)) {
@@ -173,5 +165,28 @@ else {
 }
 
 
+//// exported recast module functions ////
+
+recast.cb = function (func) {
+  var last = (++recast.__RECAST_CALLBACKS.size) - 1;
+  recast.__RECAST_CALLBACKS[last] = func;
+  return last;
+};
+
+recast.OBJLoader = function (path, callback) {
+  // with node FS api
+  if (in_nodejs()) {
+    var fs = require('fs');
+    fs.readFile(path, function(err, data) {
+      _OBJDataLoader(data, callback);
+    });
+
+  // with ajax
+  } else {
+    _ajax(path, {}, function(data) {
+      _OBJDataLoader(data, callback);
+    });
+  }
+};
 
 

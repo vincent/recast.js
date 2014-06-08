@@ -771,7 +771,7 @@ bool crowdUpdate(float dt)
     return true;
 }
 
-bool crowdGetActiveAgents(int callback)
+bool crowdGetActiveAgents()
 {
     int maxAgents = 100;
 
@@ -874,8 +874,6 @@ struct dtCrowdAgent
     agentPool_clear();
 
     // free(buff);
-
-    return true;
 }
 
 bool build()
@@ -983,13 +981,12 @@ bool build()
     rcMarkWalkableTriangles(m_ctx, m_cfg.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas);
     printf("%u Walkable Triangles\n", sizeof(m_triareas)/sizeof(unsigned char));
 
-    sprintf(buff, "m_ctx=%d, WalkableTriangles=%u, verts=%d, nverts=%d, trds=%d, m_trdareas=%x, ntrds=%d, m_soldd=%d, walkableClimb=%f", m_ctx, sizeof(m_triareas)/sizeof(unsigned char), verts, nverts, tris, m_triareas, ntris, m_solid, m_cfg.walkableClimb);
+    sprintf(buff, "m_ctx=%d, WalkableTriangles=%u, verts=%d, nverts=%d, trds=%d, m_trdareas=%x, ntrds=%d, m_soldd=%d, walkableClimb=%u", m_ctx, sizeof(m_triareas)/sizeof(unsigned char), verts, nverts, tris, m_triareas, ntris, m_solid, m_cfg.walkableClimb);
     emscripten_log(buff);
     dumpConfig();
     
     rcRasterizeTriangles(m_ctx, verts, nverts, tris, m_triareas, ntris, *m_solid, m_cfg.walkableClimb);
 
-    emscripten_log("free inter results");
     if (!m_keepInterResults)
     {
         delete [] m_triareas;
