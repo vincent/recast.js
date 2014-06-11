@@ -6,23 +6,29 @@
  * Released under the MIT license
  */
 /*jshint onevar: false, indent:4 */
-/*global mergeInto: true, LibraryManager: true, postMessage: true, Module: true */
+/*global mergeInto: true, LibraryManager: true, postMessage: true, Module: true, agentPool: true, agentPoolBuffer: true, ENVIRONMENT_IS_WORKER: true */
 (function () {
   'use strict';
 
   mergeInto(LibraryManager.library, {
 
-    flush_active_agents_callback: function(data) {
-      debugger;
-      postMessage({
-        type: 'activeAgents',
-        data: agentPoolBuffer,
-        funcName: 'crowdUpdate'
-      });
+    flush_active_agents_callback: function() {
+      Module.vent.emit('update', agentPoolBuffer);
+      if (ENVIRONMENT_IS_WORKER) {
+        postMessage({
+          type: 'update',
+          vent: true,
+          data: [ agentPoolBuffer ]
+        });
+      }
     },
 
     invoke_vector_callback: function (callback_id, x, y, z) {
       Module.__RECAST_CALLBACKS[callback_id](x, y, z);
+    },
+
+    invoke_update_callback: function (callback_id) {
+      Module.__RECAST_CALLBACKS[callback_id](agentPoolBuffer);
     },
 
     settings: function (options) {
@@ -34,7 +40,7 @@
       Module.set_agentMaxSlope(options.agentMaxSlope);
     },
 
-    agentPool_clear: function (idx) {
+    agentPool_clear: function () {
       agentPoolBuffer.length = 0;
     },
 

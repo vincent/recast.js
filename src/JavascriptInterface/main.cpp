@@ -31,6 +31,7 @@ extern "C" {
                               const float radius, const int active,  const int state, const int neighbors);
     extern void flush_active_agents_callback();
     extern void invoke_vector_callback(int callback_id, const float x,  const float y, const float z);
+    extern void invoke_update_callback(int callback_id);
 }
 
 ////////////////////////////
@@ -771,73 +772,12 @@ bool crowdUpdate(float dt)
     return true;
 }
 
-bool crowdGetActiveAgents()
+bool _crowdGetActiveAgents(int callback_id)
 {
     int maxAgents = 100;
 
     dtCrowdAgent** agents = (dtCrowdAgent**)dtAlloc(sizeof(dtCrowdAgent*)*maxAgents, DT_ALLOC_PERM);
     int nagents = m_crowd->getActiveAgents(agents, maxAgents);
-
-    // char buff[1024 * nagents];
-
-/*
-struct dtCrowdAgent
-{
-    /// 1 if the agent is active, or 0 if the agent is in an unused slot in the agent pool.
-    unsigned char active;
-
-    /// The type of mesh polygon the agent is traversing. (See: #CrowdAgentState)
-    unsigned char state;
-
-    /// The path corridor the agent is using.
-    dtPathCorridor corridor;
-
-    /// The local boundary data for the agent.
-    dtLocalBoundary boundary;
-    
-    /// Time since the agent's path corridor was optimized.
-    float topologyOptTime;
-    
-    /// The known neighbors of the agent.
-    dtCrowdNeighbour neis[DT_CROWDAGENT_MAX_NEIGHBOURS];
-
-    /// The number of neighbors.
-    int nneis;
-    
-    /// The desired speed.
-    float desiredSpeed;
-
-    float npos[3];      ///< The current agent position. [(x, y, z)]
-    float disp[3];
-    float dvel[3];      ///< The desired velocity of the agent. [(x, y, z)]
-    float nvel[3];
-    float vel[3];       ///< The actual velocity of the agent. [(x, y, z)]
-
-    /// The agent's configuration parameters.
-    dtCrowdAgentParams params;
-
-    /// The local path corridor corners for the agent. (Staight path.) [(x, y, z) * #ncorners]
-    float cornerVerts[DT_CROWDAGENT_MAX_CORNERS*3];
-
-    /// The local path corridor corner flags. (See: #dtStraightPathFlags) [(flags) * #ncorners]
-    unsigned char cornerFlags[DT_CROWDAGENT_MAX_CORNERS];
-
-    /// The reference id of the polygon being entered at the corner. [(polyRef) * #ncorners]
-    dtPolyRef cornerPolys[DT_CROWDAGENT_MAX_CORNERS];
-
-    /// The number of corners.
-    int ncorners;
-    
-    unsigned char targetState;          ///< State of the movement request.
-    dtPolyRef targetRef;                ///< Target polyref of the movement request.
-    float targetPos[3];                 ///< Target position of the movement request (or velocity in case of DT_CROWDAGENT_TARGET_VELOCITY).
-    dtPathQueueRef targetPathqRef;      ///< Path finder ref.
-    bool targetReplan;                  ///< Flag indicating that the current path is being replanned.
-    float targetReplanTime;             /// <Time since the agent's target was replanned.
-};
- */
-
-    // sprintf(buff, "__tmp_recastjs_crowd_data = []; var object;");
 
     for (int i = 0; i < nagents; i++) {
         dtCrowdAgent* ag = agents[i];
@@ -845,35 +785,25 @@ struct dtCrowdAgent
         const float* v = ag->vel;
         const float r = ag->params.radius;
         int idx = (int) ag->params.userData;
-        // agentUserData* data = (agentUserData*) ag->params.userData;
-
-        // sprintf(buff, "debug({ position:{x:%f,y:%f,z:%f}, radius:%f, active:%d, state:%d });", p[0], p[1], p[2], r, ag->active, ag->state);
-        // emscripten_run_script(buff);
-
-        // sprintf(buff, "%s \n { \n var object = /* agentPool.get(); */ { position:{}, velocity:{} }; \n object.idx=%d; object.position.x=%f; object.position.y=%f; object.position.z=%f; object.velocity.x=%f; object.velocity.y=%f; object.velocity.z=%f; object.radius=%f; object.active=%d; object.state=%d; object.neighbors=%d; \n __tmp_recastjs_crowd_data.push(object);",
-        //                buff,                                                                                      idx,                                 p[0],                              p[1],                               p[2],                               v[0],                           v[1],                               v[2],                           r,                              ag->active,          ag->state,                     ag->nneis);
-
-        // sprintf(buff, "%s \n object = agentPool.get(%d,  %f,   %f,   %f,   %f,   %f,   %f,   %f, %d,         %d,        %d); \n __tmp_recastjs_crowd_data.push(object);",
-        //                buff,                        idx, p[0], p[1], p[2], v[0], v[1], v[2], r,  ag->active, ag->state, ag->nneis);
-
         agentPool_get(idx, p[0], p[1], p[2], v[0], v[1], v[2], r, ag->active, ag->state, ag->nneis);
     }
 
-    // sprintf(buff, "\n %s \n\n %s(__tmp_recastjs_crowd_data);", buff, callback.c_str());
+    // we have a specific callback to call
+    if (callback_id != -1) {
+       invoke_update_callback(callback_id);
 
-    // emscripten_run_script(buff);
-    // emscripten_run_script(buff);
-    // emscripten_run_script(buff);
-    flush_active_agents_callback();
-
-    for (int i = 0; i < nagents; i++) {
-        // sprintf(buff, "%s \n agentPool.add(__tmp_recastjs_crowd_data[%d]); \n", buff, i);
-        agentPool_add(i);
+    // or emit the update event
+    } else {
+        flush_active_agents_callback();
     }
 
+    // free some pool slots
+    for (int i = 0; i < nagents; i++) {
+        agentPool_add(i);
+    }
     agentPool_clear();
 
-    // free(buff);
+    return true;
 }
 
 bool build()
@@ -1308,7 +1238,7 @@ EMSCRIPTEN_BINDINGS(my_module) {
     function("removeCrowdAgent", &removeCrowdAgent);
     function("crowdRequestMoveTarget", &crowdRequestMoveTarget);
     function("crowdUpdate", &crowdUpdate);
-    function("crowdGetActiveAgents", &crowdGetActiveAgents);
+    function("_crowdGetActiveAgents", &_crowdGetActiveAgents);
     function("requestMoveVelocity", &requestMoveVelocity);
 
 

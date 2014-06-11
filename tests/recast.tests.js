@@ -25,13 +25,14 @@ exports['our methods are present'] = function(test) {
     test.ok(recast.set_agentRadius, 'set_agentRadius');
     test.ok(recast.set_agentMaxClimb, 'set_agentMaxClimb');
     test.ok(recast.set_agentMaxSlope, 'set_agentMaxSlope');
-    test.ok(recast.initWithFileContent, 'initWithFileContent');
+
     test.ok(recast.build, 'build');
     test.ok(recast.initCrowd, 'initCrowd');
     test.ok(recast.initWithFileContent, 'initWithFileContent');
     test.ok(recast.findNearestPoint, 'findNearestPoint');
     test.ok(recast.findPath, 'findPath');
     test.ok(recast.getRandomPoint, 'getRandomPoint');
+
     test.ok(recast.addCrowdAgent, 'addCrowdAgent');
     test.ok(recast.updateCrowdAgentParameters, 'updateCrowdAgentParameters');
     test.ok(recast.requestMoveVelocity, 'requestMoveVelocity');
@@ -107,13 +108,55 @@ exports['load an .obj file'] = function(test) {
                 }));
             }));
 
+        }));
+    });
+};
 
-            
 
+// Check file loading
+exports['manage the crowd'] = function(test) {
+    test.expect(6);
+
+    recast.set_cellSize(1.0);
+    recast.set_cellHeight(2.0);
+    recast.set_agentHeight(2.0);
+    recast.set_agentRadius(0.2);
+    recast.set_agentMaxClimb(4.0);
+    recast.set_agentMaxSlope(30.0);
+
+    /*
+    recast.settings({
+        cellSize: 2.0,
+        cellHeight: 1.5,
+        agentHeight: 2.0,
+        agentRadius: 0.2,
+        agentMaxClimb: 4.0,
+        agentMaxSlope: 30.0
+    });
+    */
+   
+    /**
+     * Load an .OBJ file
+     */
+    recast.OBJLoader('nav_test.obj', function () {
+
+        recast.vent.on('update', function (agents) {
+            test.ok(agents && typeof agents.length !== 'undefined', 'crowd has ' + agents.length + ' agent');
+            test.strictEqual(agents.length, 1);
+            test.done();
+        });
+
+        /**
+         * Find a random navigable point on this mesh
+         */
+        recast.getRandomPoint(recast.cb(function(pt1x, pt1y, pt1z){
+            test.ok(typeof pt1x === 'number', 'point coord is a number');
+            test.ok(typeof pt1y === 'number', 'point coord is a number');
+            test.ok(typeof pt1z === 'number', 'point coord is a number');
 
             /**
              * Add an agent, retain its ID
-             * /
+             */
             var id = recast.addAgent({
                 position: {
                     x: pt1x,
@@ -130,13 +173,12 @@ exports['load an .obj file'] = function(test) {
 
             test.ok(typeof id === 'number', 'agent ID is a number');
 
+            recast.crowdUpdate(1.0);
             recast.crowdGetActiveAgents();
-            */
 
             // removeCrowdAgent
             // crowdUpdate
             // crowdGetActiveAgents
-
         }));
     });
 };

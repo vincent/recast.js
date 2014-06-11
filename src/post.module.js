@@ -11,6 +11,6 @@ else if (typeof define !== 'undefined' && define.amd) {
 }
 // included directly via <script> tag
 else {
-    root.recast = Module;
+    root.Recast = Module;
 }
 

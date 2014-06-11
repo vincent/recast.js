@@ -1,3 +1,98 @@
+/*jshint onevar: false, indent:4, strict: false */
+/*global setImmediate: false, setTimeout: false, console: false, module: true, process: true, define: true, onmessage: true */
+
+var ENVIRONMENT_IS_NODE = typeof process === 'object' && typeof require === 'function';
+var ENVIRONMENT_IS_WEB = typeof window === 'object';
+var ENVIRONMENT_IS_WORKER = typeof importScripts === 'function';
+var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIRONMENT_IS_WORKER;
+
+/**
+ * Tiny event emitter for Node.js and the browser
+ * from https://github.com/joaquimserafim/tiny-eventemitter
+ */
+function EventEmitter () {
+  if (!(this instanceof EventEmitter)) return new EventEmitter();
+  EventEmitter.init.call(this);
+}
+
+EventEmitter.init = function () {
+  this._listeners = {};
+};
+
+EventEmitter.prototype._addListenner = function (type, listener, once) {
+  if (typeof listener !== 'function')
+    throw TypeError('listener must be a function');
+
+  if (!this._listeners[type])
+    this._listeners[type] = {
+      once: once,
+      fn: function () {
+        return listener.apply(this, arguments);
+      }
+    };
+
+  return this;
+};
+
+EventEmitter.prototype.listeners = function () {
+  return Object.keys(this._listeners);
+};
+
+EventEmitter.prototype.on = function (type, listener) {
+  return this._addListenner(type, listener, 0);
+};
+
+EventEmitter.prototype.once = function (type, listener) {
+  return this._addListenner(type, listener, 1);
+};
+
+EventEmitter.prototype.remove = function (type) {
+  if (type) {
+    delete this._listeners[type];
+    return this;
+  }
+
+  for (var e in this._listeners) delete this._listeners[e];
+
+  return this;
+};
+
+EventEmitter.prototype.emit = function (type) {
+  if (!this._listeners[type])
+    return;
+
+  var args = Array.prototype.slice.call(arguments, 1);
+
+  // exec event
+  this._listeners[type].fn.apply(this, args);
+
+  // remove events that run only once
+  if (this._listeners[type].once) this.remove(type);
+  
+  return this;
+};
+
+EventEmitter.prototype.deferEmit = function (type) {
+  var self = this;
+
+  if (!self._listeners[type])
+    return;
+
+  var args = Array.prototype.slice.call(arguments, 1);
+
+  process.nextTick(function () {
+    // exec event
+    self._listeners[type].fn.apply(self, args);
+
+    // remove events that run only once
+    if (self._listeners[type].once) self.remove(type);
+  });
+
+  return self;
+};
+
+
+
 /*!
  * recast.js
  * https://github.com/vincent/recast.js
@@ -5,10 +100,6 @@
  * Copyright 2014 Vincent Lark
  * Released under the MIT license
  */
-/*jshint onevar: false, indent:4, strict: false */
-/*global setImmediate: false, setTimeout: false, console: false, module: true, process: true, define: true */
-
-// Custom Module definition from recast.js library
 var Module = {
     canvas: {},
     noInitialRun: true,
@@ -32,70 +123,10 @@ if (root !== null) {
 recast.__RECAST_CALLBACKS = {};
 recast.__RECAST_CALLBACKS.size = 0;
 
-recast.noConflict = function () {
-    root.recast = previous_recast;
-    return recast;
-};
-
-function only_once(fn) {
-    var called = false;
-    return function() {
-        if (called) { throw new Error('Callback was already called.'); }
-        called = true;
-        fn.apply(root, arguments);
-    };
-}
-
-//// cross-browser compatiblity functions ////
-
-var _toString = Object.prototype.toString;
-
-var _isArray = Array.isArray || function (obj) {
-    return _toString.call(obj) === '[object Array]';
-};
-
-var _each = function (arr, iterator) {
-    if (arr.forEach) {
-        return arr.forEach(iterator);
-    }
-    for (var i = 0; i < arr.length; i += 1) {
-        iterator(arr[i], i, arr);
-    }
-};
-
-var _map = function (arr, iterator) {
-    if (arr.map) {
-        return arr.map(iterator);
-    }
-    var results = [];
-    _each(arr, function (x, i, a) {
-        results.push(iterator(x, i, a));
-    });
-    return results;
-};
-
-var _reduce = function (arr, iterator, memo) {
-    if (arr.reduce) {
-        return arr.reduce(iterator, memo);
-    }
-    _each(arr, function (x, i, a) {
-        memo = iterator(memo, x, i, a);
-    });
-    return memo;
-};
-
-var _keys = function (obj) {
-    if (Object.keys) {
-        return Object.keys(obj);
-    }
-    var keys = [];
-    for (var k in obj) {
-        if (obj.hasOwnProperty(k)) {
-            keys.push(k);
-        }
-    }
-    return keys;
-};
+recast.vent = new EventEmitter();
+recast.on = recast.vent.on;
+recast.emit = recast.vent.emit;
+recast.deferEmit = recast.vent.deferEmit;
 
 var _ajax = function(url, data, callback, type) {
   var data_array, data_string, idx, req, value;
@@ -164,6 +195,177 @@ else {
     }
 }
 
+//// link worker recast module functions ////
+
+onmessage = function(event) {
+  var message = event.data;
+
+  switch(message.type) {
+
+    case 'set_cellSize':
+    case 'set_cellHeight':
+    case 'set_agentHeight':
+    case 'set_agentRadius':
+    case 'set_agentMaxClimb':
+    case 'set_agentMaxSlope':
+      recast[message.type](message.data);
+      break;
+
+    case 'config':
+      recast.set_cellSize(message.data.cellSize);
+      recast.set_cellHeight(message.data.cellHeight);
+      recast.set_agentHeight(message.data.agentHeight);
+      recast.set_agentRadius(message.data.agentRadius);
+      recast.set_agentMaxClimb(message.data.agentMaxClimb);
+      recast.set_agentMaxSlope(message.data.agentMaxSlope);
+      postMessage({
+        type: message.type,
+        callback: message.callback
+      });
+      break;
+
+    case 'OBJLoader':
+      recast.OBJLoader(message.data, function() {
+        postMessage({
+          type: message.type,
+          callback: message.callback
+        });
+      });
+      break;
+
+    case 'findNearestPoint':
+      recast.findNearestPoint(
+        message.data.position.x,
+        message.data.position.y,
+        message.data.position.z,
+        message.data.extend.x,
+        message.data.extend.y,
+        message.data.extend.z,
+        recast.cb(function(px, py, pz){
+          postMessage({
+            type: message.type,
+            data: [ px, py, pz ],
+            callback: message.callback
+          });
+        })
+      );
+      break;
+
+    case 'findNearestPoly':
+      recast.findNearestPoly(
+        message.data.position.x,
+        message.data.position.y,
+        message.data.position.z,
+        message.data.extend.x,
+        message.data.extend.y,
+        message.data.extend.z,
+        recast.cb(function(points){
+          postMessage({
+            type: message.type,
+            data: Array.prototype.slice.call(arguments),
+            callback: message.callback
+          });
+        })
+      );
+      break;
+
+    case 'findPath':
+      recast.findPath(message.data.sx, message.data.sy, message.data.sz, message.data.dx, message.data.dy, message.data.dz, message.data.max, recast.cb(function(path){
+        postMessage({
+          type: message.type,
+          data: [ path ],
+          callback: message.callback
+        });
+      }));
+      break;
+
+    case 'getRandomPoint':
+      recast.getRandomPoint(recast.cb(function(px, py, pz){
+        postMessage({
+          type: message.type,
+          data: [ px, py, pz ],
+          callback: message.callback
+        });
+      }));
+      break;
+
+    case 'setPolyUnwalkable':
+      recast.setPolyUnwalkable(message.data.sx, message.data.sy, message.data.sz, message.data.dx, message.data.dy, message.data.dz, message.data.flags);
+      break;
+
+    case 'addCrowdAgent':
+      var idx = recast.addCrowdAgent(
+        message.data.position.x,
+        message.data.position.y,
+        message.data.position.z,
+        message.data.radius,
+        message.data.height,
+        message.data.maxAcceleration,
+        message.data.maxSpeed,
+        message.data.updateFlags,
+        message.data.separationWeight
+      );
+      postMessage({
+        type: message.type,
+        data: [ idx ],
+        callback: message.callback
+      });
+      break;
+
+    case 'updateCrowdAgentParameters':
+      recast.updateCrowdAgentParameters(message.data.agent,
+        message.data.options.position.x,
+        message.data.options.position.y,
+        message.data.options.position.z,
+        message.data.options.radius,
+        message.data.options.height,
+        message.data.options.maxAcceleration,
+        message.data.options.maxSpeed,
+        message.data.options.updateFlags,
+        message.data.options.separationWeight
+      );
+      break;
+
+    case 'requestMoveVelocity':
+      recast.requestMoveVelocity(message.data.agent, message.data.velocity.x, message.data.velocity.y, message.data.velocity.z);
+      break;
+
+    case 'removeCrowdAgent':
+      recast.removeCrowdAgent(message.data);
+      break;
+
+    case 'crowdRequestMoveTarget':
+      recast.crowdRequestMoveTarget(message.data.agent, message.data.x, message.data.y, message.data.z);
+      break;
+
+    case 'crowdUpdate':
+      recast.crowdUpdate(message.data);
+      if (message.callback) {
+        recast._crowdGetActiveAgents(recast.cb(function(){
+          postMessage({
+            type: message.type,
+            data: [ agentPoolBuffer ],
+            callback: message.callback
+          });
+        }));
+      }
+      break;
+
+    case 'crowdGetActiveAgents':
+      recast._crowdGetActiveAgents(! message.callback ? -1 : recast.cb(function(){
+        postMessage({
+          type: message.type,
+          data: [ agentPoolBuffer ],
+          callback: message.callback
+        });
+      }));
+      break;
+
+    default:
+      throw new Error(message.type + ' is not a known Recast method');
+
+  }
+};
 
 //// exported recast module functions ////
 
@@ -175,7 +377,7 @@ recast.cb = function (func) {
 
 recast.OBJLoader = function (path, callback) {
   // with node FS api
-  if (in_nodejs()) {
+  if (ENVIRONMENT_IS_NODE) {
     var fs = require('fs');
     fs.readFile(path, function(err, data) {
       _OBJDataLoader(data, callback);
@@ -189,4 +391,99 @@ recast.OBJLoader = function (path, callback) {
   }
 };
 
+recast.addAgent = function (options) {
+  return recast.addCrowdAgent(
+    options.position.x,
+    options.position.y,
+    options.position.z,
+    options.radius,
+    options.height,
+    options.maxAcceleration,
+    options.maxSpeed,
+    options.updateFlags,
+    options.separationWeight
+  );
+};
 
+recast.crowdGetActiveAgents = function (callback_id) {
+  return recast._crowdGetActiveAgents(callback_id || -1);
+};
+
+//////////////////////////////////////////
+
+function AgentPool (n) {
+  this.__pools = [];
+  var i = 0;
+  while (i < n) {
+    this.__pools[i] = { position:{}, velocity:{} };
+    i++;
+  }
+  // debug('__pools is %o length', this.__pools.length);
+}
+
+// Get a new array
+AgentPool.prototype.get = function(idx,position_x,position_y,position_z,velocity_x,velocity_y,velocity_z,radius,active,state,neighbors) {
+  if ( this.__pools.length > 0 ) {
+    var ag = this.__pools.pop();
+    ag.idx = idx;
+    ag.position.x = position_x;
+    ag.position.y = position_y;
+    ag.position.z = position_z;
+    ag.velocity.x = velocity_x;
+    ag.velocity.y = velocity_y;
+    ag.velocity.z = velocity_z;
+    ag.radius = radius;
+    ag.active = active;
+    ag.state = state;
+    ag.neighbors = neighbors;
+    return ag;
+  }
+
+  // console.log( "pool ran out!" )
+  return null;
+};
+
+// Release an array back into the pool
+AgentPool.prototype.add = function( v ) {
+  this.__pools.push( v );
+};
+
+var agentPool = new AgentPool(100);
+var agentPoolBuffer = [];
+
+//////////////////////////////////////////
+
+//////////////////////////////////////////
+
+function VectorPool (n) {
+  this.__pools = [];
+  var i = 0;
+  while (i < n) {
+    this.__pools[i] = { x:0, y:0, z:0 };
+    i++;
+  }
+  // debug('__pools is %o length', this.__pools.length);
+}
+
+// Get a new array
+VectorPool.prototype.get = function(x, y, z) {
+  if ( this.__pools.length > 0 ) {
+    var v = this.__pools.pop();
+    v.x = x;
+    v.y = y;
+    v.z = z;
+    return v;
+  }
+
+  // console.log( "pool ran out!" )
+  return null;
+};
+
+// Release an array back into the pool
+VectorPool.prototype.add = function( v ) {
+  this.__pools.push( v );
+};
+
+var vectorPool = new VectorPool(10000);
+
+//////////////////////////////////////////
