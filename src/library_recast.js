@@ -31,6 +31,10 @@
       Module.__RECAST_CALLBACKS[callback_id](agentPoolBuffer);
     },
 
+    invoke_generic_callback_string: function (callback_id, data) {
+      Module.__RECAST_CALLBACKS[callback_id](JSON.parse(Module.Pointer_stringify(data)));
+    },
+
     settings: function (options) {
       Module.set_cellSize(options.cellSize);
       Module.set_cellHeight(options.cellHeight);

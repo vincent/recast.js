@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <memory.h>
+#include <time.h>
 
 #include <string>
 #include <random>
@@ -32,6 +33,7 @@ extern "C" {
     extern void flush_active_agents_callback();
     extern void invoke_vector_callback(int callback_id, const float x,  const float y, const float z);
     extern void invoke_update_callback(int callback_id);
+    extern void invoke_generic_callback_string(int callback_id, char* data);
 }
 
 ////////////////////////////
@@ -267,17 +269,23 @@ void getNavMeshVertices(int callback){
     const float ch = m_pmesh->ch;
     const float* orig = m_pmesh->bmin;
 
-    char buff[512];
+    char buff[m_pmesh->npolys * 1000];
 
-    sprintf(buff, "nvp=%u, cs=%f, ch=%f, orig={%f, %f, %f}", nvp, cs, ch, orig[0], orig[1], orig[2]);
-    emscripten_log(buff);
-    emscripten_run_script("__tmp_recastjs_data.length = 0;");
+    sprintf(buff, "");
 
     for (int i = 0; i < m_pmesh->npolys; ++i)
     {
         if (m_pmesh->areas[i] == SAMPLE_POLYAREA_GROUND)
         {
             const unsigned short* p = &m_pmesh->polys[i*nvp*2];
+
+            unsigned int color;
+            if (m_pmesh->areas[i] == RC_WALKABLE_AREA)
+                color = duRGBA(0,192,255,64);
+            else if (m_pmesh->areas[i] == RC_NULL_AREA)
+                color = duRGBA(0,0,0,64);
+            else
+                color = duIntToCol(m_pmesh->areas[i], 255);
 
             unsigned short vi[3];
             for (int j = 2; j < nvp; ++j)
@@ -294,17 +302,15 @@ void getNavMeshVertices(int callback){
                     const float y = orig[1] + (v[1]+1)*ch;
                     const float z = orig[2] + v[2]*cs;
 
-                    sprintf(buff, "__tmp_recastjs_data.push({x:%f, y:%f, z:%f});", x, y, z);
-                    emscripten_run_script(buff);
+                    sprintf(buff, "%s{\"x\":%f,\"y\":%f,\"z\":%f,\"col\":%u}%s", buff, x, y, z, color, (i == m_pmesh->npolys - 1 && k == 2 ? "" : ","));
                 }
             }
         }
     }
 
-    sprintf(buff, "Module.__RECAST_CALLBACKS[%u](__tmp_recastjs_data);", callback);
-    emscripten_run_script(buff);
+    sprintf(buff, "[%s]", buff);
 
-    // free(buff);
+    invoke_generic_callback_string(callback, buff);
 }
 
 void getNavMeshTiles(int callback){
@@ -313,6 +319,12 @@ void getNavMeshTiles(int callback){
 float randomf()
 {
     return (static_cast <float> (rand()) / static_cast <float> (RAND_MAX));
+}
+// http://stackoverflow.com/questions/686353/c-random-float-number-generation
+float randZeroToOne()
+{
+    srand (time(NULL));
+    return rand() / (RAND_MAX + 1.);
 }
 
 void getRandomPoint(int callback)
@@ -327,7 +339,7 @@ void getRandomPoint(int callback)
 
     float randomPt[3];
 
-    dtStatus findStatus = m_navQuery->findRandomPoint(&filter, randomf, &ref, randomPt);
+    dtStatus findStatus = m_navQuery->findRandomPoint(&filter, randZeroToOne, &ref, randomPt);
 
     if (dtStatusFailed(findStatus)) {
         printf("Cannot find a random point: %u\n", findStatus);
