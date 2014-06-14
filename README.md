@@ -21,11 +21,6 @@ Oh, that's a 3D/WebGL/three.js/... stuff ?
 It is designed to work along a WebGL software but it's completely library agnostic.
 It only manages a mesh and its properties.
 
-Is there some live examples ?
-=========
-
-The library currently has no live examples, but it is used in [three-arena](https://github.com/vincent/three-arena) where one can find examples like [here](http://three-arena.com/examples/index.html)
-
 Tests
 =========
 
