@@ -21,8 +21,8 @@ renderer.clear();
 var width = renderer.domElement.width;
 var height = renderer.domElement.height;
 var camera = new THREE.PerspectiveCamera( 45, width / height, 1, 10000);
-camera.position.y = 100;
-camera.position.z = 100;
+camera.position.y = 50;
+camera.position.z = 50;
 
 var controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.addEventListener('change', function(){
@@ -31,7 +31,7 @@ controls.addEventListener('change', function(){
 
 var agent = new THREE.Object3D();
 var agentBody = new THREE.Mesh(
-    new THREE.CylinderGeometry(1, 1, 2),
+    new THREE.CylinderGeometry(0.2, 0.5, 2),
     new THREE.MeshBasicMaterial({
       color: '#FF0000'
     })
@@ -41,16 +41,17 @@ agent.add(agentBody);
 
 var scene = new THREE.Scene();
 
-var navigationMesh;
-
 var light = new THREE.SpotLight();
 light.position.set( 170, 330, -160 );
 scene.add(light);
 
 renderer.render(scene, camera);
 
+var navigationMesh, sequence;
+
 ////////////////////////////////
 
+var intest = true;
 var recast = require('../lib/recast');
 
 // Check our library is here
@@ -120,6 +121,11 @@ exports['handle an agent'] = function(test) {
    
     var loader = new THREE.OBJLoader();
     loader.load('nav_test.obj', function(object){
+        object.traverse(function(child) {
+            if (child instanceof THREE.Mesh) {
+                child.material.side = THREE.DoubleSide;
+            }
+        } );
         scene.add(object);
     });
 
@@ -173,7 +179,7 @@ exports['handle an agent'] = function(test) {
                 y: -1.64166,
                 z: -5.41350
             },
-            radius: 0.3,
+            radius: 0.2,
             height: 0.5,
             maxAcceleration: 1.0,
             maxSpeed: 2.0,
@@ -195,20 +201,27 @@ exports['handle an agent'] = function(test) {
 
         animate(new Date().getTime());
 
-        var routes = 0;
+        var routes;
+
+        sequence = function() {
+            document.getElementById('sequence').style.display = 'none';
+            routes = 0;
+            goAway();
+        };
+
         var goAway = function(){
             recast.getRandomPoint(recast.cb(function(pt2x, pt2y, pt2z){
                 recast.crowdRequestMoveTarget(id, pt2x, pt2y, pt2z);
                 if (++routes < 11) {
-                    setTimeout(goAway, 2000);
+                    test.ok(true, 'route ' + routes + ': to ' + Math.round(pt2x, 2) + ',' + Math.round(pt2y, 2)+ ',' + Math.round(pt2z, 2));
+                    setTimeout(goAway, 3000);
                 } else {
+                    document.getElementById('sequence').style.display = 'block';
                     test.done();
-                    return;
                 }
-                test.ok(true, 'route ' + routes + ': to ' + Math.round(pt2x, 2) + ',' + Math.round(pt2y, 2)+ ',' + Math.round(pt2z, 2));
             }));
         };
 
-        goAway();
+        sequence();
     });
 };

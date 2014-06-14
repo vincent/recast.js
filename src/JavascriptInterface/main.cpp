@@ -34,7 +34,7 @@ extern "C" {
     extern void flush_active_agents_callback();
     extern void invoke_vector_callback(int callback_id, const float x,  const float y, const float z);
     extern void invoke_update_callback(int callback_id);
-    extern void invoke_generic_callback_string(int callback_id, char* data);
+    extern void invoke_generic_callback_string(int callback_id, const char* data);
 }
 
 ////////////////////////////
@@ -229,7 +229,7 @@ void debugDrawHeightfieldWalkable() {
 
 ////////////////////////////
 
-void emscripten_log(char* string, bool escape = true)
+void emscripten_log(const char* string, bool escape = true)
 {
     char buff[1024];
     sprintf(buff, (escape ? "console.log('%s');" : "console.log(%s);"), string);
@@ -316,13 +316,88 @@ void getNavMeshVertices(int callback){
     invoke_generic_callback_string(callback, buff);
 }
 
+
+void getNavHeightfieldRegions(int callback)
+{
+    if (! m_chf) {
+        printf("CompactHeightfield (m_chf) is not available \n");
+        return;
+    }
+
+    std::string data;
+
+    const float cs = m_chf->cs;
+    const float ch = m_chf->ch;
+
+    int height = m_chf->height;
+    int width = m_chf->width;
+
+    char buff[height * width * 1000];
+    sprintf(buff, "");
+
+    data = "[";
+    // ((y == height - 1) && (x == width - 1) && (i == ni - 1) ? "" : ","
+
+    for (int y = 0; y < height; ++y)
+    {
+        data += "[";
+
+        for (int x = 0; x < width; ++x)
+        {
+            const float fx = m_chf->bmin[0] + x*cs;
+            const float fz = m_chf->bmin[2] + y*cs;
+            const rcCompactCell& c = m_chf->cells[x+y*m_chf->width];
+
+            data += "[";
+            
+            for (unsigned i = c.index, ni = c.index+c.count; i < ni; ++i)
+            {
+                const rcCompactSpan& s = m_chf->spans[i];
+                const float fy = m_chf->bmin[1] + (s.y)*ch;
+                unsigned int color;
+                if (s.reg)
+                    color = duIntToCol(s.reg, 192);
+                else
+                    color = duRGBA(0,0,0,64);
+
+                char localData[512];
+
+                data += "[";
+
+                sprintf(localData, "{\"x\":%f,\"y\":%f,\"z\":%f,\"col\":%u},",  fx,    fy, fz   , color);
+                data = data + localData;
+
+                sprintf(localData, "{\"x\":%f,\"y\":%f,\"z\":%f,\"col\":%u},",  fx,    fy, fz+cs, color);
+                data = data + localData;
+
+                sprintf(localData, "{\"x\":%f,\"y\":%f,\"z\":%f,\"col\":%u},",  fx+cs, fy, fz+cs, color);
+                data = data + localData;
+
+                sprintf(localData, "{\"x\":%f,\"y\":%f,\"z\":%f,\"col\":%u}",   fx+cs, fy, fz   , color);
+                data = data + localData;
+
+                data += "]";
+            }
+            data += "]";
+        }
+        data += "]";
+    }
+    data += "]";
+
+    // char buff2[512];
+    // sprintf(buff2, "cs=%f, ch=%f, height=%u, width=%u, len=%u", cs, ch, height, width, strlen(buff));
+    // emscripten_log(buff2);
+    
+    // sprintf(buff, "[%s]", buff);
+
+    invoke_generic_callback_string(callback, data.c_str());
+
+    // free(buff);
+}
+
 void getNavMeshTiles(int callback){
 }
 
-float randomf()
-{
-    return (static_cast <float> (rand()) / static_cast <float> (RAND_MAX));
-}
 // http://stackoverflow.com/questions/686353/c-random-float-number-generation
 float randZeroToOne()
 {
@@ -355,58 +430,6 @@ void getRandomPoint(int callback)
 
         invoke_vector_callback(callback, randomPt[0], randomPt[1], randomPt[2]);
     }
-
-    // free(buff);
-}
-void getNavHeightfieldRegions(int callback)
-{
-    if (! m_chf) {
-        printf("CompactHeightfield (m_chf) is not available \n");
-        return;
-    }
-
-    const float cs = m_chf->cs;
-    const float ch = m_chf->ch;
-
-    int height = m_chf->height;
-    int width = m_chf->width;
-
-    char buff[512];
-
-    sprintf(buff, "cs=%f, ch=%f, height=%u, width=%u", cs, ch, height, width);
-    emscripten_log(buff);
-
-    emscripten_run_script("__tmp_recastjs_data = [];");
-
-    for (int y = 0; y < m_chf->height; ++y)
-    {
-        printf("on y=%u \n", y);
-        for (int x = 0; x < m_chf->width; ++x)
-        {
-            const float fx = m_chf->bmin[0] + x*cs;
-            const float fz = m_chf->bmin[2] + y*cs;
-            const rcCompactCell& c = m_chf->cells[x+y*m_chf->width];
-            
-            for (unsigned i = c.index, ni = c.index+c.count; i < ni; ++i)
-            {
-                const rcCompactSpan& s = m_chf->spans[i];
-                const float fy = m_chf->bmin[1] + (s.y)*ch;
-                unsigned int color;
-                if (s.reg)
-                    color = duIntToCol(s.reg, 192);
-                else
-                    color = duRGBA(0,0,0,64);
-
-                sprintf(buff, "__tmp_recastjs_data.push({x:%f, y:%f, z:%f});", fx, fy, fz);      emscripten_run_script(buff);
-                sprintf(buff, "__tmp_recastjs_data.push({x:%f, y:%f, z:%f});", fx, fy, fz+cs);   emscripten_run_script(buff);
-                sprintf(buff, "__tmp_recastjs_data.push({x:%f, y:%f, z:%f});", fx+cs, fy, fz+cs);emscripten_run_script(buff);
-                sprintf(buff, "__tmp_recastjs_data.push({x:%f, y:%f, z:%f});", fx+cs, fy, fz);   emscripten_run_script(buff);
-            }
-        }
-    }
-    
-    sprintf(buff, "Module.__RECAST_CALLBACKS[%u](__tmp_recastjs_data);", callback);
-    emscripten_run_script(buff);
 
     // free(buff);
 }
@@ -874,7 +897,7 @@ bool build()
     // Reset build times gathering.
     //m_ctx->resetTimers();
 
-    emscripten_log("resetTimers");
+    // emscripten_log("resetTimers");
 
     // Start the build process. 
     //m_ctx->startTimer(RC_TIMER_TOTAL);
@@ -883,7 +906,7 @@ bool build()
     m_ctx->log(RC_LOG_PROGRESS, " - %d x %d cells", m_cfg.width, m_cfg.height);
     m_ctx->log(RC_LOG_PROGRESS, " - %.1fK verts, %.1fK tris", nverts/1000.0f, ntris/1000.0f);
     
-    emscripten_log("Building navigation");
+    // emscripten_log("Building navigation");
 
     //
     // Step 2. Rasterize input polygon soup.
@@ -904,7 +927,7 @@ bool build()
         return false;
     }
     
-    emscripten_log("Heightfield polygon soup");
+    // emscripten_log("Heightfield polygon soup");
 
     // Allocate array that can hold triangle area types.
     // If you have multiple meshes you need to process, allocate
@@ -916,21 +939,21 @@ bool build()
         return false;
     }
 
-    emscripten_log("rcMarkWalkableTriangles");
+    // emscripten_log("rcMarkWalkableTriangles");
 
-    sprintf(buff, "m_ctx=%d", m_ctx);
-    emscripten_log(buff);
+    // sprintf(buff, "m_ctx=%d", m_ctx);
+    // emscripten_log(buff);
 
     // Find triangles which are walkable based on their slope and rasterize them.
     // If your input data is multiple meshes, you can transform them here, calculate
     // the are type for each of the meshes and rasterize them.
     memset(m_triareas, 0, ntris*sizeof(unsigned char));
     rcMarkWalkableTriangles(m_ctx, m_cfg.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas);
-    printf("%u Walkable Triangles\n", sizeof(m_triareas)/sizeof(unsigned char));
+    // printf("%u Walkable Triangles\n", sizeof(m_triareas)/sizeof(unsigned char));
 
-    sprintf(buff, "m_ctx=%d, WalkableTriangles=%u, verts=%d, nverts=%d, trds=%d, m_trdareas=%x, ntrds=%d, m_soldd=%d, walkableClimb=%u", m_ctx, sizeof(m_triareas)/sizeof(unsigned char), verts, nverts, tris, m_triareas, ntris, m_solid, m_cfg.walkableClimb);
-    emscripten_log(buff);
-    dumpConfig();
+    // sprintf(buff, "m_ctx=%d, WalkableTriangles=%u, verts=%d, nverts=%d, trds=%d, m_trdareas=%x, ntrds=%d, m_soldd=%d, walkableClimb=%u", m_ctx, sizeof(m_triareas)/sizeof(unsigned char), verts, nverts, tris, m_triareas, ntris, m_solid, m_cfg.walkableClimb);
+    // emscripten_log(buff);
+    // dumpConfig();
     
     rcRasterizeTriangles(m_ctx, verts, nverts, tris, m_triareas, ntris, *m_solid, m_cfg.walkableClimb);
 
@@ -944,7 +967,7 @@ bool build()
     // Step 3. Filter walkables surfaces.
     //
     
-    emscripten_log("rcFilterLowHangingWalkableObstacles");
+    // emscripten_log("rcFilterLowHangingWalkableObstacles");
 
     // Once all geoemtry is rasterized, we do initial pass of filtering to
     // remove unwanted overhangs caused by the conservative rasterization
@@ -957,7 +980,7 @@ bool build()
     // Step 4. Partition walkable surface to simple regions.
     //
 
-    emscripten_log("rcBuildCompactHeightfield");
+    // emscripten_log("rcBuildCompactHeightfield");
 
     // Compact the heightfield so that it is faster to handle from now on.
     // This will result more cache coherent data as well as the neighbours
@@ -980,7 +1003,7 @@ bool build()
         m_solid = 0;
     }
         
-    emscripten_log("rcErodeWalkableArea");
+    // emscripten_log("rcErodeWalkableArea");
 
     // Erode the walkable area by agent radius.
     if (!rcErodeWalkableArea(m_ctx, m_cfg.walkableRadius, *m_chf))
@@ -989,7 +1012,7 @@ bool build()
         return false;
     }
 
-    emscripten_log("rcMarkConvexPolyArea");
+    // emscripten_log("rcMarkConvexPolyArea");
 
     // (Optional) Mark areas.
     const ConvexVolume* vols = m_geom->getConvexVolumes();
@@ -1027,7 +1050,7 @@ bool build()
     // Step 5. Trace and simplify region contours.
     //
 
-    emscripten_log("rcBuildContours");
+    // emscripten_log("rcBuildContours");
     
     // Create contours.
     m_cset = rcAllocContourSet();
@@ -1042,7 +1065,7 @@ bool build()
         return false;
     }
     
-    printf("Trace and simplify region contours: %u conts (maxSimplificationError= %f, maxEdgeLen= %u)\n", m_cset->nconts, m_cfg.maxSimplificationError, m_cfg.maxEdgeLen);
+    // printf("Trace and simplify region contours: %u conts (maxSimplificationError= %f, maxEdgeLen= %u)\n", m_cset->nconts, m_cfg.maxSimplificationError, m_cfg.maxEdgeLen);
 
     //
     // Step 6. Build polygons mesh from contours.
@@ -1061,7 +1084,7 @@ bool build()
         return false;
     }
     
-    printf("Build polygons mesh from contours. \n");
+    // printf("Build polygons mesh from contours. \n");
 
     //
     // Step 7. Create detail mesh which allows to access approximate height on each polygon.
@@ -1088,7 +1111,7 @@ bool build()
         m_cset = 0;
     }
 
-    printf("Create detail mesh. \n");
+    // printf("Create detail mesh. \n");
 
     // At this point the navigation mesh data is ready, you can access it from m_pmesh.
     // See duDebugDrawPolyMesh or dtCreateNavMeshData as examples how to access the data.
@@ -1168,7 +1191,7 @@ bool build()
             return false;
         }
         
-        printf("Built Detour navdata. %p \n", navData);
+        // printf("Built Detour navdata. %p \n", navData);
 
         m_navMesh = dtAllocNavMesh();
         if (!m_navMesh)
@@ -1178,7 +1201,7 @@ bool build()
             return false;
         }
 
-        printf("Created Detour navmesh. %p \n", m_navMesh);
+        // printf("Created Detour navmesh. %p \n", m_navMesh);
 
         dtStatus status;
         
@@ -1191,7 +1214,7 @@ bool build()
             return false;
         }
         
-        printf("Init Detour navmesh. %p \n", navData);
+        // printf("Init Detour navmesh. %p \n", navData);
 
         m_navQuery = dtAllocNavMeshQuery();
         status = m_navQuery->init(m_navMesh, 2048);
@@ -1211,9 +1234,9 @@ bool build()
         return false;
     }
 
-    printf("m_navMesh=%p \n", m_navMesh);
+    // printf("m_navMesh=%p \n", m_navMesh);
     
-    printf("m_navQuery=%p \n", m_navQuery);
+    // printf("m_navQuery=%p \n", m_navQuery);
 
     //m_ctx->stopTimer(RC_TIMER_TOTAL);
 
