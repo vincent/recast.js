@@ -1,0 +1,32 @@
+{
+  "name": "recast.js",
+  "version": "0.0.0",
+  "description": "A wrapper for the RecastDetour navigation library for node and the browser",
+  "main": "./lib/recast",
+  "scripts": {
+    "test": "cd tests && nodeunit recast.tests.js && nodeunit recast.withworker.tests.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:vincent/recast.js.git"
+  },
+  "keywords": [
+    "navigation",
+    "mesh",
+    "3D",
+    "emscripten",
+    "pathfinding"
+  ],
+  "author": "Vincent Lark <vincent.lark@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vincent/recast.js/issues"
+  },
+  "homepage": "https://github.com/vincent/recast.js",
+  "devDependencies": {
+    "nodeunit": "^0.9.0"
+  },
+  "dependencies": {
+    "webworker-threads": "^0.4.13"
+  }
+}

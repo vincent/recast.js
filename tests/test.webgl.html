@@ -1,0 +1,34 @@
+<html>
+  <head>
+    <title>Recast.js Test Suite</title>
+    <script src="../node_modules/nodeunit/examples/browser/nodeunit.js"></script>
+    <script src="../vendor/three.js"></script>
+    <script src="../vendor/ConvexGeometry.js"></script>
+    <script src="../vendor/OrbitControls.js"></script>
+    <script src="../vendor/OBJLoader.js"></script>
+    <script src="../vendor/stats.js"></script>
+    <script src="../lib/recast.js"></script>
+    <link rel="stylesheet" href="../node_modules/nodeunit/share/nodeunit.css"/>
+    <style>
+      body { margin:0; padding:0 }
+    </style>
+    <script>
+      var recast = this.recast;
+      this.require = function () { return recast; };
+      this.exports = {};
+    </script>
+  </head>
+  <body>
+    <h1 id="nodeunit-header">Recast.js Test Suite</h1>
+    <script src="recast.test.webgl.js"></script>
+    <script>
+    nodeunit.run({'recast.tests': exports});
+    </script>
+    <button onclick="navigationMesh.parent ? scene.remove(navigationMesh) : scene.add(navigationMesh)">
+      Toggle navigation mesh
+    </button>
+    <button id="sequence" onclick="sequence()" style="display:none">
+      Reboot sequence
+    </button>
+  </body>
+</html>
