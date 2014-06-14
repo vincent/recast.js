@@ -10,7 +10,7 @@
 'use strict';
 
 var renderer = new THREE.WebGLRenderer({antialias: true});
-renderer.setSize(document.body.clientWidth * 0.8, document.body.clientHeight * 0.8);
+renderer.setSize(document.body.clientWidth * 0.6, document.body.clientHeight * 0.8);
 renderer.domElement.style.position = 'absolute';
 renderer.domElement.style.bottom = 0;
 renderer.domElement.style.right = 0;
@@ -152,7 +152,7 @@ exports['handle an agent'] = function(test) {
                 i += 2;
             }
 
-            scene.add(navigationMesh);
+            // scene.add(navigationMesh);
 
             renderer.render(scene, camera);
         }));
@@ -199,8 +199,13 @@ exports['handle an agent'] = function(test) {
         var goAway = function(){
             recast.getRandomPoint(recast.cb(function(pt2x, pt2y, pt2z){
                 recast.crowdRequestMoveTarget(id, pt2x, pt2y, pt2z);
-                if (++routes < 10) setTimeout(goAway, 2000);
-                test.ok(true, 'route ' + routes + ': to ' + pt2x + ',' + pt2y + ',' + pt2z);
+                if (++routes < 11) {
+                    setTimeout(goAway, 2000);
+                } else {
+                    test.done();
+                    return;
+                }
+                test.ok(true, 'route ' + routes + ': to ' + Math.round(pt2x, 2) + ',' + Math.round(pt2y, 2)+ ',' + Math.round(pt2z, 2));
             }));
         };
 

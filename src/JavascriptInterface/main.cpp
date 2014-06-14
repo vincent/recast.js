@@ -2,6 +2,7 @@
 #include <math.h>
 #include <memory.h>
 #include <time.h>
+#include <sys/time.h>  
 
 #include <string>
 #include <random>
@@ -53,6 +54,8 @@ unsigned char m_navMeshDrawFlags;
 
 bool m_keepInterResults = true;
 float m_totalBuildTimeMs;
+
+int randModulo = 0;
 
 //// DEFAULTS
 float m_agentHeight = 2.0f;  // , 5.0f, 0.1f);
@@ -323,7 +326,9 @@ float randomf()
 // http://stackoverflow.com/questions/686353/c-random-float-number-generation
 float randZeroToOne()
 {
-    srand (time(NULL));
+    randModulo += 1;
+
+    srand (time(NULL) % randModulo);
     return rand() / (RAND_MAX + 1.);
 }
 
