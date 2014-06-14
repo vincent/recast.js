@@ -9,7 +9,7 @@ What can I do with it ?
 =========
 
 * load any mesh in .obj format
-* compute and extract its navigation mesh with options (cell size, max slope, max jump)
+* compute and extract its navigation mesh with options
 * find a random point garanteed to be navigable
 * find the nearest path from one point to another
 * add agents on the navigation mesh
