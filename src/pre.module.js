@@ -123,6 +123,8 @@ if (root !== null) {
 recast.__RECAST_CALLBACKS = {};
 recast.__RECAST_CALLBACKS.size = 0;
 
+recast.__RECAST_OBJECTS = {};
+
 recast.vent = new EventEmitter();
 recast.on = recast.vent.on;
 recast.emit = recast.vent.emit;
@@ -369,10 +371,40 @@ onmessage = function(event) {
 
 //// exported recast module functions ////
 
+recast.setGLContext = function (gl_context) {
+  recast.glContext = gl_context;
+};
+
+
 recast.cb = function (func) {
   var last = (++recast.__RECAST_CALLBACKS.size) - 1;
   recast.__RECAST_CALLBACKS[last] = func;
   return last;
+};
+
+recast.drawObject = function (objectName) {
+  var object = recast.__RECAST_OBJECTS[objectName];
+
+  if (! object) {
+    throw new Error(objectName + ' is not a valid object, or has not ben created');
+  }
+
+  // recast.glContext.clear(recast.glContext.COLOR_BUFFER_BIT | recast.glContext.DEPTH_BUFFER_BIT);
+
+  for (var i = 0; i < object.buffers.length; i++) {
+    recast.glContext.bindBuffer(recast.glContext.ARRAY_BUFFER, object.buffers[i]);
+    recast.glContext.bufferData(recast.glContext.ARRAY_BUFFER, object.datas[i], recast.glContext.STATIC_DRAW);
+    recast.glContext.drawArrays(recast.glContext.TRIANGLES, 0, object.buffers[i].numItems);
+  }
+};
+
+recast.settings = function (options) {
+  recast.set_cellSize(options.cellSize);
+  recast.set_cellHeight(options.cellHeight);
+  recast.set_agentHeight(options.agentHeight);
+  recast.set_agentRadius(options.agentRadius);
+  recast.set_agentMaxClimb(options.agentMaxClimb);
+  recast.set_agentMaxSlope(options.agentMaxSlope);
 };
 
 recast.OBJLoader = function (path, callback) {

@@ -35,6 +35,8 @@ extern "C" {
     extern void invoke_vector_callback(int callback_id, const float x,  const float y, const float z);
     extern void invoke_update_callback(int callback_id);
     extern void invoke_generic_callback_string(int callback_id, const char* data);
+    extern void gl_create_object(const char* objectName);
+    extern void gl_draw_object(const char* objectName);
 }
 
 ////////////////////////////
@@ -205,25 +207,32 @@ void dumpConfig()
     sprintf(buff, "console.log('%s');", buff);
     emscripten_run_script(buff);
 }
-void debugDrawNavMesh(unsigned char flags) {
-    duDebugDrawNavMesh(dd, *m_navMesh, flags);
+void debugCreateNavMesh(unsigned char flags) {
+    gl_create_object("NavMesh");
+    duDebugDrawNavMesh(dd, *m_navMesh, SAMPLE_POLYAREA_GROUND);
 }
-void debugDrawNavMeshPortals() {
+void debugCreateNavMeshPortals() {
+    gl_create_object("NavMeshPortals");
     duDebugDrawNavMeshPortals(dd, *m_navMesh);
 }
-void debugDrawRegionConnections() {
+void debugCreateRegionConnections() {
+    gl_create_object("RegionConnections");
     duDebugDrawRegionConnections(dd, *m_cset, 0.5f);
 }
-void debugDrawRawContours() {
+void debugCreateRawContours() {
+    gl_create_object("RawContours");
     duDebugDrawRawContours(dd, *m_cset, 0.5f);
 }
-void debugDrawContours() {
+void debugCreateContours() {
+    gl_create_object("Contours");
     duDebugDrawContours(dd, *m_cset, 0.5f);
 }
-void debugDrawHeightfieldSolid() {
+void debugCreateHeightfieldSolid() {
+    gl_create_object("HeightfieldSolid");
     duDebugDrawHeightfieldSolid(dd, *m_solid);
 }
-void debugDrawHeightfieldWalkable() {
+void debugCreateHeightfieldWalkable() {
+    gl_create_object("HeightfieldWalkable");
     duDebugDrawHeightfieldWalkable(dd, *m_solid);
 }
 
@@ -1297,13 +1306,13 @@ EMSCRIPTEN_BINDINGS(my_module) {
     function("set_detailSampleMaxError", &set_detailSampleMaxError);
 
 
-    function("debugDrawNavMesh", &debugDrawNavMesh);
-    function("debugDrawNavMeshPortals", &debugDrawNavMeshPortals);
-    function("debugDrawRegionConnections", &debugDrawRegionConnections);
-    function("debugDrawRawContours", &debugDrawRawContours);
-    function("debugDrawContours", &debugDrawContours);
-    function("debugDrawHeightfieldSolid", &debugDrawHeightfieldSolid);
-    function("debugDrawHeightfieldWalkable", &debugDrawHeightfieldWalkable);
+    function("debugCreateNavMesh", &debugCreateNavMesh);
+    function("debugCreateNavMeshPortals", &debugCreateNavMeshPortals);
+    function("debugCreateRegionConnections", &debugCreateRegionConnections);
+    function("debugCreateRawContours", &debugCreateRawContours);
+    function("debugCreateContours", &debugCreateContours);
+    function("debugCreateHeightfieldSolid", &debugCreateHeightfieldSolid);
+    function("debugCreateHeightfieldWalkable", &debugCreateHeightfieldWalkable);
 
 }
 

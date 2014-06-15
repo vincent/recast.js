@@ -35,13 +35,24 @@
       Module.__RECAST_CALLBACKS[callback_id](JSON.parse(Module.Pointer_stringify(data)));
     },
 
-    settings: function (options) {
-      Module.set_cellSize(options.cellSize);
-      Module.set_cellHeight(options.cellHeight);
-      Module.set_agentHeight(options.agentHeight);
-      Module.set_agentRadius(options.agentRadius);
-      Module.set_agentMaxClimb(options.agentMaxClimb);
-      Module.set_agentMaxSlope(options.agentMaxSlope);
+    gl_create_object: function (objectName) {
+      objectName = Module.Pointer_stringify(objectName);
+      Module.__RECAST_GLOBAL_CURRENT = objectName;
+
+      Module.__RECAST_OBJECTS[objectName] = {
+        buffers: [],
+        datas: []
+      };
+    },
+
+    gl_add_to_object: function () {
+      var buffer = Module.glContext.createBuffer();
+      var data = new Float32Array(Module.__RECAST_GLOBAL_DATA);
+      buffer.itemSize = 3;
+      buffer.numItems = data.length / buffer.itemSize;
+
+      Module.__RECAST_OBJECTS[Module.__RECAST_GLOBAL_CURRENT].buffers.push(buffer);
+      Module.__RECAST_OBJECTS[Module.__RECAST_GLOBAL_CURRENT].datas.push(data);
     },
 
     agentPool_clear: function () {

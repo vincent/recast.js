@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Recast.js : A wrapper for the RecastDetour navigation library for node and the browser" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Recast.js</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/vincent/recast.js">View on GitHub</a>
+
+          <h1 id="project_title">Recast.js</h1>
+          <h2 id="project_tagline">A wrapper for the RecastDetour navigation library for node and the browser</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/vincent/recast.js/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/vincent/recast.js/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+
+      <h3><a name="user-content-recastjs" class="anchor" href="#recastjs" aria-hidden="true"><span class="octicon octicon-link"></span></a>Recast.js</h3>
+
+      <p>A Javascript library to handle navigation meshes, in nodejs and the browser.
+        <br>
+        <a href="tests/test.webgl.html">Demo</a>
+      </p>
+
+      <p>It embeds an Emscripten-compiled bundle of the <a href="https://github.com/memononen/recastnavigation">RecastDetour navigation c++ library</a></p>
+
+      <h3>
+      <a name="user-content-what-can-i-do-with-it-" class="anchor" href="#what-can-i-do-with-it-" aria-hidden="true"><span class="octicon octicon-link"></span></a>What can I do with it ?</h3>
+
+      <ul class="task-list">
+      <li>load any mesh in .obj format</li>
+      <li>compute and extract its navigation mesh with options (cell size, max slope, max jump)</li>
+      <li>find a random point garanteed to be navigable</li>
+      <li>find the nearest path from one point to another</li>
+      <li>add agents on the navigation mesh</li>
+      <li>make them move with their own speed</li>
+      </ul><h3>
+      <a name="user-content-oh-thats-a-3dwebglthreejs-stuff-" class="anchor" href="#oh-thats-a-3dwebglthreejs-stuff-" aria-hidden="true"><span class="octicon octicon-link"></span></a>Oh, that's a 3D/WebGL/three.js/... stuff ?</h3>
+
+      <p>It is designed to work along a WebGL software but it's completely library agnostic.
+      It only manages a mesh and its properties.</p>
+
+      <h3>
+      <a name="user-content-tests" class="anchor" href="#tests" aria-hidden="true"><span class="octicon octicon-link"></span></a>Tests</h3>
+
+      <p>Some basic tests exist in the <a href="https://github.com/vincent/recast.js">tests</a> directory.
+      They should pass both in node (npm test) and in the browser.
+      There are both simple and worker versions. </p>
+
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Recast.js maintained by <a href="https://github.com/vincent">vincent</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    <script type="text/javascript">
+      var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+      document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+      try {
+        var pageTracker = _gat._getTracker("UA-43950137-2");
+      pageTracker._trackPageview();
+      } catch(err) {}
+    </script>
+
+  </body>
+</html>
