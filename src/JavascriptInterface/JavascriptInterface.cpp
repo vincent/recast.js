@@ -20,6 +20,10 @@
 #	define snprintf _snprintf
 #endif
 
+extern "C" {
+    extern void gl_add_to_object();
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BuildContext::BuildContext() :
@@ -114,16 +118,20 @@ void DebugDrawGL::begin(duDebugDrawPrimitives prim, float size)
 	switch (prim)
 	{
 		case DU_DRAW_POINTS:
-			emscripten_run_script("window._dd_data = []; window._dd_data.dt = 'DU_DRAW_POINTS';");
+			// emscripten_run_script("console.log(\"DebugDrawGL::begin POINTS\");");
+			emscripten_run_script("Module.__RECAST_GLOBAL_DATA = []; Module.__RECAST_GLOBAL_DATA.mode = 1;");
 			break;
 		case DU_DRAW_LINES:
-			emscripten_run_script("window._dd_data = []; window._dd_data.dt = 'DU_DRAW_LINES';");
+			// emscripten_run_script("console.log(\"DebugDrawGL::begin LINES\");");
+			emscripten_run_script("Module.__RECAST_GLOBAL_DATA = []; Module.__RECAST_GLOBAL_DATA.mode = 2;");
 			break;
 		case DU_DRAW_TRIS:
-			emscripten_run_script("window._dd_data = []; window._dd_data.dt = 'DU_DRAW_TRIS';");
+			// emscripten_run_script("console.log(\"DebugDrawGL::begin TRIANGLES\");");
+			emscripten_run_script("Module.__RECAST_GLOBAL_DATA = []; Module.__RECAST_GLOBAL_DATA.mode = 3;");
 			break;
 		case DU_DRAW_QUADS:
-			emscripten_run_script("window._dd_data = []; window._dd_data.dt = 'DU_DRAW_QUADS';");
+			// emscripten_run_script("console.log(\"DebugDrawGL::begin STATIC_DRAW\");");
+			emscripten_run_script("Module.__RECAST_GLOBAL_DATA = []; Module.__RECAST_GLOBAL_DATA.mode = 4;");
 			break;
 	};
 }
@@ -132,7 +140,7 @@ void DebugDrawGL::vertex(const float* pos, unsigned int color)
 {
 	char buff[1024];
 	if ( !isnan(pos[0]) && !isnan(pos[1]) && !isnan(pos[2]) ) {
-		sprintf(buff, "window._dd_data.push(new THREE.Vector3(%f, %f, %f))", pos[0], pos[1], pos[2]);
+		sprintf(buff, "Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f);", pos[0], pos[1], pos[2]);
 		emscripten_run_script(buff);
 	}
 }
@@ -141,9 +149,10 @@ void DebugDrawGL::vertex(const float x, const float y, const float z, unsigned i
 {
 	char buff[1024];
 	if ( !isnan(x) && !isnan(y) && !isnan(z) ) {
-		sprintf(buff, "window._dd_data.push(new THREE.Vector3(%f, %f, %f))", x, y, z);
-		//sprintf(buff, "console.log(' %s ');", buff);
+		sprintf(buff, "Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f);", x, y, z);
 		emscripten_run_script(buff);
+		// sprintf(buff, "console.log(' %s ');", buff);
+		// emscripten_run_script(buff);
 	}
 }
 
@@ -153,9 +162,10 @@ void DebugDrawGL::vertex(const float* pos, unsigned int color, const float* uv)
 
 	char buff[1024];
 	if ( !isnan(pos[0]) && !isnan(pos[1]) && !isnan(pos[2]) ) {
-		sprintf(buff, "window._dd_data.push(new THREE.Vector3(%f, %f, %f))", pos[0], pos[1], pos[2]);
-		//sprintf(buff, "console.log(' %s ');", buff);
+		sprintf(buff, "Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f);", pos[0], pos[1], pos[2]);
 		emscripten_run_script(buff);
+		// sprintf(buff, "console.log(' %s ');", buff);
+		// emscripten_run_script(buff);
 	}
 }
 
@@ -165,15 +175,17 @@ void DebugDrawGL::vertex(const float x, const float y, const float z, unsigned i
 
 	char buff[1024];
 	if ( !isnan(x) && !isnan(y) && !isnan(z) ) {
-		sprintf(buff, "window._dd_data.push(new THREE.Vector3(%f, %f, %f))", x, y, z);
-		//sprintf(buff, "console.log(' %s ');", buff);
+		sprintf(buff, "Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f);", x, y, z);
 		emscripten_run_script(buff);
+		// sprintf(buff, "console.log(' %s ');", buff);
+		// emscripten_run_script(buff);
 	}
 }
 
 void DebugDrawGL::end()
 {
-	emscripten_run_script("console.log(\"DebugDrawGL::end\"); if (window._dd_data.dt) { var object = __ta_utils.meshFromVertices(window._dd_data, new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true, transparent: true, opacity: 0.5 }) ); game.scene.add(object); };");
+	// Instead of drawing, we register the object vertices to the current object (see gl_create_object)
+	gl_add_to_object();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -24,11 +24,28 @@
     <script>
     nodeunit.run({'recast.tests': exports});
     </script>
+        
     <button onclick="navigationMesh.parent ? scene.remove(navigationMesh) : scene.add(navigationMesh)">
       Toggle navigation mesh
     </button>
+   
     <button id="sequence" onclick="sequence()" style="display:none">
       Reboot sequence
     </button>
+
+    <!--
+    <br><br>
+    <form autocomplete="off">
+      <input name="toggle" type="radio" onchange="terrain.parent ? scene.remove(terrain) : scene.add(terrain)" checked/> Terrain<br>
+      <input name="toggle" type="radio" onchange="debugDraw['NavMesh'] = ! debugDraw['NavMesh'];"/> NavMesh<br>
+      <input name="toggle" type="radio" onchange="debugDraw['NavMeshPortals'] = ! debugDraw['NavMeshPortals'];"/> NavMeshPortals<br>
+      <input name="toggle" type="radio" onchange="debugDraw['RegionConnections'] = ! debugDraw['RegionConnections'];"/> RegionConnections<br>
+      <input name="toggle" type="radio" onchange="debugDraw['RawContours'] = ! debugDraw['RawContours'];"/> RawContours<br>
+      <input name="toggle" type="radio" onchange="debugDraw['Contours'] = ! debugDraw['Contours'];"/> Contours<br>
+      <input name="toggle" type="radio" onchange="debugDraw['HeightfieldSolid'] = ! debugDraw['HeightfieldSolid'];"/> HeightfieldSolid<br>
+      <input name="toggle" type="radio" onchange="debugDraw['HeightfieldWalkable'] = ! debugDraw['HeightfieldWalkable'];"/> HeightfieldWalkable<br>
+      <input name="toggle" type="radio" onchange="debugDraw['DrawContours'] = ! debugDraw['DrawContours'];"/> Draw contours<br>
+    </form>
+    -->
   </body>
 </html>

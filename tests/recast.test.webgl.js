@@ -26,7 +26,7 @@ camera.position.z = 50;
 
 var controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.addEventListener('change', function(){
-    renderer.render(scene, camera);
+    render();
 });
 
 var agent = new THREE.Object3D();
@@ -45,14 +45,27 @@ var light = new THREE.SpotLight();
 light.position.set( 170, 330, -160 );
 scene.add(light);
 
-renderer.render(scene, camera);
-
 var navigationMesh, sequence;
 
 ////////////////////////////////
 
-var intest = true;
+var terrain;
+var debugDraw = {};
 var recast = require('../lib/recast');
+
+recast.setGLContext(renderer.context);
+
+function render () {
+    renderer.render(scene, camera);
+
+    if (debugDraw.NavMesh)              { recast.drawObject('NavMesh');             }                        
+    if (debugDraw.NavMeshPortals)       { recast.drawObject('NavMeshPortals');      }          
+    if (debugDraw.RegionConnections)    { recast.drawObject('RegionConnections');   }    
+    if (debugDraw.RawContours)          { recast.drawObject('RawContours');         }                
+    if (debugDraw.Contours)             { recast.drawObject('Contours');            }                      
+    if (debugDraw.HeightfieldSolid)     { recast.drawObject('HeightfieldSolid');    }      
+    if (debugDraw.HeightfieldWalkable)  { recast.drawObject('HeightfieldWalkable'); }
+}
 
 // Check our library is here
 exports['recast is present'] = function(test) {
@@ -121,6 +134,7 @@ exports['handle an agent'] = function(test) {
    
     var loader = new THREE.OBJLoader();
     loader.load('nav_test.obj', function(object){
+        terrain = object;
         object.traverse(function(child) {
             if (child instanceof THREE.Mesh) {
                 child.material.side = THREE.DoubleSide;
@@ -134,6 +148,14 @@ exports['handle an agent'] = function(test) {
      * Load an .OBJ file
      */
     recast.OBJLoader('nav_test.obj', function(){
+
+        // recast.debugCreateNavMesh(0);
+        // recast.debugCreateNavMeshPortals();
+        // recast.debugCreateRegionConnections();
+        // recast.debugCreateRawContours();
+        // recast.debugCreateContours();
+        // recast.debugCreateHeightfieldSolid();
+        // recast.debugCreateHeightfieldWalkable();
 
         /**
          * Get navmesh geometry and draw it
@@ -160,7 +182,7 @@ exports['handle an agent'] = function(test) {
 
             // scene.add(navigationMesh);
 
-            renderer.render(scene, camera);
+            // renderer.render(scene, camera);
         }));
 
         recast.vent.on('update', function (agents) {
@@ -187,6 +209,8 @@ exports['handle an agent'] = function(test) {
             separationWeight: 10.0
         });
 
+        var routes;
+
         var last = new Date().getTime();
         var animate = function animate (time) {
             recast.crowdUpdate(0.1);
@@ -195,13 +219,12 @@ exports['handle an agent'] = function(test) {
             window.requestAnimationFrame(animate);
 
             last = time;
-            renderer.render(scene, camera);
+            render();
+
             if (stats) stats.update();
         };
 
         animate(new Date().getTime());
-
-        var routes;
 
         sequence = function() {
             document.getElementById('sequence').style.display = 'none';
