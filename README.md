@@ -28,6 +28,15 @@ Some tests exist in the [tests](https://github.com/vincent/recast.js) directory.
 They describe regular usages of the library, and should pass both in node (npm test) and in the browser.
 There are both simple and worker versions. 
 
+Build
+=========
+
+It supposes you already have a working emscripten toolchain installed. You can also define your paths in the Makefile.
+The Emscripten build can be ran with
+{{{
+make build
+}}}
+
 Contribute
 =========
 

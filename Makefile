@@ -9,9 +9,9 @@ BUILDDIR = lib
 
 FASTCOMPILER = EMCC_FAST_COMPILER=0
 
-# PATH TO EMCC
-LLVM = /usr/local/opt/llvm/bin
-CC = /Users/vincent/Workspace/emscripten/emcc
+# LLVM & EMCC PATHS
+# LLVM = /usr/local/opt/llvm/bin
+# CC = /usr/local/opt/emscripten/emcc
 
 CFLAGS = --closure 1 -O2 -g -s WARN_ON_UNDEFINED_SYMBOLS=0 -s VERBOSE=0 -s NO_EXIT_RUNTIME=1 -s LINKABLE=1 -s ALLOW_MEMORY_GROWTH=1 -s DISABLE_GL_EMULATION=1 -s DISABLE_EXCEPTION_CATCHING=1 -s ASSERTIONS=0 --bind
 DEFINES = -D NOT_GCC -D EMSCRIPTEN -D USES_UNIX_DIR
