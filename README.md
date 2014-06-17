@@ -27,3 +27,11 @@ Tests
 Some tests exist in the [tests](https://github.com/vincent/recast.js) directory.
 They describe regular usages of the library, and should pass both in node (npm test) and in the browser.
 There are both simple and worker versions. 
+
+Contribute
+=========
+
+You are welcome to contribute by forking the project and send pull requests !
+There are many areas where it could be improved.
+
+The C++ Recast part is roughly borrowed from different posts from [the google group](https://groups.google.com/forum/#!forum/recastnavigation) and [the github source](https://github.com/memononen/recastnavigation)
