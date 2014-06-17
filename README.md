@@ -15,15 +15,15 @@ What can I do with it ?
 * add agents on the navigation mesh
 * make them move with their own speed
 
-Oh, that's a 3D/WebGL/three.js/... stuff ?
+Oh, that's a WebGL - Three.js - Babylon.js stuff ?
 =========
 
 It is designed to work along a WebGL software but it's completely library agnostic.
-It only manages a mesh and its properties.
+It only manages a mesh, and its properties.
 
 Tests
 =========
 
-Some basic tests exist in the [tests](https://github.com/vincent/recast.js) directory.
-They should pass both in node (npm test) and in the browser.
+Some tests exist in the [tests](https://github.com/vincent/recast.js) directory.
+They describe regular usages of the library, and should pass both in node (npm test) and in the browser.
 There are both simple and worker versions. 
