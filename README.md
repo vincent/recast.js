@@ -5,6 +5,8 @@ A Javascript library to handle navigation meshes, in nodejs and the browser.
 
 It embeds an Emscripten-compiled bundle of the [RecastDetour navigation c++ library](https://github.com/memononen/recastnavigation)
 
+[Demo](http://vincent.github.io/recast.js/tests/test.webgl.html)
+
 What can I do with it ?
 =========
 
@@ -24,7 +26,7 @@ It only manages a mesh and its properties.
 Tests
 =========
 
-Some tests exist in the [tests](https://github.com/vincent/recast.js/tests) directory.
+Some tests exist in the [tests](https://github.com/vincent/recast.js/tree/master/tests) directory.
 They describe regular usages of the library, and should pass both in node (npm test) and in the browser.
 There are both simple and worker versions. 
 
