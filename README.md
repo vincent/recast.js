@@ -24,7 +24,7 @@ It only manages a mesh and its properties.
 Tests
 =========
 
-Some tests exist in the [tests](https://github.com/vincent/recast.js) directory.
+Some tests exist in the [tests](https://github.com/vincent/recast.js/tests) directory.
 They describe regular usages of the library, and should pass both in node (npm test) and in the browser.
 There are both simple and worker versions. 
 
@@ -33,9 +33,7 @@ Build
 
 It supposes you already have a working emscripten toolchain installed. You can also define your paths in the Makefile.
 The Emscripten build can be ran with
-{{{
-make build
-}}}
+`make build`
 
 Contribute
 =========
@@ -43,4 +41,5 @@ Contribute
 You are welcome to contribute by forking the project and send pull requests !
 There are many areas where it could be improved.
 
-The C++ Recast part is roughly borrowed from different posts from [the google group](https://groups.google.com/forum/#!forum/recastnavigation) and [the github source](https://github.com/memononen/recastnavigation)
+* the C++ Recast part is roughly borrowed from different posts from [the google group](https://groups.google.com/forum/#!forum/recastnavigation) and [the github source](https://github.com/memononen/recastnavigation)
+* the navigation mesh is currently rebuilt every time
