@@ -15,11 +15,11 @@ What can I do with it ?
 * add agents on the navigation mesh
 * make them move with their own speed
 
-Oh, that's a WebGL - Three.js - Babylon.js stuff ?
+Oh, that's a WebGL-Three.js-Babylon.js stuff ?
 =========
 
 It is designed to work along a WebGL software but it's completely library agnostic.
-It only manages a mesh, and its properties.
+It only manages a mesh and its properties.
 
 Tests
 =========
