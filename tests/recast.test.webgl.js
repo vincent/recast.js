@@ -29,17 +29,27 @@ controls.addEventListener('change', function(){
     render();
 });
 
-var agent = new THREE.Object3D();
-var agentBody = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.2, 0.5, 2),
-    new THREE.MeshBasicMaterial({
-      color: '#FF0000'
-    })
-);
-agentBody.position.y = 1;
-agent.add(agentBody);
+var agentsParam = location.search.match(/agents=(\d+)/);
+var MAX_AGENTS = agentsParam.length == 2 ? agentsParam[1] : 10;
+var MAX_HOPS = 10;
 
+var agentsObjects = [];
 var scene = new THREE.Scene();
+
+var agentGeometry = new THREE.CylinderGeometry(0.2, 0.5, 2);
+var agentMaterial = new THREE.MeshBasicMaterial({
+  color: '#FF0000'
+});
+
+for (var i = 0; i < MAX_AGENTS; i++) {
+    var agent = new THREE.Object3D();
+    var agentBody = new THREE.Mesh(agentGeometry, agentMaterial);
+    agentBody.position.y = 1;
+    agent.add(agentBody);
+
+    agentsObjects.push(agent);
+    scene.add(agent);
+}
 
 var light = new THREE.SpotLight();
 light.position.set( 170, 330, -160 );
@@ -49,7 +59,7 @@ var navigationMesh, sequence;
 
 ////////////////////////////////
 
-var terrain;
+var terrain, agents = [];
 var debugDraw = {};
 var recast = require('../lib/recast');
 
@@ -186,37 +196,39 @@ exports['handle an agent'] = function(test) {
         }));
 
         recast.vent.on('update', function (agents) {
-            var pos = agents[0].position;
-            agent.position.set(pos.x, pos.y, pos.z);
+            for (var i = 0; i < agents.length; i++) {
+                var pos = agents[i].position;
+                agentsObjects[i].position.set(pos.x, pos.y, pos.z);
+            }
         });
-
-        scene.add(agent);
 
         /**
-         * Add an agent, retain its ID
+         * Add some agents
          */
-        var id = recast.addAgent({
-            position: {
-                x: -25.8850,
-                y: -1.64166,
-                z: -5.41350
-            },
-            radius: 0.2,
-            height: 0.5,
-            maxAcceleration: 1.0,
-            maxSpeed: 2.0,
-            updateFlags: 0,
-            separationWeight: 10.0
-        });
+        for (var i = 0; i < agentsObjects.length; i++) {
+            agents.push(recast.addAgent({
+                position: {
+                    x: -25.8850,
+                    y: -1.64166,
+                    z: -5.41350
+                },
+                radius: 0.8,
+                height: 0.5,
+                maxAcceleration: 1.0,
+                maxSpeed: 2.0,
+                updateFlags: 0,
+                separationWeight: 20.0
+            }));
+        }
 
         var routes;
 
         var last = new Date().getTime();
         var animate = function animate (time) {
+            window.requestAnimationFrame(animate);
+
             recast.crowdUpdate(0.1);
             recast.crowdGetActiveAgents();
-
-            window.requestAnimationFrame(animate);
 
             last = time;
             render();
@@ -233,16 +245,20 @@ exports['handle an agent'] = function(test) {
         };
 
         var goAway = function(){
-            recast.getRandomPoint(recast.cb(function(pt2x, pt2y, pt2z){
-                recast.crowdRequestMoveTarget(id, pt2x, pt2y, pt2z);
-                if (++routes < 11) {
-                    test.ok(true, 'route ' + routes + ': to ' + Math.round(pt2x, 2) + ',' + Math.round(pt2y, 2)+ ',' + Math.round(pt2z, 2));
-                    setTimeout(goAway, 3000);
-                } else {
-                    document.getElementById('sequence').style.display = 'block';
-                    test.done();
-                }
-            }));
+            for (var i = 0; i < agentsObjects.length; i++) {
+                (function (i) {
+                    recast.getRandomPoint(recast.cb(function(pt2x, pt2y, pt2z){
+                        recast.crowdRequestMoveTarget(i, pt2x, pt2y, pt2z);
+                        if (++routes < MAX_HOPS) {
+                            test.ok(true, 'route ' + routes + ': to ' + Math.round(pt2x, 2) + ',' + Math.round(pt2y, 2)+ ',' + Math.round(pt2z, 2));
+                            setTimeout(goAway, 8000 * Math.random());
+                        } else {
+                            document.getElementById('sequence').style.display = 'block';
+                            // test.done();
+                        }
+                    }));
+                })(i);
+            }
         };
 
         sequence();
