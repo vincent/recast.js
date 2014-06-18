@@ -108,10 +108,6 @@ var Module = {
 var recast = Module;
 
 
-function in_nodejs () {
-  return (typeof module !== 'undefined' && module.exports);
-}
-
 // global on the server, window in the browser
 var root, previous_recast;
 
@@ -199,7 +195,11 @@ else {
 
 //// link worker recast module functions ////
 
-onmessage = function(event) {
+var workerMain = function(event) {
+  if (! event.data) {
+    return;
+  }
+
   var message = event.data;
 
   switch(message.type) {
@@ -369,6 +369,21 @@ onmessage = function(event) {
   }
 };
 
+if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
+  onmessage = workerMain;
+  // postMessage = postMessage;
+
+} else if (ENVIRONMENT_IS_NODE) {
+  process.on('message', function(message) {
+    workerMain(message);
+  });
+
+  postMessage = function (message) {
+    process.send({ data: message });
+  };
+
+}
+
 //// exported recast module functions ////
 
 recast.setGLContext = function (gl_context) {
@@ -414,6 +429,7 @@ recast.OBJLoader = function (path, callback) {
   if (ENVIRONMENT_IS_NODE) {
     var fs = require('fs');
     fs.readFile(path, function(err, data) {
+      if (err) throw new Error(err);
       _OBJDataLoader(data, callback);
     });
 

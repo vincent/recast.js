@@ -11,6 +11,13 @@
 
 var recast = require('../lib/recast.withworker');
 
+var ENVIRONMENT_IS_NODE = typeof process === 'object' && typeof require === 'function';
+var ENVIRONMENT_IS_WEB = typeof window === 'object';
+var ENVIRONMENT_IS_WORKER = typeof importScripts === 'function';
+var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIRONMENT_IS_WORKER;
+
+recast = new recast('../lib/recast');
+
 // Check our library is here
 exports['recast is present'] = function(test) {
     test.ok(recast, 'recast should be an object');
@@ -68,7 +75,7 @@ exports['load an .obj file'] = function(test) {
     /**
      * Load an .OBJ file
      */
-    recast.OBJLoader('/tests/nav_test.obj', recast.cb(function(){
+    recast.OBJLoader(ENVIRONMENT_IS_WEB ? '/tests/nav_test.obj' : '../tests/nav_test.obj', recast.cb(function(){
 
         /**
          * Find a random navigable point on this mesh
@@ -138,7 +145,7 @@ exports['manage the crowd'] = function(test) {
     /**
      * Load an .OBJ file
      */
-    recast.OBJLoader('/tests/nav_test.obj', recast.cb(function () {
+    recast.OBJLoader(ENVIRONMENT_IS_WEB ? '/tests/nav_test.obj' : '../tests/nav_test.obj', recast.cb(function () {
 
         recast.vent.on('update', function (agents) {
             test.ok(agents && typeof agents.length !== 'undefined', 'crowd has ' + agents.length + ' agent');
