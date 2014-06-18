@@ -164,7 +164,7 @@ var _ajax = function(url, data, callback, type) {
 var _OBJDataLoader = function (contents, callback) {
   recast.initWithFileContent(contents.toString());
   recast.build();
-  recast.initCrowd(100, 1.0);
+  recast.initCrowd(1000, 1.0);
   callback(recast);
 };
 
@@ -377,8 +377,10 @@ recast.setGLContext = function (gl_context) {
 
 
 recast.cb = function (func) {
+  recast.__RECAST_CALLBACKS.size = recast.__RECAST_CALLBACKS.size % 10;
   var last = (++recast.__RECAST_CALLBACKS.size) - 1;
   recast.__RECAST_CALLBACKS[last] = func;
+  // recast.__RECAST_CALLBACKS[last].__debug = 'callback_id#' + last;
   return last;
 };
 
@@ -480,7 +482,7 @@ AgentPool.prototype.add = function( v ) {
   this.__pools.push( v );
 };
 
-var agentPool = new AgentPool(100);
+var agentPool = new AgentPool(1000);
 var agentPoolBuffer = [];
 
 //////////////////////////////////////////
