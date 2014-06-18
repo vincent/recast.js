@@ -380,7 +380,7 @@ recast.cb = function (func) {
   recast.__RECAST_CALLBACKS.size = recast.__RECAST_CALLBACKS.size % 10;
   var last = (++recast.__RECAST_CALLBACKS.size) - 1;
   recast.__RECAST_CALLBACKS[last] = func;
-  recast.__RECAST_CALLBACKS[last].__debug = 'callback_id#' + last;
+  // recast.__RECAST_CALLBACKS[last].__debug = 'callback_id#' + last;
   return last;
 };
 

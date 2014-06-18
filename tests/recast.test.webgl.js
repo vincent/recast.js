@@ -30,7 +30,7 @@ controls.addEventListener('change', function(){
 });
 
 var agentsParam = location.search.match(/agents=(\d+)/);
-var MAX_AGENTS = agentsParam.length == 2 ? agentsParam[1] : 10;
+var MAX_AGENTS = (agentsParam && agentsParam.length == 2 ) ? agentsParam[1] : 10;
 var MAX_HOPS = 10;
 
 var agentsObjects = [];
@@ -113,7 +113,7 @@ exports['our methods are present'] = function(test) {
 exports['handle an agent'] = function(test) {
     test.expect(10);
 
-    recast.set_cellSize(0.5);
+    recast.set_cellSize(0.3);
     recast.set_cellHeight(0.8);
     recast.set_agentHeight(1.0);
     recast.set_agentRadius(0.2);
@@ -170,30 +170,32 @@ exports['handle an agent'] = function(test) {
         /**
          * Get navmesh geometry and draw it
          */
-        recast.getNavMeshVertices(recast.cb(function (vertices) {
+        if (location.search.match(/navigationmesh=1/)) {
+            recast.getNavMeshVertices(recast.cb(function (vertices) {
 
-            navigationMesh = new THREE.Object3D();
-            var materials = [ new THREE.MeshNormalMaterial() ];
+                navigationMesh = new THREE.Object3D();
+                var materials = [ new THREE.MeshNormalMaterial() ];
 
-            for (var i = 0; i < vertices.length; i++) {
-                if (!vertices[i+2]) { break; }
+                for (var i = 0; i < vertices.length; i++) {
+                    if (!vertices[i+2]) { break; }
 
-                var geometry = new THREE.ConvexGeometry([
-                    new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ), 
-                    new THREE.Vector3( vertices[i+1].x, vertices[i+1].y, vertices[i+1].z ),
-                    new THREE.Vector3( vertices[i+2].x, vertices[i+2].y, vertices[i+2].z )
-                ]);
+                    var geometry = new THREE.ConvexGeometry([
+                        new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ), 
+                        new THREE.Vector3( vertices[i+1].x, vertices[i+1].y, vertices[i+1].z ),
+                        new THREE.Vector3( vertices[i+2].x, vertices[i+2].y, vertices[i+2].z )
+                    ]);
 
-                var child = THREE.SceneUtils.createMultiMaterialObject(geometry, materials);
-                navigationMesh.add(child);
+                    var child = THREE.SceneUtils.createMultiMaterialObject(geometry, materials);
+                    navigationMesh.add(child);
 
-                i += 2;
-            }
+                    i += 2;
+                }
 
-            // scene.add(navigationMesh);
+                // scene.add(navigationMesh);
 
-            // renderer.render(scene, camera);
-        }));
+                // renderer.render(scene, camera);
+            }));
+        }
 
         recast.vent.on('update', function (agents) {
             for (var i = 0; i < agents.length; i++) {

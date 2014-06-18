@@ -39,7 +39,7 @@
     <br><br>
 
 
-    <button onclick="navigationMesh.parent ? scene.remove(navigationMesh) : scene.add(navigationMesh)">
+    <button onclick="if (! navigationMesh) { location.search += '&navigationmesh=1' } else { navigationMesh.parent ? scene.remove(navigationMesh) : scene.add(navigationMesh); }">
       Toggle navigation mesh
     </button>
    
