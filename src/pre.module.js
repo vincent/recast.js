@@ -214,6 +214,7 @@ var workerMain = function(event) {
       break;
 
     case 'config':
+    case 'settings':
       recast.set_cellSize(message.data.cellSize);
       recast.set_cellHeight(message.data.cellHeight);
       recast.set_agentHeight(message.data.agentHeight);
