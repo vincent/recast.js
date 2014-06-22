@@ -222,6 +222,7 @@ var workerMain = function(event) {
       recast.set_agentMaxClimb(message.data.agentMaxClimb);
       recast.set_agentMaxSlope(message.data.agentMaxSlope);
       postMessage({
+        vent: true,
         type: message.type,
         callback: message.callback
       });
@@ -229,6 +230,15 @@ var workerMain = function(event) {
 
     case 'OBJLoader':
       recast.OBJLoader(message.data, function() {
+        postMessage({
+          type: message.type,
+          callback: message.callback
+        });
+      });
+      break;
+
+    case 'OBJDataLoader':
+      _OBJDataLoader(message.data, function() {
         postMessage({
           type: message.type,
           callback: message.callback
@@ -309,6 +319,7 @@ var workerMain = function(event) {
         message.data.separationWeight
       );
       postMessage({
+        vent: true,
         type: message.type,
         data: [ idx ],
         callback: message.callback
@@ -335,6 +346,12 @@ var workerMain = function(event) {
 
     case 'removeCrowdAgent':
       recast.removeCrowdAgent(message.data);
+      postMessage({
+        vent: true,
+        type: message.type,
+        data: [ message.data ],
+        callback: message.callback
+      });
       break;
 
     case 'crowdRequestMoveTarget':
@@ -343,20 +360,20 @@ var workerMain = function(event) {
 
     case 'crowdUpdate':
       recast.crowdUpdate(message.data);
-      if (message.callback) {
-        recast._crowdGetActiveAgents(recast.cb(function(){
-          postMessage({
-            type: message.type,
-            data: [ agentPoolBuffer ],
-            callback: message.callback
-          });
-        }));
-      }
+      recast._crowdGetActiveAgents(recast.cb(function(){
+        postMessage({
+          vent: true,
+          type: message.type,
+          data: [ agentPoolBuffer ],
+          callback: message.callback
+        });
+      }));
       break;
 
     case 'crowdGetActiveAgents':
       recast._crowdGetActiveAgents(! message.callback ? -1 : recast.cb(function(){
         postMessage({
+          vent: true,
           type: message.type,
           data: [ agentPoolBuffer ],
           callback: message.callback
@@ -423,6 +440,10 @@ recast.settings = function (options) {
   recast.set_agentRadius(options.agentRadius);
   recast.set_agentMaxClimb(options.agentMaxClimb);
   recast.set_agentMaxSlope(options.agentMaxSlope);
+};
+
+recast.OBJDataLoader = function (data, callback) {
+  _OBJDataLoader(data, callback);
 };
 
 recast.OBJLoader = function (path, callback) {
