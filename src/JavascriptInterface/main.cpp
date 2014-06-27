@@ -529,7 +529,7 @@ void findNearestPoint(float cx, float cy, float cz,
     }
 }
 
-void setPolyUnwalkable(float posX, float posY, float posZ, float extendX, float extendY, float extendZ, unsigned short flags)
+void setPolyFlags(float posX, float posY, float posZ, float extendX, float extendY, float extendZ, unsigned short flags)
 {
     dtQueryFilter filter;
     filter.setIncludeFlags(3);
@@ -1278,7 +1278,7 @@ EMSCRIPTEN_BINDINGS(my_module) {
     function("findNearestPoly", &findNearestPoly);
     function("findNearestPoint", &findNearestPoint);
     function("findPath", &findPath);
-    function("setPolyUnwalkable", &setPolyUnwalkable);
+    function("setPolyFlags", &setPolyFlags);
     function("getRandomPoint", &getRandomPoint);
 
     function("initCrowd", &initCrowd);

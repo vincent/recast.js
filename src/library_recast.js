@@ -18,7 +18,7 @@
         postMessage({
           type: 'update',
           vent: true,
-          data: [ agentPoolBuffer ]
+          data: agentPoolBuffer
         });
       }
     },

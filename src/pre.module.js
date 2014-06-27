@@ -302,8 +302,14 @@ var workerMain = function(event) {
       }));
       break;
 
-    case 'setPolyUnwalkable':
-      recast.setPolyUnwalkable(message.data.sx, message.data.sy, message.data.sz, message.data.dx, message.data.dy, message.data.dz, message.data.flags);
+    case 'setPolyFlags':
+      recast.setPolyFlags(message.data.sx, message.data.sy, message.data.sz, message.data.dx, message.data.dy, message.data.dz, message.data.flags);
+      postMessage({
+        vent: true,
+        type: message.type,
+        data: message.data,
+        callback: message.callback
+      });
       break;
 
     case 'addCrowdAgent':
@@ -360,9 +366,8 @@ var workerMain = function(event) {
 
     case 'crowdUpdate':
       recast.crowdUpdate(message.data);
-      recast._crowdGetActiveAgents(recast.cb(function(){
+      recast._crowdGetActiveAgents(! message.callback ? -1 : recast.cb(function(){
         postMessage({
-          vent: true,
           type: message.type,
           data: [ agentPoolBuffer ],
           callback: message.callback
@@ -474,6 +479,18 @@ recast.addAgent = function (options) {
     options.maxSpeed,
     options.updateFlags,
     options.separationWeight
+  );
+};
+
+recast.findNearest = function (position, callback_id) {
+  return recast.findNearestPoint(
+    position.x,
+    position.y,
+    position.z,
+    3,
+    3,
+    3,
+    callback_id
   );
 };
 
