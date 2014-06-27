@@ -54,7 +54,7 @@ dtCrowd* m_crowd;
 
 unsigned char m_navMeshDrawFlags;
 
-bool m_keepInterResults = true;
+bool m_keepInterResults = false;
 float m_totalBuildTimeMs;
 
 int randModulo = 0;
