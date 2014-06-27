@@ -1,10 +1,9 @@
 /*jshint onevar: false, indent:4, strict: false */
-/*global setImmediate: false, setTimeout: false, console: false, module: true, process: true, define: true, onmessage: true */
+/*global setImmediate: false, setTimeout: false, console: false, module: true, process: true, define: true, onmessage: true, postMessage: true, require: true */
 
 var ENVIRONMENT_IS_NODE = typeof process === 'object' && typeof require === 'function';
 var ENVIRONMENT_IS_WEB = typeof window === 'object';
 var ENVIRONMENT_IS_WORKER = typeof importScripts === 'function';
-var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIRONMENT_IS_WORKER;
 
 /**
  * Tiny event emitter for Node.js and the browser
@@ -128,13 +127,13 @@ recast.deferEmit = recast.vent.deferEmit;
 
 var _ajax = function(url, data, callback, type) {
   var data_array, data_string, idx, req, value;
-  if (data == null) {
+  if (! data) {
     data = {};
   }
-  if (callback == null) {
+  if (! callback) {
     callback = function() {};
   }
-  if (type == null) {
+  if (! type) {
     //default to a GET request
     type = 'GET';
   }
@@ -272,7 +271,7 @@ var workerMain = function(event) {
         message.data.extend.x,
         message.data.extend.y,
         message.data.extend.z,
-        recast.cb(function(points){
+        recast.cb(function(){
           postMessage({
             type: message.type,
             data: Array.prototype.slice.call(arguments),
@@ -402,7 +401,9 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
   });
 
   postMessage = function (message) {
-    process.send({ data: message });
+    if (process.send) { // not in the main process
+      process.send({ data: message });
+    }
   };
 
 }
@@ -511,7 +512,10 @@ function AgentPool (n) {
 }
 
 // Get a new array
-AgentPool.prototype.get = function(idx,position_x,position_y,position_z,velocity_x,velocity_y,velocity_z,radius,active,state,neighbors) {
+AgentPool.prototype.get = function(idx,position_x,position_y,position_z,
+                                   velocity_x,velocity_y,velocity_z,
+                                   radius,active,state,neighbors)
+{
   if ( this.__pools.length > 0 ) {
     var ag = this.__pools.pop();
     ag.idx = idx;
@@ -539,6 +543,7 @@ AgentPool.prototype.add = function( v ) {
 
 var agentPool = new AgentPool(1000);
 var agentPoolBuffer = [];
+agentPool.ready = true; // just to make jshint happy
 
 //////////////////////////////////////////
 
@@ -574,5 +579,6 @@ VectorPool.prototype.add = function( v ) {
 };
 
 var vectorPool = new VectorPool(10000);
+vectorPool.ready = true; // just to make jshint happy 
 
 //////////////////////////////////////////

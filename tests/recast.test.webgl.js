@@ -229,9 +229,7 @@ exports['handle an agent'] = function(test) {
         var animate = function animate (time) {
             window.requestAnimationFrame(animate);
 
-            recast.crowdUpdate(0.1, recast.cb(function(){
-                test.ok(true, 'one can get back the crowd from crowdUpdate'); 
-            }));
+            recast.crowdUpdate(0.1);
             recast.crowdGetActiveAgents();
 
             last = time;

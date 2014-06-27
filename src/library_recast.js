@@ -14,7 +14,7 @@
 
     flush_active_agents_callback: function() {
       Module.vent.emit('update', agentPoolBuffer);
-      if (ENVIRONMENT_IS_WORKER) {
+      if (typeof window === 'undefined' || typeof importScripts === 'function') {
         postMessage({
           type: 'update',
           vent: true,
