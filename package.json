@@ -5,7 +5,7 @@
   "main": "./lib/recast",
   "scripts": {
     "build": "make build",
-    "test": "cd tests && nodeunit recast.tests.js && nodeunit recast.withworker.tests.js"
+    "test": "cd tests && ../node_modules/.bin/nodeunit recast.tests.js && ../node_modules/.bin/nodeunit recast.withworker.tests.js"
   },
   "repository": {
     "type": "git",
