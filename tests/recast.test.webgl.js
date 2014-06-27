@@ -111,7 +111,7 @@ exports['our methods are present'] = function(test) {
 
 // Check file loading
 exports['handle an agent'] = function(test) {
-    test.expect(10);
+    test.expect(11);
 
     recast.set_cellSize(0.3);
     recast.set_cellHeight(0.8);
@@ -229,7 +229,9 @@ exports['handle an agent'] = function(test) {
         var animate = function animate (time) {
             window.requestAnimationFrame(animate);
 
-            recast.crowdUpdate(0.1);
+            recast.crowdUpdate(0.1, recast.cb(function(){
+                test.ok(true, 'one can get back the crowd from crowdUpdate'); 
+            }));
             recast.crowdGetActiveAgents();
 
             last = time;

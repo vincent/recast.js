@@ -40,6 +40,8 @@ exports['our methods are present'] = function(test) {
     test.ok(recast.findPath, 'findPath');
     test.ok(recast.getRandomPoint, 'getRandomPoint');
 
+    test.ok(recast.getNavMeshVertices, 'getNavMeshVertices');
+
     test.ok(recast.addCrowdAgent, 'addCrowdAgent');
     test.ok(recast.updateCrowdAgentParameters, 'updateCrowdAgentParameters');
     test.ok(recast.requestMoveVelocity, 'requestMoveVelocity');
@@ -122,7 +124,7 @@ exports['load an .obj file'] = function(test) {
 
 // Check file loading
 exports['manage the crowd'] = function(test) {
-    test.expect(6);
+    test.expect(8);
 
     recast.set_cellSize(1.0);
     recast.set_cellHeight(2.0);
