@@ -77,7 +77,7 @@ exports['load an .obj file'] = function(test) {
     /**
      * Load an .OBJ file
      */
-    recast.OBJLoader(ENVIRONMENT_IS_WEB ? '/tests/nav_test.obj' : '../tests/nav_test.obj', recast.cb(function(){
+    recast.OBJLoader(ENVIRONMENT_IS_WEB ? '/tests/simple.obj' : '../tests/simple.obj', recast.cb(function(){
 
         /**
          * Find a random navigable point on this mesh
@@ -147,7 +147,7 @@ exports['manage the crowd'] = function(test) {
     /**
      * Load an .OBJ file
      */
-    recast.OBJLoader(ENVIRONMENT_IS_WEB ? '/tests/nav_test.obj' : '../tests/nav_test.obj', recast.cb(function () {
+    recast.OBJLoader(ENVIRONMENT_IS_WEB ? '/tests/simple.obj' : '../tests/simple.obj', recast.cb(function () {
 
         recast.vent.on('update', function (agents) {
             test.ok(agents && typeof agents.length !== 'undefined', 'crowd has ' + agents.length + ' agent');

@@ -68,7 +68,7 @@ exports['load an .obj file'] = function(test) {
     /**
      * Load an .OBJ file
      */
-    recast.OBJLoader('nav_test.obj', function(){
+    recast.OBJLoader('simple.obj', function(){
 
         /**
          * Find a random navigable point on this mesh
@@ -138,7 +138,7 @@ exports['manage the crowd'] = function(test) {
     /**
      * Load an .OBJ file
      */
-    recast.OBJLoader('nav_test.obj', function () {
+    recast.OBJLoader('simple.obj', function () {
 
         recast.vent.on('update', function (agents) {
             test.ok(agents && typeof agents.length !== 'undefined', 'crowd has ' + agents.length + ' agent');
