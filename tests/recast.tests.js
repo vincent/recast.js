@@ -40,7 +40,7 @@ exports['our methods are present'] = function(test) {
     test.ok(recast.crowdRequestMoveTarget, 'crowdRequestMoveTarget');
     test.ok(recast.crowdUpdate, 'crowdUpdate');
     test.ok(recast.crowdGetActiveAgents, 'crowdGetActiveAgents');
-    test.done();
+    test.done('');
 };
 
 // Check file loading
