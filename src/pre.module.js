@@ -281,6 +281,25 @@ var workerMain = function(event) {
       );
       break;
 
+    case 'queryPolygons':
+      recast.queryPolygons(
+        message.data.position.x,
+        message.data.position.y,
+        message.data.position.z,
+        message.data.extend.x,
+        message.data.extend.y,
+        message.data.extend.z,
+        message.data.maxPolys,
+        recast.cb(function(){
+          postMessage({
+            type: message.type,
+            data: Array.prototype.slice.call(arguments),
+            callback: message.callback
+          });
+        })
+      );
+      break;
+
     case 'findPath':
       recast.findPath(message.data.sx, message.data.sy, message.data.sz, message.data.dx, message.data.dy, message.data.dz, message.data.max, recast.cb(function(path){
         postMessage({
@@ -513,6 +532,15 @@ recast.findNearest = function (position, callback_id) {
 recast.crowdGetActiveAgents = function (callback_id) {
   return recast._crowdGetActiveAgents(callback_id || -1);
 };
+
+recast.queryPolygons = function (posX, posY, posZ, extX, extY, extZ, maxPolys, callback_id) {
+  if (typeof callback_id === 'undefined' && typeof maxPolys === 'number') {
+      callback_id = maxPolys;
+      maxPolys = 1000;
+  }
+  return recast._queryPolygons(posX, posY, posZ, extX, extY, extZ, maxPolys, callback_id);
+};
+
 
 //////////////////////////////////////////
 

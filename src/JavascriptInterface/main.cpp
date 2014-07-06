@@ -420,6 +420,35 @@ void getRandomPoint(int callback)
     // free(buff);
 }
 
+std::string recastjsPolyJSON(const dtPoly* poly, const dtMeshTile* tile)
+{
+    std::string data;
+    data = "{";
+
+    char successbuff[128 * poly->vertCount];
+
+    sprintf(successbuff, "\"x\":%u,\"y\":%u,\"layer\":%u,\"flags\":%u,\"area\":%u,", tile->header->x, tile->header->y, tile->header->layer, poly->flags, poly->getArea());
+    data += successbuff;
+
+    // float* centroid;
+    // dtCalcPolyCenter(centroid, poly->verts, poly->vertCount, tile->verts);
+    // sprintf(successbuff, "\"centroid\":{\"x\":%f,\"y\":%f,\"z\":%f},", centroid[0], centroid[1], centroid[2]);
+    // data += successbuff;
+
+    data += "\"vertices\":[";
+        
+    for (int i = 0; i < (int)poly->vertCount; i++) {
+        float* v = &tile->verts[poly->verts[i]*3];
+
+        sprintf(successbuff, "{\"x\":%f,\"y\":%f,\"z\":%f}%s", v[0], v[1], v[2], (i == poly->vertCount - 1) ? "" : ",");
+        data += successbuff;
+    }
+
+    data += "]}";
+
+    return data;
+}
+
 void findNearestPoly(float cx, float cy, float cz,
                     float ex, float ey, float ez,
                      /*const dtQueryFilter* filter,
@@ -446,42 +475,15 @@ void findNearestPoly(float cx, float cy, float cz,
 
         const dtMeshTile* tile = 0;
         const dtPoly* poly = 0;
-        findStatus = m_navMesh->getTileAndPolyByRef(ref, &tile, &poly);
+        m_navMesh->getTileAndPolyByRefUnsafe(ref, &tile, &poly);
 
-        if (dtStatusFailed(findStatus)) {
-            printf("Cannot get tile and poly by ref #%u : %u \n", ref, findStatus);
+        std::string data = recastjsPolyJSON(poly, tile);
 
-        } else {
-
-            // sprintf(buff, "got nearestPoly #%u", ref);
-            // emscripten_log(buff);
-
-            std::string data;
-            data = "{";
-
-            char successbuff[128 * poly->vertCount];
-
-            sprintf(successbuff, "\"x\":%u,\"y\":%u,\"layer\":%u,\"flags\":%u,\"area\":%u,", tile->header->x, tile->header->y, tile->header->layer, poly->flags, poly->getArea());
-            data += successbuff;
-
-            data += "\"vertices\":[";
-                
-            for (int i = 0; i < (int)poly->vertCount; i++) {
-                float* v = &tile->verts[poly->verts[i]*3];
-
-                sprintf(successbuff, "{\"x\":%f,\"y\":%f,\"z\":%f}%s", v[0], v[1], v[2], (i == poly->vertCount - 1) ? "" : ",");
-                data += successbuff;
-            }
-
-            data += "]}";
-
-            invoke_generic_callback_string(callback, data.c_str());
-            return;
-        }
+        invoke_generic_callback_string(callback, data.c_str());
+        return;
     }
 
     invoke_generic_callback_string(callback, "null");
-    return;
 }
 
 void findNearestPoint(float cx, float cy, float cz,
@@ -536,6 +538,48 @@ void setPolyFlags(float posX, float posY, float posZ, float extendX, float exten
     }
 }
 
+void _queryPolygons(float posX, float posY, float posZ,
+                    float extX, float extY, float extZ,
+                    const int maxPolys, int callback)
+{
+    float center[3]  = { posX, posY, posZ };
+    float extents[3] = { extX, extY, extZ };
+
+    dtStatus findStatus;
+
+    dtPolyRef polys[maxPolys];
+    int polyCount;
+
+    dtQueryFilter filter;
+    filter.setIncludeFlags(3);
+    filter.setExcludeFlags(0);
+
+    findStatus = m_navQuery->queryPolygons(center, extents, &filter, polys, &polyCount, maxPolys);
+
+    std::string data;
+    data = "[";
+
+    if (dtStatusFailed(findStatus)) {
+        printf("Cannot query polygons: %u\n", findStatus);
+
+    } else {
+
+        for (int p = 0; p < (int)polyCount; p++) {
+
+            const dtMeshTile* tile = 0;
+            const dtPoly* poly = 0;
+            m_navMesh->getTileAndPolyByRefUnsafe(polys[p], &tile, &poly);
+            data += recastjsPolyJSON(poly, tile) + (p == polyCount - 1 ? "" : ",");
+        }
+
+        data += "]";
+
+        invoke_generic_callback_string(callback, data.c_str());
+        return;
+    }
+
+    invoke_generic_callback_string(callback, "null");
+}
 
 void findPath(float startPosX, float startPosY, float startPosZ,
                 float endPosX, float endPosY, float endPosZ, int maxPath,
@@ -1263,6 +1307,7 @@ EMSCRIPTEN_BINDINGS(my_module) {
     function("findPath", &findPath);
     function("setPolyFlags", &setPolyFlags);
     function("getRandomPoint", &getRandomPoint);
+    function("_queryPolygons", &_queryPolygons);
 
     function("initCrowd", &initCrowd);
     function("addCrowdAgent", &addCrowdAgent);

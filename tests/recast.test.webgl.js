@@ -208,48 +208,63 @@ exports['handle an agent'] = function(test) {
             }));
         }
 
-        var polyMesh, lastPolyPosition;
-        var paintPoly = function(polygon){
+        var polyMesh, polyGrp, polys = {}, polyGrpIndex = 0;
+        var paintPolys = function(polygons){
             // poly.faces[].color.setRGB(Math.random(), Math.random(), Math.random());
 
-            if (! polygon || lastPolyPosition === polygon.vertices[2].z) {
+            if (! polygons) {
                 return;
             }
 
-            if (1 || ! polyMesh) {
+            if (1 || ! polyGrp) {
 
-                polyMesh = new THREE.Mesh(
-                    new THREE.Geometry(),
-                    new THREE.MeshBasicMaterial({
-                        color: 0x00ff00,
-                        shading: THREE.FlatShading,
-                        // side: THREE.DoubleSide,
-                        wireframe: false,
-                        transparent: false,
-                        // vertexColors: THREE.FaceColors, // CHANGED
-                        overdraw: true
-                    })
-                );
+                polyGrpIndex++;
+                if (polyGrpIndex > 200) {
+                    polyGrp = new THREE.Object3D();
 
-                lastPolyPosition = polygon.vertices[2].z;
+                    for (var i = 0; i < polygons.length; i++) {
 
-                polyMesh.geometry.vertices.push(new THREE.Vector3());
-                polyMesh.geometry.vertices.push(new THREE.Vector3());
-                polyMesh.geometry.vertices.push(new THREE.Vector3());
+                        var polygon = polygons[i];
+                        var key = polygon.vertices[0].x + '-' + polygon.vertices[0].y + '-' + polygon.vertices[0].z + '-' + polygon.vertices[1].x + '-' + polygon.vertices[1].y + '-' + polygon.vertices[1].z + '-' + polygon.vertices[2].x + '-' + polygon.vertices[2].y + '-' + polygon.vertices[2].z;
 
-                polyMesh.geometry.faces.push( new THREE.Face3( 0, 1, 2 ) );
+                        if (polys[key]) {
+                            continue;
+                        }
 
-                scene.add(polyMesh);
+                        polyMesh = new THREE.Mesh(
+                            new THREE.Geometry(),
+                            new THREE.MeshBasicMaterial({
+                                color: 0xff0000,
+                                shading: THREE.FlatShading,
+                                // side: THREE.DoubleSide,
+                                wireframe: false,
+                                transparent: false,
+                                // vertexColors: THREE.FaceColors, // CHANGED
+                                overdraw: true
+                            })
+                        );
+
+                        polys[key] = polyMesh;
+
+                        polyMesh.geometry.vertices.push(new THREE.Vector3( polygon.vertices[0].x, polygon.vertices[0].y, polygon.vertices[0].z ));
+                        polyMesh.geometry.vertices.push(new THREE.Vector3( polygon.vertices[1].x, polygon.vertices[1].y, polygon.vertices[1].z ));
+                        polyMesh.geometry.vertices.push(new THREE.Vector3( polygon.vertices[2].x, polygon.vertices[2].y, polygon.vertices[2].z ));
+
+                        polyMesh.geometry.faces.push( new THREE.Face3( 0, 1, 2 ) );
+
+                        // Make this poly unwalkable
+                        recast.setPolyFlags(
+                            polygon.vertices[0].x,
+                            polygon.vertices[0].y,
+                            polygon.vertices[0].z,
+                            2, 2, 2,
+                            0
+                        );
+
+                        scene.add(polyMesh);
+                    }
+                }
             }
-
-            polyMesh.material.color.set(0xff0000);
-            
-            polyMesh.geometry.vertices[0].set( polygon.vertices[0].x, polygon.vertices[0].y, polygon.vertices[0].z );
-            polyMesh.geometry.vertices[1].set( polygon.vertices[1].x, polygon.vertices[1].y, polygon.vertices[1].z );
-            polyMesh.geometry.vertices[2].set( polygon.vertices[2].x, polygon.vertices[2].y, polygon.vertices[2].z );
-
-            polyMesh.geometry.computeFaceNormals();
-            polyMesh.geometry.verticesNeedUpdate = true;
         };
 
         var circleMesh;
@@ -290,21 +305,20 @@ exports['handle an agent'] = function(test) {
 
                 if (agent.idx === 0) {
 
-                    recast.findNearestPoly(
+                    // recast.findNearestPoly(
+                    //     agentsObjects[agent.idx].position.x,
+                    //     agentsObjects[agent.idx].position.y,
+                    //     agentsObjects[agent.idx].position.z,
+                    //     2, 2, 2,
+                    //     recast.cb(paintPoly)
+                    // );
+
+                    recast.queryPolygons(
                         agentsObjects[agent.idx].position.x,
                         agentsObjects[agent.idx].position.y,
                         agentsObjects[agent.idx].position.z,
-                        2, 2, 2,
-                        recast.cb(paintPoly)
-                    );
-
-                    // Make this poly unwalkable
-                    if (agent.neighbors === 0) recast.setPolyFlags(
-                        agent.position.x, 
-                        agent.position.y, 
-                        agent.position.z,
-                        2, 2, 2,
-                        0
+                        0.3, 0.3, 0.3,
+                        recast.cb(paintPolys)
                     );
 
                     // recast.findNearestPoint(
