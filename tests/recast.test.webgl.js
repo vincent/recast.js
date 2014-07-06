@@ -37,13 +37,15 @@ var agentsObjects = [];
 var scene = new THREE.Scene();
 
 var agentGeometry = new THREE.CylinderGeometry(0.2, 0.5, 2);
-var agentMaterial = new THREE.MeshBasicMaterial({
-  color: '#FF0000'
-});
 
 for (var i = 0; i < MAX_AGENTS; i++) {
     var agent = new THREE.Object3D();
-    var agentBody = new THREE.Mesh(agentGeometry, agentMaterial);
+    var agentBody = new THREE.Mesh(
+        agentGeometry,
+        new THREE.MeshBasicMaterial({
+          color: '#FF0000'
+        })
+    );
     agentBody.position.y = 1;
     agent.add(agentBody);
 
@@ -114,7 +116,7 @@ exports['handle an agent'] = function(test) {
     test.expect(11);
 
     recast.set_cellSize(0.3);
-    recast.set_cellHeight(0.8);
+    recast.set_cellHeight(0.1);
     recast.set_agentHeight(1.0);
     recast.set_agentRadius(0.2);
     recast.set_agentMaxClimb(4.0);
@@ -174,7 +176,16 @@ exports['handle an agent'] = function(test) {
             recast.getNavMeshVertices(recast.cb(function (vertices) {
 
                 navigationMesh = new THREE.Object3D();
-                var materials = [ new THREE.MeshNormalMaterial() ];
+                // var materials = [ new THREE.MeshNormalMaterial() ];
+                var materials = [ new THREE.MeshBasicMaterial({
+                    color: 0x000055,
+                    shading: THREE.FlatShading,
+                    side: THREE.DoubleSide,
+                    wireframe: false,
+                    transparent: true,
+                    opacity: 0.3,
+                    overdraw: true
+                }) ];
 
                 for (var i = 0; i < vertices.length; i++) {
                     if (!vertices[i+2]) { break; }
@@ -197,10 +208,96 @@ exports['handle an agent'] = function(test) {
             }));
         }
 
+        var polyMesh, polyMeshMaterials;
+        var paintPoly = function(polygon){
+            // poly.faces[].color.setRGB(Math.random(), Math.random(), Math.random());
+
+            if (! polyMesh) {
+
+                polyMesh = new THREE.Mesh(
+                    new THREE.Geometry(),
+                    new THREE.MeshBasicMaterial({
+                        color: 0x00ff00,
+                        shading: THREE.FlatShading,
+                        // side: THREE.DoubleSide,
+                        wireframe: false,
+                        transparent: false,
+                        // vertexColors: THREE.FaceColors, // CHANGED
+                        overdraw: true
+                    })
+                );
+
+                polyMesh.geometry.vertices.push(new THREE.Vector3());
+                polyMesh.geometry.vertices.push(new THREE.Vector3());
+                polyMesh.geometry.vertices.push(new THREE.Vector3());
+
+                polyMesh.geometry.faces.push( new THREE.Face3( 0, 1, 2 ) );
+
+                scene.add(polyMesh);
+            }
+            
+            polyMesh.geometry.vertices[0].set( polygon.vertices[0].x, polygon.vertices[0].y, polygon.vertices[0].z );
+            polyMesh.geometry.vertices[1].set( polygon.vertices[1].x, polygon.vertices[1].y, polygon.vertices[1].z );
+            polyMesh.geometry.vertices[2].set( polygon.vertices[2].x, polygon.vertices[2].y, polygon.vertices[2].z );
+
+            polyMesh.geometry.computeFaceNormals();
+            polyMesh.geometry.verticesNeedUpdate = true;
+        };
+
+        var circleMesh;
+        var paintCircle = function(pointX, pointY, pointZ){
+
+            if (! circleMesh) {
+                circleMesh = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.8, 0.8, 0.2),
+                    new THREE.MeshBasicMaterial({
+                        color: 0x00ff00,
+                        shading: THREE.FlatShading,
+                        // side: THREE.DoubleSide,
+                        wireframe: false,
+                        transparent: false,
+                        // vertexColors: THREE.FaceColors, // CHANGED
+                        overdraw: true
+                    })
+                );
+
+                scene.add(circleMesh);
+            }
+
+            circleMesh.position.set(pointX, pointY, pointZ);
+        };
+
         recast.vent.on('update', function (agents) {
             for (var i = 0; i < agents.length; i++) {
-                var pos = agents[i].position;
-                agentsObjects[i].position.set(pos.x, pos.y, pos.z);
+                var agent = agents[i];
+
+                agentsObjects[agent.idx].position.set(
+                    agent.position.x, 
+                    agent.position.y, 
+                    agent.position.z
+                );
+
+                var color = agent.neighbors * 128;
+                agentsObjects[agent.idx].children[0].material.color.set(color, color, color);
+
+                if (agent.idx === 0) {
+
+                    recast.findNearestPoly(
+                        agentsObjects[agent.idx].position.x,
+                        agentsObjects[agent.idx].position.y,
+                        agentsObjects[agent.idx].position.z,
+                        2, 2, 2,
+                        recast.cb(paintPoly)
+                    );
+
+                    // recast.findNearestPoint(
+                    //     agentsObjects[agent.idx].position.x,
+                    //     agentsObjects[agent.idx].position.y,
+                    //     agentsObjects[agent.idx].position.z,
+                    //     2, 2, 2,
+                    //     recast.cb(paintCircle)
+                    // );
+                }
             }
         });
 
@@ -218,7 +315,7 @@ exports['handle an agent'] = function(test) {
                 height: 0.5,
                 maxAcceleration: 1.0,
                 maxSpeed: 2.0,
-                updateFlags: 0,
+                updateFlags: 0, // & recast.CROWD_OBSTACLE_AVOIDANCE, // & recast.CROWD_ANTICIPATE_TURNS & recast.CROWD_OPTIMIZE_TOPO & recast.CROWD_SEPARATION,
                 separationWeight: 20.0
             }));
         }
