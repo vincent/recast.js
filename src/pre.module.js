@@ -410,6 +410,13 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
 
 //// exported recast module functions ////
 
+// UpdateFlags
+recast.CROWD_ANTICIPATE_TURNS   = 1;
+recast.CROWD_OBSTACLE_AVOIDANCE = 2;
+recast.CROWD_SEPARATION         = 4;
+recast.CROWD_OPTIMIZE_VIS       = 8;          ///< Use #dtPathCorridor::optimizePathVisibility() to optimize the agent path.
+recast.CROWD_OPTIMIZE_TOPO      = 16;        ///< Use dtPathCorridor::optimizePathTopology() to optimize the agent path.
+
 recast.setGLContext = function (gl_context) {
   recast.glContext = gl_context;
 };
@@ -514,21 +521,24 @@ function AgentPool (n) {
 // Get a new array
 AgentPool.prototype.get = function(idx,position_x,position_y,position_z,
                                    velocity_x,velocity_y,velocity_z,
-                                   radius,active,state,neighbors)
+                                   radius,active,state,neighbors,
+                                   partial, desiredSpeed)
 {
   if ( this.__pools.length > 0 ) {
     var ag = this.__pools.pop();
-    ag.idx = idx;
-    ag.position.x = position_x;
-    ag.position.y = position_y;
-    ag.position.z = position_z;
-    ag.velocity.x = velocity_x;
-    ag.velocity.y = velocity_y;
-    ag.velocity.z = velocity_z;
-    ag.radius = radius;
-    ag.active = active;
-    ag.state = state;
-    ag.neighbors = neighbors;
+    ag.idx          = idx;
+    ag.position.x   = position_x;
+    ag.position.y   = position_y;
+    ag.position.z   = position_z;
+    ag.velocity.x   = velocity_x;
+    ag.velocity.y   = velocity_y;
+    ag.velocity.z   = velocity_z;
+    ag.radius       = radius;
+    ag.active       = active;
+    ag.state        = state;
+    ag.neighbors    = neighbors;
+    ag.partial      = partial;
+    ag.desiredSpeed = desiredSpeed;
     return ag;
   }
 

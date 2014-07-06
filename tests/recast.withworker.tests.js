@@ -37,6 +37,7 @@ exports['our methods are present'] = function(test) {
     test.ok(recast.initCrowd, 'initCrowd');
     test.ok(recast.initWithFileContent, 'initWithFileContent');
     test.ok(recast.findNearestPoint, 'findNearestPoint');
+    test.ok(recast.findNearestPoint, 'findNearestPoly');
     test.ok(recast.findPath, 'findPath');
     test.ok(recast.getRandomPoint, 'getRandomPoint');
 

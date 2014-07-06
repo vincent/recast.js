@@ -8,7 +8,7 @@ NODELINT = $(CWD)/node_modules/nodelint/nodelint
 BUILDDIR = lib
 
 CC = $(EMSCRIPTEN_ROOT)/emcc
-FASTCOMPILER = EMCC_FAST_COMPILER=1
+# FASTCOMPILER = EMCC_FAST_COMPILER=0
 
 # PATH TO EMCC
 # LLVM = /usr/local/opt/llvm/bin
