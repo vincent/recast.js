@@ -49,6 +49,13 @@ for (var i = 0; i < MAX_AGENTS; i++) {
     agentBody.position.y = 1;
     agent.add(agentBody);
 
+    agent.arrowHelper = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 1),
+        new THREE.Vector3(0, 0, 0),
+        1.5,
+        0xffff00);
+    agent.add(agent.arrowHelper);
+
     agentsObjects.push(agent);
     scene.add(agent);
 }
@@ -294,11 +301,22 @@ exports['handle an agent'] = function(test) {
             for (var i = 0; i < agents.length; i++) {
                 var agent = agents[i];
 
+                var angle = Math.atan2(- agent.velocity.z, agent.velocity.x);
+                if (Math.abs(agentsObjects[agent.idx].rotation.y - angle) > 0) {
+                    agentsObjects[agent.idx].rotation.y = angle;
+                }
+                
                 agentsObjects[agent.idx].position.set(
                     agent.position.x, 
                     agent.position.y, 
                     agent.position.z
                 );
+
+                // agentsObjects[agent.idx].arrowHelper.setDirection(
+                //     agent.velocity.x * 100, 
+                //     agent.velocity.y * 100, 
+                //     agent.velocity.z * 100
+                // );
 
                 var color = agent.neighbors * 128;
                 agentsObjects[agent.idx].children[0].material.color.set(color, color, color);
