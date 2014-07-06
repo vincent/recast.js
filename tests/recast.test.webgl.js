@@ -208,11 +208,15 @@ exports['handle an agent'] = function(test) {
             }));
         }
 
-        var polyMesh, polyMeshMaterials;
+        var polyMesh, lastPolyPosition;
         var paintPoly = function(polygon){
             // poly.faces[].color.setRGB(Math.random(), Math.random(), Math.random());
 
-            if (! polyMesh) {
+            if (! polygon || lastPolyPosition === polygon.vertices[2].z) {
+                return;
+            }
+
+            if (1 || ! polyMesh) {
 
                 polyMesh = new THREE.Mesh(
                     new THREE.Geometry(),
@@ -227,6 +231,8 @@ exports['handle an agent'] = function(test) {
                     })
                 );
 
+                lastPolyPosition = polygon.vertices[2].z;
+
                 polyMesh.geometry.vertices.push(new THREE.Vector3());
                 polyMesh.geometry.vertices.push(new THREE.Vector3());
                 polyMesh.geometry.vertices.push(new THREE.Vector3());
@@ -235,6 +241,8 @@ exports['handle an agent'] = function(test) {
 
                 scene.add(polyMesh);
             }
+
+            polyMesh.material.color.set(0xff0000);
             
             polyMesh.geometry.vertices[0].set( polygon.vertices[0].x, polygon.vertices[0].y, polygon.vertices[0].z );
             polyMesh.geometry.vertices[1].set( polygon.vertices[1].x, polygon.vertices[1].y, polygon.vertices[1].z );
@@ -290,6 +298,15 @@ exports['handle an agent'] = function(test) {
                         recast.cb(paintPoly)
                     );
 
+                    // Make this poly unwalkable
+                    if (agent.neighbors === 0) recast.setPolyFlags(
+                        agent.position.x, 
+                        agent.position.y, 
+                        agent.position.z,
+                        2, 2, 2,
+                        0
+                    );
+
                     // recast.findNearestPoint(
                     //     agentsObjects[agent.idx].position.x,
                     //     agentsObjects[agent.idx].position.y,
@@ -315,7 +332,7 @@ exports['handle an agent'] = function(test) {
                 height: 0.5,
                 maxAcceleration: 1.0,
                 maxSpeed: 2.0,
-                updateFlags: 0, // & recast.CROWD_OBSTACLE_AVOIDANCE, // & recast.CROWD_ANTICIPATE_TURNS & recast.CROWD_OPTIMIZE_TOPO & recast.CROWD_SEPARATION,
+                updateFlags: 0, // && recast.CROWD_OBSTACLE_AVOIDANCE, // & recast.CROWD_ANTICIPATE_TURNS & recast.CROWD_OPTIMIZE_TOPO & recast.CROWD_SEPARATION,
                 separationWeight: 20.0
             }));
         }

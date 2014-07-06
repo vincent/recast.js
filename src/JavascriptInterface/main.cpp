@@ -124,29 +124,6 @@ enum SamplePolyFlags
     SAMPLE_POLYFLAGS_DISABLED   = 0x10,     // Disabled polygon
     SAMPLE_POLYFLAGS_ALL        = 0xffff    // All abilities.
 };
-enum DrawMode
-{
-    DRAWMODE_NAVMESH,
-    DRAWMODE_NAVMESH_TRANS,
-    DRAWMODE_NAVMESH_BVTREE,
-    DRAWMODE_NAVMESH_NODES,
-    DRAWMODE_NAVMESH_INVIS,
-    DRAWMODE_MESH,
-    DRAWMODE_VOXELS,
-    DRAWMODE_VOXELS_WALKABLE,
-    DRAWMODE_COMPACT,
-    DRAWMODE_COMPACT_DISTANCE,
-    DRAWMODE_COMPACT_REGIONS,
-    DRAWMODE_REGION_CONNECTIONS,
-    DRAWMODE_RAW_CONTOURS,
-    DRAWMODE_BOTH_CONTOURS,
-    DRAWMODE_CONTOURS,
-    DRAWMODE_POLYMESH,
-    DRAWMODE_POLYMESH_DETAIL,
-    MAX_DRAWMODE
-};
-
-DrawMode m_drawMode;
 
 BuildContext* m_ctx;
 
@@ -503,7 +480,7 @@ void findNearestPoly(float cx, float cy, float cz,
         }
     }
 
-    invoke_generic_callback_string(callback, "");
+    invoke_generic_callback_string(callback, "null");
     return;
 }
 
@@ -582,12 +559,12 @@ void findPath(float startPosX, float startPosY, float startPosZ,
     filter.setExcludeFlags(0);
 
     // Change costs.
-    // filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f);
-    // filter.setAreaCost(SAMPLE_POLYAREA_WATER, 10.0f);
-    // filter.setAreaCost(SAMPLE_POLYAREA_ROAD, 1.0f);
-    // filter.setAreaCost(SAMPLE_POLYAREA_DOOR, 1.0f);
-    // filter.setAreaCost(SAMPLE_POLYAREA_GRASS, 2.0f);
-    // filter.setAreaCost(SAMPLE_POLYAREA_JUMP, 1.5f);
+    filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f);
+    filter.setAreaCost(SAMPLE_POLYAREA_WATER, 10.0f);
+    filter.setAreaCost(SAMPLE_POLYAREA_ROAD, 1.0f);
+    filter.setAreaCost(SAMPLE_POLYAREA_DOOR, 1.0f);
+    filter.setAreaCost(SAMPLE_POLYAREA_GRASS, 2.0f);
+    filter.setAreaCost(SAMPLE_POLYAREA_JUMP, 1.5f);
 
     float nearestStartPos[3];
     dtPolyRef startRef = 0;

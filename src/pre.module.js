@@ -417,6 +417,14 @@ recast.CROWD_SEPARATION         = 4;
 recast.CROWD_OPTIMIZE_VIS       = 8;          ///< Use #dtPathCorridor::optimizePathVisibility() to optimize the agent path.
 recast.CROWD_OPTIMIZE_TOPO      = 16;        ///< Use dtPathCorridor::optimizePathTopology() to optimize the agent path.
 
+// Polyflags
+recast.FLAG_WALK       = 0x01;
+recast.FLAG_SWIM       = 0x02;
+recast.FLAG_DOOR       = 0x04;
+recast.FLAG_JUMP       = 0x08;
+recast.FLAG_DISABLED   = 0x10;
+recast.FLAG_ALL        = 0xffff;
+
 recast.setGLContext = function (gl_context) {
   recast.glContext = gl_context;
 };
