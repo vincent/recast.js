@@ -1,10 +1,9 @@
 /*jshint onevar: false, indent:4, strict: false */
-/*global setImmediate: false, setTimeout: false, console: false, module: true, process: true, define: true, onmessage: true */
+/*global setImmediate: false, setTimeout: false, console: false, module: true, process: true, define: true, onmessage: true, postMessage: true, require: true */
 
 var ENVIRONMENT_IS_NODE = typeof process === 'object' && typeof require === 'function';
 var ENVIRONMENT_IS_WEB = typeof window === 'object';
 var ENVIRONMENT_IS_WORKER = typeof importScripts === 'function';
-var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIRONMENT_IS_WORKER;
 
 /**
  * Tiny event emitter for Node.js and the browser
@@ -108,10 +107,6 @@ var Module = {
 var recast = Module;
 
 
-function in_nodejs () {
-  return (typeof module !== 'undefined' && module.exports);
-}
-
 // global on the server, window in the browser
 var root, previous_recast;
 
@@ -132,13 +127,13 @@ recast.deferEmit = recast.vent.deferEmit;
 
 var _ajax = function(url, data, callback, type) {
   var data_array, data_string, idx, req, value;
-  if (data == null) {
+  if (! data) {
     data = {};
   }
-  if (callback == null) {
+  if (! callback) {
     callback = function() {};
   }
-  if (type == null) {
+  if (! type) {
     //default to a GET request
     type = 'GET';
   }
@@ -199,7 +194,11 @@ else {
 
 //// link worker recast module functions ////
 
-onmessage = function(event) {
+var workerMain = function(event) {
+  if (! event.data) {
+    return;
+  }
+
   var message = event.data;
 
   switch(message.type) {
@@ -214,6 +213,7 @@ onmessage = function(event) {
       break;
 
     case 'config':
+    case 'settings':
       recast.set_cellSize(message.data.cellSize);
       recast.set_cellHeight(message.data.cellHeight);
       recast.set_agentHeight(message.data.agentHeight);
@@ -221,6 +221,7 @@ onmessage = function(event) {
       recast.set_agentMaxClimb(message.data.agentMaxClimb);
       recast.set_agentMaxSlope(message.data.agentMaxSlope);
       postMessage({
+        vent: true,
         type: message.type,
         callback: message.callback
       });
@@ -228,6 +229,15 @@ onmessage = function(event) {
 
     case 'OBJLoader':
       recast.OBJLoader(message.data, function() {
+        postMessage({
+          type: message.type,
+          callback: message.callback
+        });
+      });
+      break;
+
+    case 'OBJDataLoader':
+      _OBJDataLoader(message.data, function() {
         postMessage({
           type: message.type,
           callback: message.callback
@@ -261,7 +271,26 @@ onmessage = function(event) {
         message.data.extend.x,
         message.data.extend.y,
         message.data.extend.z,
-        recast.cb(function(points){
+        recast.cb(function(){
+          postMessage({
+            type: message.type,
+            data: Array.prototype.slice.call(arguments),
+            callback: message.callback
+          });
+        })
+      );
+      break;
+
+    case 'queryPolygons':
+      recast.queryPolygons(
+        message.data.position.x,
+        message.data.position.y,
+        message.data.position.z,
+        message.data.extend.x,
+        message.data.extend.y,
+        message.data.extend.z,
+        message.data.maxPolys,
+        recast.cb(function(){
           postMessage({
             type: message.type,
             data: Array.prototype.slice.call(arguments),
@@ -291,8 +320,14 @@ onmessage = function(event) {
       }));
       break;
 
-    case 'setPolyUnwalkable':
-      recast.setPolyUnwalkable(message.data.sx, message.data.sy, message.data.sz, message.data.dx, message.data.dy, message.data.dz, message.data.flags);
+    case 'setPolyFlags':
+      recast.setPolyFlags(message.data.sx, message.data.sy, message.data.sz, message.data.dx, message.data.dy, message.data.dz, message.data.flags);
+      postMessage({
+        vent: true,
+        type: message.type,
+        data: message.data,
+        callback: message.callback
+      });
       break;
 
     case 'addCrowdAgent':
@@ -308,6 +343,7 @@ onmessage = function(event) {
         message.data.separationWeight
       );
       postMessage({
+        vent: true,
         type: message.type,
         data: [ idx ],
         callback: message.callback
@@ -334,6 +370,12 @@ onmessage = function(event) {
 
     case 'removeCrowdAgent':
       recast.removeCrowdAgent(message.data);
+      postMessage({
+        vent: true,
+        type: message.type,
+        data: [ message.data ],
+        callback: message.callback
+      });
       break;
 
     case 'crowdRequestMoveTarget':
@@ -342,20 +384,19 @@ onmessage = function(event) {
 
     case 'crowdUpdate':
       recast.crowdUpdate(message.data);
-      if (message.callback) {
-        recast._crowdGetActiveAgents(recast.cb(function(){
-          postMessage({
-            type: message.type,
-            data: [ agentPoolBuffer ],
-            callback: message.callback
-          });
-        }));
-      }
+      recast._crowdGetActiveAgents(! message.callback ? -1 : recast.cb(function(){
+        postMessage({
+          type: message.type,
+          data: [ agentPoolBuffer ],
+          callback: message.callback
+        });
+      }));
       break;
 
     case 'crowdGetActiveAgents':
       recast._crowdGetActiveAgents(! message.callback ? -1 : recast.cb(function(){
         postMessage({
+          vent: true,
           type: message.type,
           data: [ agentPoolBuffer ],
           callback: message.callback
@@ -369,7 +410,39 @@ onmessage = function(event) {
   }
 };
 
+if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
+  onmessage = workerMain;
+  // postMessage = postMessage;
+
+} else if (ENVIRONMENT_IS_NODE) {
+  process.on('message', function(message) {
+    workerMain(message);
+  });
+
+  postMessage = function (message) {
+    if (process.send) { // not in the main process
+      process.send({ data: message });
+    }
+  };
+
+}
+
 //// exported recast module functions ////
+
+// UpdateFlags
+recast.CROWD_ANTICIPATE_TURNS   = 1;
+recast.CROWD_OBSTACLE_AVOIDANCE = 2;
+recast.CROWD_SEPARATION         = 4;
+recast.CROWD_OPTIMIZE_VIS       = 8;          ///< Use #dtPathCorridor::optimizePathVisibility() to optimize the agent path.
+recast.CROWD_OPTIMIZE_TOPO      = 16;        ///< Use dtPathCorridor::optimizePathTopology() to optimize the agent path.
+
+// Polyflags
+recast.FLAG_WALK       = 0x01;
+recast.FLAG_SWIM       = 0x02;
+recast.FLAG_DOOR       = 0x04;
+recast.FLAG_JUMP       = 0x08;
+recast.FLAG_DISABLED   = 0x10;
+recast.FLAG_ALL        = 0xffff;
 
 recast.setGLContext = function (gl_context) {
   recast.glContext = gl_context;
@@ -409,11 +482,16 @@ recast.settings = function (options) {
   recast.set_agentMaxSlope(options.agentMaxSlope);
 };
 
+recast.OBJDataLoader = function (data, callback) {
+  _OBJDataLoader(data, callback);
+};
+
 recast.OBJLoader = function (path, callback) {
   // with node FS api
   if (ENVIRONMENT_IS_NODE) {
     var fs = require('fs');
     fs.readFile(path, function(err, data) {
+      if (err) throw new Error(err);
       _OBJDataLoader(data, callback);
     });
 
@@ -439,9 +517,30 @@ recast.addAgent = function (options) {
   );
 };
 
+recast.findNearest = function (position, callback_id) {
+  return recast.findNearestPoint(
+    position.x,
+    position.y,
+    position.z,
+    3,
+    3,
+    3,
+    callback_id
+  );
+};
+
 recast.crowdGetActiveAgents = function (callback_id) {
   return recast._crowdGetActiveAgents(callback_id || -1);
 };
+
+recast.queryPolygons = function (posX, posY, posZ, extX, extY, extZ, maxPolys, callback_id) {
+  if (typeof callback_id === 'undefined' && typeof maxPolys === 'number') {
+      callback_id = maxPolys;
+      maxPolys = 1000;
+  }
+  return recast._queryPolygons(posX, posY, posZ, extX, extY, extZ, maxPolys, callback_id);
+};
+
 
 //////////////////////////////////////////
 
@@ -456,20 +555,26 @@ function AgentPool (n) {
 }
 
 // Get a new array
-AgentPool.prototype.get = function(idx,position_x,position_y,position_z,velocity_x,velocity_y,velocity_z,radius,active,state,neighbors) {
+AgentPool.prototype.get = function(idx,position_x,position_y,position_z,
+                                   velocity_x,velocity_y,velocity_z,
+                                   radius,active,state,neighbors,
+                                   partial, desiredSpeed)
+{
   if ( this.__pools.length > 0 ) {
     var ag = this.__pools.pop();
-    ag.idx = idx;
-    ag.position.x = position_x;
-    ag.position.y = position_y;
-    ag.position.z = position_z;
-    ag.velocity.x = velocity_x;
-    ag.velocity.y = velocity_y;
-    ag.velocity.z = velocity_z;
-    ag.radius = radius;
-    ag.active = active;
-    ag.state = state;
-    ag.neighbors = neighbors;
+    ag.idx          = idx;
+    ag.position.x   = position_x;
+    ag.position.y   = position_y;
+    ag.position.z   = position_z;
+    ag.velocity.x   = velocity_x;
+    ag.velocity.y   = velocity_y;
+    ag.velocity.z   = velocity_z;
+    ag.radius       = radius;
+    ag.active       = active;
+    ag.state        = state;
+    ag.neighbors    = neighbors;
+    ag.partial      = partial;
+    ag.desiredSpeed = desiredSpeed;
     return ag;
   }
 
@@ -484,6 +589,7 @@ AgentPool.prototype.add = function( v ) {
 
 var agentPool = new AgentPool(1000);
 var agentPoolBuffer = [];
+agentPool.ready = true; // just to make jshint happy
 
 //////////////////////////////////////////
 
@@ -519,5 +625,6 @@ VectorPool.prototype.add = function( v ) {
 };
 
 var vectorPool = new VectorPool(10000);
+vectorPool.ready = true; // just to make jshint happy 
 
 //////////////////////////////////////////

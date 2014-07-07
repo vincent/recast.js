@@ -30,6 +30,7 @@ exports['our methods are present'] = function(test) {
     test.ok(recast.initCrowd, 'initCrowd');
     test.ok(recast.initWithFileContent, 'initWithFileContent');
     test.ok(recast.findNearestPoint, 'findNearestPoint');
+    test.ok(recast.findNearestPoint, 'findNearestPoly');
     test.ok(recast.findPath, 'findPath');
     test.ok(recast.getRandomPoint, 'getRandomPoint');
 
@@ -40,7 +41,7 @@ exports['our methods are present'] = function(test) {
     test.ok(recast.crowdRequestMoveTarget, 'crowdRequestMoveTarget');
     test.ok(recast.crowdUpdate, 'crowdUpdate');
     test.ok(recast.crowdGetActiveAgents, 'crowdGetActiveAgents');
-    test.done();
+    test.done('');
 };
 
 // Check file loading
@@ -91,11 +92,10 @@ exports['load an .obj file'] = function(test) {
                 /**
                  * Find the nearest navigable polygon from 0,0,0 with a maximum extend of 10
                  */
-                recast.findNearestPoly(0, 0, 0, extend, extend, extend, recast.cb(function(count, vertice1, vertice2 /* ... */){
-                    test.ok(count > 0, 'origin poly has some vertices');
+                recast.findNearestPoly(0, 0, 0, extend, extend, extend, recast.cb(function(polygon){
+                    test.ok(polygon.vertices, 'origin poly has some vertices');
 
-                    var vertices = Array.prototype.slice.call(arguments, 1);
-                    test.ok(vertices && typeof vertices.length !== 'undefined', 'origin poly has ' + vertices.length + ' vertices');
+                    test.ok(polygon.vertices && typeof polygon.vertices.length !== 'undefined', 'origin poly has ' + polygon.vertices.length + ' polygon.vertices');
 
                     /**
                      * Find the shortest possible path from pt1 to pt2

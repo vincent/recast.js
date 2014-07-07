@@ -11,6 +11,13 @@
 
 var recast = require('../lib/recast.withworker');
 
+var ENVIRONMENT_IS_NODE = typeof process === 'object' && typeof require === 'function';
+var ENVIRONMENT_IS_WEB = typeof window === 'object';
+var ENVIRONMENT_IS_WORKER = typeof importScripts === 'function';
+var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIRONMENT_IS_WORKER;
+
+recast = new recast('../lib/recast');
+
 // Check our library is here
 exports['recast is present'] = function(test) {
     test.ok(recast, 'recast should be an object');
@@ -30,8 +37,11 @@ exports['our methods are present'] = function(test) {
     test.ok(recast.initCrowd, 'initCrowd');
     test.ok(recast.initWithFileContent, 'initWithFileContent');
     test.ok(recast.findNearestPoint, 'findNearestPoint');
+    test.ok(recast.findNearestPoint, 'findNearestPoly');
     test.ok(recast.findPath, 'findPath');
     test.ok(recast.getRandomPoint, 'getRandomPoint');
+
+    test.ok(recast.getNavMeshVertices, 'getNavMeshVertices');
 
     test.ok(recast.addCrowdAgent, 'addCrowdAgent');
     test.ok(recast.updateCrowdAgentParameters, 'updateCrowdAgentParameters');
@@ -47,9 +57,9 @@ exports['our methods are present'] = function(test) {
 exports['load an .obj file'] = function(test) {
     test.expect(9);
 
-    recast.set_cellSize(1.0);
-    recast.set_cellHeight(2.0);
-    recast.set_agentHeight(2.0);
+    recast.set_cellSize(0.3);
+    recast.set_cellHeight(0.1);
+    recast.set_agentHeight(1.0);
     recast.set_agentRadius(0.2);
     recast.set_agentMaxClimb(4.0);
     recast.set_agentMaxSlope(30.0);
@@ -68,7 +78,7 @@ exports['load an .obj file'] = function(test) {
     /**
      * Load an .OBJ file
      */
-    recast.OBJLoader('/tests/nav_test.obj', recast.cb(function(){
+    recast.OBJLoader(ENVIRONMENT_IS_WEB ? '../tests/nav_test.obj' : '../tests/nav_test.obj', recast.cb(function(){
 
         /**
          * Find a random navigable point on this mesh
@@ -91,11 +101,10 @@ exports['load an .obj file'] = function(test) {
                 /**
                  * Find the nearest navigable polygon from 0,0,0 with a maximum extend of 10
                  */
-                recast.findNearestPoly(0, 0, 0, extend, extend, extend, recast.cb(function(count, vertice1, vertice2 /* ... */){
-                    test.ok(count > 0, 'origin poly has some vertices');
+                recast.findNearestPoly(0, 0, 0, extend, extend, extend, recast.cb(function(polygon){
+                    test.ok(polygon.vertices, 'origin poly has some vertices');
 
-                    var vertices = Array.prototype.slice.call(arguments, 1);
-                    test.ok(vertices && typeof vertices.length !== 'undefined', 'origin poly has ' + vertices.length + ' vertices');
+                    test.ok(polygon.vertices && typeof polygon.vertices.length !== 'undefined', 'origin poly has ' + polygon.vertices.length + ' vertices');
 
                     /**
                      * Find the shortest possible path from pt1 to pt2
@@ -115,11 +124,11 @@ exports['load an .obj file'] = function(test) {
 
 // Check file loading
 exports['manage the crowd'] = function(test) {
-    test.expect(6);
+    test.expect(8);
 
-    recast.set_cellSize(1.0);
-    recast.set_cellHeight(2.0);
-    recast.set_agentHeight(2.0);
+    recast.set_cellSize(0.3);
+    recast.set_cellHeight(0.1);
+    recast.set_agentHeight(1.0);
     recast.set_agentRadius(0.2);
     recast.set_agentMaxClimb(4.0);
     recast.set_agentMaxSlope(30.0);
@@ -138,7 +147,7 @@ exports['manage the crowd'] = function(test) {
     /**
      * Load an .OBJ file
      */
-    recast.OBJLoader('/tests/nav_test.obj', recast.cb(function () {
+    recast.OBJLoader(ENVIRONMENT_IS_WEB ? '../tests/nav_test.obj' : '../tests/nav_test.obj', recast.cb(function () {
 
         recast.vent.on('update', function (agents) {
             test.ok(agents && typeof agents.length !== 'undefined', 'crowd has ' + agents.length + ' agent');
@@ -182,6 +191,11 @@ exports['manage the crowd'] = function(test) {
                             recast.crowdGetActiveAgents(recast.cb(function(agents){
                                 test.strictEqual(agents.length, 1);
                                 test.done();
+
+                                // FIXME: so dirty
+                                if (ENVIRONMENT_IS_NODE) {
+                                    setTimeout(function(){ process.exit(0); }, 1000);
+                                }
                             }));
                         }, 2000);
 

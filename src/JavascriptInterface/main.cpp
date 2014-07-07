@@ -30,7 +30,8 @@ extern "C" {
     extern void agentPool_get(const int idx,
                               const float pos_x,  const float pos_y, const float pos_z,
                               const float vel_x,  const float vel_y, const float vel_z,
-                              const float radius, const int active,  const int state, const int neighbors);
+                              const float radius, const int active,  const int state, const int neighbors,
+                              const bool  partial,const float desiredSpeed);
     extern void flush_active_agents_callback();
     extern void invoke_vector_callback(int callback_id, const float x,  const float y, const float z);
     extern void invoke_update_callback(int callback_id);
@@ -54,7 +55,7 @@ dtCrowd* m_crowd;
 
 unsigned char m_navMeshDrawFlags;
 
-bool m_keepInterResults = true;
+bool m_keepInterResults = false;
 float m_totalBuildTimeMs;
 
 int randModulo = 0;
@@ -123,30 +124,6 @@ enum SamplePolyFlags
     SAMPLE_POLYFLAGS_DISABLED   = 0x10,     // Disabled polygon
     SAMPLE_POLYFLAGS_ALL        = 0xffff    // All abilities.
 };
-
-enum DrawMode
-{
-    DRAWMODE_NAVMESH,
-    DRAWMODE_NAVMESH_TRANS,
-    DRAWMODE_NAVMESH_BVTREE,
-    DRAWMODE_NAVMESH_NODES,
-    DRAWMODE_NAVMESH_INVIS,
-    DRAWMODE_MESH,
-    DRAWMODE_VOXELS,
-    DRAWMODE_VOXELS_WALKABLE,
-    DRAWMODE_COMPACT,
-    DRAWMODE_COMPACT_DISTANCE,
-    DRAWMODE_COMPACT_REGIONS,
-    DRAWMODE_REGION_CONNECTIONS,
-    DRAWMODE_RAW_CONTOURS,
-    DRAWMODE_BOTH_CONTOURS,
-    DRAWMODE_CONTOURS,
-    DRAWMODE_POLYMESH,
-    DRAWMODE_POLYMESH_DETAIL,
-    MAX_DRAWMODE
-};
-
-DrawMode m_drawMode;
 
 BuildContext* m_ctx;
 
@@ -443,14 +420,41 @@ void getRandomPoint(int callback)
     // free(buff);
 }
 
+std::string recastjsPolyJSON(const dtPoly* poly, const dtMeshTile* tile)
+{
+    std::string data;
+    data = "{";
+
+    char successbuff[128 * poly->vertCount];
+
+    sprintf(successbuff, "\"x\":%u,\"y\":%u,\"layer\":%u,\"flags\":%u,\"area\":%u,", tile->header->x, tile->header->y, tile->header->layer, poly->flags, poly->getArea());
+    data += successbuff;
+
+    // float* centroid;
+    // dtCalcPolyCenter(centroid, poly->verts, poly->vertCount, tile->verts);
+    // sprintf(successbuff, "\"centroid\":{\"x\":%f,\"y\":%f,\"z\":%f},", centroid[0], centroid[1], centroid[2]);
+    // data += successbuff;
+
+    data += "\"vertices\":[";
+        
+    for (int i = 0; i < (int)poly->vertCount; i++) {
+        float* v = &tile->verts[poly->verts[i]*3];
+
+        sprintf(successbuff, "{\"x\":%f,\"y\":%f,\"z\":%f}%s", v[0], v[1], v[2], (i == poly->vertCount - 1) ? "" : ",");
+        data += successbuff;
+    }
+
+    data += "]}";
+
+    return data;
+}
+
 void findNearestPoly(float cx, float cy, float cz,
                     float ex, float ey, float ez,
                      /*const dtQueryFilter* filter,
                      dtPolyRef* nearestRef, float* nearestPt*/
                     int callback)
 {
-    emscripten_run_script("__tmp_recastjs_data.length = 0;");
-
     const float p[3] = {cx,cy,cz};
     const float ext[3] = {ex,ey,ez};
     float nearestPt[3];
@@ -464,39 +468,22 @@ void findNearestPoly(float cx, float cy, float cz,
 
     dtStatus findStatus = m_navQuery->findNearestPoly(p, ext, &filter, &ref, 0);
 
-    if (dtStatusFailed(findStatus)) {
+    if (dtStatusFailed(findStatus) || ref == 0) {
         printf("Cannot find nearestPoly: %u\n", findStatus);
 
     } else {
 
-        const dtMeshTile* tile;
-        const dtPoly* poly;
-        findStatus = m_navMesh->getTileAndPolyByRef(ref, &tile, &poly);
+        const dtMeshTile* tile = 0;
+        const dtPoly* poly = 0;
+        m_navMesh->getTileAndPolyByRefUnsafe(ref, &tile, &poly);
 
-        if (dtStatusFailed(findStatus)) {
-            printf("Cannot get tile and poly by ref #%u : %u \n", ref, findStatus);
+        std::string data = recastjsPolyJSON(poly, tile);
 
-        } else {
-            // TODO: put poly and tile in __tmp_recastjs_data
-
-            char successbuff[128 * tile->header->vertCount];
-            sprintf(successbuff, "%u", tile->header->vertCount);
-
-            for (int i = 0; i < tile->header->vertCount; i++) {
-                float* v = &tile->verts[i];
-
-                sprintf(successbuff, "%s,{x:%f,y:%f,z:%f}", successbuff, v[0], v[1], v[2]);
-            }
-
-            sprintf(successbuff, "Module.__RECAST_CALLBACKS[%u](%s);", callback, successbuff);
-            emscripten_run_script(successbuff);
-            return;
-        }
+        invoke_generic_callback_string(callback, data.c_str());
+        return;
     }
 
-    sprintf(buff, "Module.__RECAST_CALLBACKS[%u](null);", callback);
-    emscripten_run_script(buff);
-    return;
+    invoke_generic_callback_string(callback, "null");
 }
 
 void findNearestPoint(float cx, float cy, float cz,
@@ -505,8 +492,6 @@ void findNearestPoint(float cx, float cy, float cz,
                      dtPolyRef* nearestRef, float* nearestPt*/
                     int callback)
 {
-    emscripten_run_script("__tmp_recastjs_data = [];");
-
     const float p[3] = {cx,cy,cz};
     const float ext[3] = {ex,ey,ez};
     float nearestPt[3];
@@ -529,7 +514,7 @@ void findNearestPoint(float cx, float cy, float cz,
     }
 }
 
-void setPolyUnwalkable(float posX, float posY, float posZ, float extendX, float extendY, float extendZ, unsigned short flags)
+void setPolyFlags(float posX, float posY, float posZ, float extendX, float extendY, float extendZ, unsigned short flags)
 {
     dtQueryFilter filter;
     filter.setIncludeFlags(3);
@@ -553,6 +538,48 @@ void setPolyUnwalkable(float posX, float posY, float posZ, float extendX, float 
     }
 }
 
+void _queryPolygons(float posX, float posY, float posZ,
+                    float extX, float extY, float extZ,
+                    const int maxPolys, int callback)
+{
+    float center[3]  = { posX, posY, posZ };
+    float extents[3] = { extX, extY, extZ };
+
+    dtStatus findStatus;
+
+    dtPolyRef polys[maxPolys];
+    int polyCount;
+
+    dtQueryFilter filter;
+    filter.setIncludeFlags(3);
+    filter.setExcludeFlags(0);
+
+    findStatus = m_navQuery->queryPolygons(center, extents, &filter, polys, &polyCount, maxPolys);
+
+    std::string data;
+    data = "[";
+
+    if (dtStatusFailed(findStatus)) {
+        printf("Cannot query polygons: %u\n", findStatus);
+
+    } else {
+
+        for (int p = 0; p < (int)polyCount; p++) {
+
+            const dtMeshTile* tile = 0;
+            const dtPoly* poly = 0;
+            m_navMesh->getTileAndPolyByRefUnsafe(polys[p], &tile, &poly);
+            data += recastjsPolyJSON(poly, tile) + (p == polyCount - 1 ? "" : ",");
+        }
+
+        data += "]";
+
+        invoke_generic_callback_string(callback, data.c_str());
+        return;
+    }
+
+    invoke_generic_callback_string(callback, "null");
+}
 
 void findPath(float startPosX, float startPosY, float startPosZ,
                 float endPosX, float endPosY, float endPosZ, int maxPath,
@@ -576,12 +603,12 @@ void findPath(float startPosX, float startPosY, float startPosZ,
     filter.setExcludeFlags(0);
 
     // Change costs.
-    // filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f);
-    // filter.setAreaCost(SAMPLE_POLYAREA_WATER, 10.0f);
-    // filter.setAreaCost(SAMPLE_POLYAREA_ROAD, 1.0f);
-    // filter.setAreaCost(SAMPLE_POLYAREA_DOOR, 1.0f);
-    // filter.setAreaCost(SAMPLE_POLYAREA_GRASS, 2.0f);
-    // filter.setAreaCost(SAMPLE_POLYAREA_JUMP, 1.5f);
+    filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f);
+    filter.setAreaCost(SAMPLE_POLYAREA_WATER, 10.0f);
+    filter.setAreaCost(SAMPLE_POLYAREA_ROAD, 1.0f);
+    filter.setAreaCost(SAMPLE_POLYAREA_DOOR, 1.0f);
+    filter.setAreaCost(SAMPLE_POLYAREA_GRASS, 2.0f);
+    filter.setAreaCost(SAMPLE_POLYAREA_JUMP, 1.5f);
 
     float nearestStartPos[3];
     dtPolyRef startRef = 0;
@@ -704,7 +731,7 @@ void updateCrowdAgentParameters(const int idx, float posX, float posY, float pos
     ap.maxSpeed = maxSpeed;
     ap.collisionQueryRange = ap.radius * 12.0f;
     ap.pathOptimizationRange = ap.radius * 300.0f;
-    ap.updateFlags = 0; 
+    ap.updateFlags = updateFlags; 
     // if (m_toolParams.m_anticipateTurns)
     //  ap.updateFlags |= DT_CROWD_ANTICIPATE_TURNS;
     // if (m_toolParams.m_optimizeVis)
@@ -733,9 +760,9 @@ int addCrowdAgent(float posX, float posY, float posZ, float radius, float height
     ap.height = height;
     ap.maxAcceleration = maxAcceleration;
     ap.maxSpeed = maxSpeed;
-    ap.collisionQueryRange = ap.radius * 12.0f;
-    ap.pathOptimizationRange = ap.radius * 300.0f;
-    ap.updateFlags = 0; 
+    ap.collisionQueryRange = ap.radius * 5.0f;
+    ap.pathOptimizationRange = ap.radius * 30.0f;
+    ap.updateFlags = updateFlags;
     // if (m_toolParams.m_anticipateTurns)
     //  ap.updateFlags |= DT_CROWD_ANTICIPATE_TURNS;
     // if (m_toolParams.m_optimizeVis)
@@ -834,7 +861,7 @@ bool _crowdGetActiveAgents(int callback_id)
         const float* v = ag->vel;
         const float r = ag->params.radius;
         int idx = (int) ag->params.userData;
-        agentPool_get(idx, p[0], p[1], p[2], v[0], v[1], v[2], r, ag->active, ag->state, ag->nneis);
+        agentPool_get(idx, p[0], p[1], p[2], v[0], v[1], v[2], r, ag->active, ag->state, ag->nneis, ag->partial, ag->desiredSpeed);
     }
 
     // we have a specific callback to call
@@ -1278,8 +1305,9 @@ EMSCRIPTEN_BINDINGS(my_module) {
     function("findNearestPoly", &findNearestPoly);
     function("findNearestPoint", &findNearestPoint);
     function("findPath", &findPath);
-    function("setPolyUnwalkable", &setPolyUnwalkable);
+    function("setPolyFlags", &setPolyFlags);
     function("getRandomPoint", &getRandomPoint);
+    function("_queryPolygons", &_queryPolygons);
 
     function("initCrowd", &initCrowd);
     function("addCrowdAgent", &addCrowdAgent);

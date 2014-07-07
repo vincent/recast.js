@@ -5,16 +5,20 @@
     <script src="../lib/recast.withworker.js"></script>
     <link rel="stylesheet" href="../node_modules/nodeunit/share/nodeunit.css"/>
     <script>
-      var recast = this.recast;
-      this.require = function () { return recast; };
       this.exports = {};
+      var r = new Recast('../lib/recast.js', function(){
+        nodeunit.run({'recast.tests': exports});
+      });
+      var recast = function() {
+        return r;
+      };
+      this.require = function () { return recast; };
     </script>
     <script src="recast.withworker.tests.js"></script>
   </head>
   <body>
     <h1 id="nodeunit-header">Recast.js Test Suite</h1>
     <script>
-      nodeunit.run({'recast.tests': exports});
     </script>
   </body>
 </html>

@@ -14,11 +14,11 @@
 
     flush_active_agents_callback: function() {
       Module.vent.emit('update', agentPoolBuffer);
-      if (ENVIRONMENT_IS_WORKER) {
+      if (typeof window === 'undefined' || typeof importScripts === 'function') {
         postMessage({
           type: 'update',
           vent: true,
-          data: [ agentPoolBuffer ]
+          data: agentPoolBuffer
         });
       }
     },
@@ -63,8 +63,8 @@
       agentPool.add(agentPoolBuffer[idx]);
     },
 
-    agentPool_get: function (idx, position_x, position_y, position_z, velocity_x, velocity_y, velocity_z, radius, active, state, neighbors) {
-      agentPoolBuffer.push(agentPool.get(idx, position_x, position_y, position_z, velocity_x, velocity_y, velocity_z, radius, active, state, neighbors));
+    agentPool_get: function (idx, position_x, position_y, position_z, velocity_x, velocity_y, velocity_z, radius, active, state, neighbors, partial, desiredSpeed) {
+      agentPoolBuffer.push(agentPool.get(idx, position_x, position_y, position_z, velocity_x, velocity_y, velocity_z, radius, active, state, neighbors, partial, desiredSpeed));
     }
     
   });

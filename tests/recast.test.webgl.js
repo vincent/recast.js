@@ -37,15 +37,24 @@ var agentsObjects = [];
 var scene = new THREE.Scene();
 
 var agentGeometry = new THREE.CylinderGeometry(0.2, 0.5, 2);
-var agentMaterial = new THREE.MeshBasicMaterial({
-  color: '#FF0000'
-});
 
 for (var i = 0; i < MAX_AGENTS; i++) {
     var agent = new THREE.Object3D();
-    var agentBody = new THREE.Mesh(agentGeometry, agentMaterial);
+    var agentBody = new THREE.Mesh(
+        agentGeometry,
+        new THREE.MeshBasicMaterial({
+          color: '#FF0000'
+        })
+    );
     agentBody.position.y = 1;
     agent.add(agentBody);
+
+    agent.arrowHelper = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 1),
+        new THREE.Vector3(0, 0, 0),
+        1.5,
+        0xffff00);
+    agent.add(agent.arrowHelper);
 
     agentsObjects.push(agent);
     scene.add(agent);
@@ -111,10 +120,10 @@ exports['our methods are present'] = function(test) {
 
 // Check file loading
 exports['handle an agent'] = function(test) {
-    test.expect(10);
+    test.expect(11);
 
     recast.set_cellSize(0.3);
-    recast.set_cellHeight(0.8);
+    recast.set_cellHeight(0.1);
     recast.set_agentHeight(1.0);
     recast.set_agentRadius(0.2);
     recast.set_agentMaxClimb(4.0);
@@ -174,7 +183,16 @@ exports['handle an agent'] = function(test) {
             recast.getNavMeshVertices(recast.cb(function (vertices) {
 
                 navigationMesh = new THREE.Object3D();
-                var materials = [ new THREE.MeshNormalMaterial() ];
+                // var materials = [ new THREE.MeshNormalMaterial() ];
+                var materials = [ new THREE.MeshBasicMaterial({
+                    color: 0x000055,
+                    shading: THREE.FlatShading,
+                    side: THREE.DoubleSide,
+                    wireframe: false,
+                    transparent: true,
+                    opacity: 0.3,
+                    overdraw: true
+                }) ];
 
                 for (var i = 0; i < vertices.length; i++) {
                     if (!vertices[i+2]) { break; }
@@ -197,10 +215,138 @@ exports['handle an agent'] = function(test) {
             }));
         }
 
+        var polyMesh, polyGrp, polys = {}, polyGrpIndex = 0;
+        var paintPolys = function(polygons){
+            // poly.faces[].color.setRGB(Math.random(), Math.random(), Math.random());
+
+            if (! polygons) {
+                return;
+            }
+
+            if (1 || ! polyGrp) {
+
+                polyGrpIndex++;
+                if (polyGrpIndex > 200) {
+                    polyGrp = new THREE.Object3D();
+
+                    for (var i = 0; i < polygons.length; i++) {
+
+                        var polygon = polygons[i];
+                        var key = polygon.vertices[0].x + '-' + polygon.vertices[0].y + '-' + polygon.vertices[0].z + '-' + polygon.vertices[1].x + '-' + polygon.vertices[1].y + '-' + polygon.vertices[1].z + '-' + polygon.vertices[2].x + '-' + polygon.vertices[2].y + '-' + polygon.vertices[2].z;
+
+                        if (polys[key]) {
+                            continue;
+                        }
+
+                        polyMesh = new THREE.Mesh(
+                            new THREE.Geometry(),
+                            new THREE.MeshBasicMaterial({
+                                color: 0xff0000,
+                                shading: THREE.FlatShading,
+                                // side: THREE.DoubleSide,
+                                wireframe: false,
+                                transparent: false,
+                                // vertexColors: THREE.FaceColors, // CHANGED
+                                overdraw: true
+                            })
+                        );
+
+                        polys[key] = polyMesh;
+
+                        polyMesh.geometry.vertices.push(new THREE.Vector3( polygon.vertices[0].x, polygon.vertices[0].y, polygon.vertices[0].z ));
+                        polyMesh.geometry.vertices.push(new THREE.Vector3( polygon.vertices[1].x, polygon.vertices[1].y, polygon.vertices[1].z ));
+                        polyMesh.geometry.vertices.push(new THREE.Vector3( polygon.vertices[2].x, polygon.vertices[2].y, polygon.vertices[2].z ));
+
+                        polyMesh.geometry.faces.push( new THREE.Face3( 0, 1, 2 ) );
+
+                        // Make this poly unwalkable
+                        recast.setPolyFlags(
+                            polygon.vertices[0].x,
+                            polygon.vertices[0].y,
+                            polygon.vertices[0].z,
+                            2, 2, 2,
+                            0
+                        );
+
+                        scene.add(polyMesh);
+                    }
+                }
+            }
+        };
+
+        var circleMesh;
+        var paintCircle = function(pointX, pointY, pointZ){
+
+            if (! circleMesh) {
+                circleMesh = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.8, 0.8, 0.2),
+                    new THREE.MeshBasicMaterial({
+                        color: 0x00ff00,
+                        shading: THREE.FlatShading,
+                        // side: THREE.DoubleSide,
+                        wireframe: false,
+                        transparent: false,
+                        // vertexColors: THREE.FaceColors, // CHANGED
+                        overdraw: true
+                    })
+                );
+
+                scene.add(circleMesh);
+            }
+
+            circleMesh.position.set(pointX, pointY, pointZ);
+        };
+
         recast.vent.on('update', function (agents) {
             for (var i = 0; i < agents.length; i++) {
-                var pos = agents[i].position;
-                agentsObjects[i].position.set(pos.x, pos.y, pos.z);
+                var agent = agents[i];
+
+                var angle = Math.atan2(- agent.velocity.z, agent.velocity.x);
+                if (Math.abs(agentsObjects[agent.idx].rotation.y - angle) > 0) {
+                    agentsObjects[agent.idx].rotation.y = angle;
+                }
+                
+                agentsObjects[agent.idx].position.set(
+                    agent.position.x, 
+                    agent.position.y, 
+                    agent.position.z
+                );
+
+                // agentsObjects[agent.idx].arrowHelper.setDirection(
+                //     agent.velocity.x * 100, 
+                //     agent.velocity.y * 100, 
+                //     agent.velocity.z * 100
+                // );
+
+                var color = agent.neighbors * 128;
+                agentsObjects[agent.idx].children[0].material.color.set(color, color, color);
+
+                if (agent.idx === 0) {
+
+                    // recast.findNearestPoly(
+                    //     agentsObjects[agent.idx].position.x,
+                    //     agentsObjects[agent.idx].position.y,
+                    //     agentsObjects[agent.idx].position.z,
+                    //     2, 2, 2,
+                    //     recast.cb(paintPoly)
+                    // );
+
+                    recast.queryPolygons(
+                        agentsObjects[agent.idx].position.x,
+                        agentsObjects[agent.idx].position.y,
+                        agentsObjects[agent.idx].position.z,
+                        0.3, 0.3, 0.3,
+                        recast.cb(paintPolys)
+                    );
+
+                    // recast.findNearestPoint(
+                    //     agentsObjects[agent.idx].position.x,
+                    //     agentsObjects[agent.idx].position.y,
+                    //     agentsObjects[agent.idx].position.z,
+                    //     2, 2, 2,
+                    //     recast.cb(paintCircle)
+                    // );
+                }
             }
         });
 
@@ -218,7 +364,7 @@ exports['handle an agent'] = function(test) {
                 height: 0.5,
                 maxAcceleration: 1.0,
                 maxSpeed: 2.0,
-                updateFlags: 0,
+                updateFlags: 0, // && recast.CROWD_OBSTACLE_AVOIDANCE, // & recast.CROWD_ANTICIPATE_TURNS & recast.CROWD_OPTIMIZE_TOPO & recast.CROWD_SEPARATION,
                 separationWeight: 20.0
             }));
         }
