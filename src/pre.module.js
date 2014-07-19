@@ -330,6 +330,16 @@ var workerMain = function(event) {
       });
       break;
 
+    case 'setPolyFlagsByRef':
+      recast.setPolyFlagsByRef(message.data.ref, message.data.flags);
+      postMessage({
+        vent: true,
+        type: message.type,
+        data: message.data,
+        callback: message.callback
+      });
+      break;
+
     case 'addCrowdAgent':
       var idx = recast.addCrowdAgent(
         message.data.position.x,

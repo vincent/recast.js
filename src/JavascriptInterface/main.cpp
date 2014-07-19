@@ -89,21 +89,6 @@ rcPolyMesh* m_pmesh;
 rcConfig m_cfg; 
 rcPolyMeshDetail* m_dmesh;
 
-/// Tool types.
-enum SampleToolType
-{
-    TOOL_NONE = 0,
-    TOOL_TILE_EDIT,
-    TOOL_TILE_HIGHLIGHT,
-    TOOL_TEMP_OBSTACLE,
-    TOOL_NAVMESH_TESTER,
-    TOOL_NAVMESH_PRUNE,
-    TOOL_OFFMESH_CONNECTION,
-    TOOL_CONVEX_VOLUME,
-    TOOL_CROWD,
-    MAX_TOOLS
-};
-
 /// These are just sample areas to use consistent values across the samples.
 /// The use should specify these base on his needs.
 enum SamplePolyAreas
@@ -405,10 +390,10 @@ void getRandomPoint(int callback)
 
     float randomPt[3];
 
-    dtStatus findStatus = m_navQuery->findRandomPoint(&filter, randZeroToOne, &ref, randomPt);
+    dtStatus status = m_navQuery->findRandomPoint(&filter, randZeroToOne, &ref, randomPt);
 
-    if (dtStatusFailed(findStatus)) {
-        printf("Cannot find a random point: %u\n", findStatus);
+    if (dtStatusFailed(status)) {
+        printf("Cannot find a random point: %u\n", status);
 
        invoke_vector_callback(callback, NULL, NULL, NULL);
 
@@ -420,14 +405,14 @@ void getRandomPoint(int callback)
     // free(buff);
 }
 
-std::string recastjsPolyJSON(const dtPoly* poly, const dtMeshTile* tile)
+std::string recastjsPolyJSON(const dtPoly* poly, const dtMeshTile* tile, dtPolyRef ref)
 {
     std::string data;
     data = "{";
 
     char successbuff[128 * poly->vertCount];
 
-    sprintf(successbuff, "\"x\":%u,\"y\":%u,\"layer\":%u,\"flags\":%u,\"area\":%u,", tile->header->x, tile->header->y, tile->header->layer, poly->flags, poly->getArea());
+    sprintf(successbuff, "\"ref\":%u,\"x\":%u,\"y\":%u,\"layer\":%u,\"flags\":%u,\"area\":%u,", ref, tile->header->x, tile->header->y, tile->header->layer, poly->flags, poly->getArea());
     data += successbuff;
 
     // float* centroid;
@@ -466,10 +451,10 @@ void findNearestPoly(float cx, float cy, float cz,
 
     dtPolyRef ref = 0;
 
-    dtStatus findStatus = m_navQuery->findNearestPoly(p, ext, &filter, &ref, 0);
+    dtStatus status = m_navQuery->findNearestPoly(p, ext, &filter, &ref, 0);
 
-    if (dtStatusFailed(findStatus) || ref == 0) {
-        printf("Cannot find nearestPoly: %u\n", findStatus);
+    if (dtStatusFailed(status) || ref == 0) {
+        printf("Cannot find nearestPoly: %u\n", status);
 
     } else {
 
@@ -477,7 +462,7 @@ void findNearestPoly(float cx, float cy, float cz,
         const dtPoly* poly = 0;
         m_navMesh->getTileAndPolyByRefUnsafe(ref, &tile, &poly);
 
-        std::string data = recastjsPolyJSON(poly, tile);
+        std::string data = recastjsPolyJSON(poly, tile, ref);
 
         invoke_generic_callback_string(callback, data.c_str());
         return;
@@ -503,14 +488,28 @@ void findNearestPoint(float cx, float cy, float cz,
     dtPolyRef ref = 0;
     float nearestPos[3];
 
-    dtStatus findStatus = m_navQuery->findNearestPoly(p, ext, &filter, &ref, nearestPos);
+    dtStatus status = m_navQuery->findNearestPoly(p, ext, &filter, &ref, nearestPos);
 
-    if (dtStatusFailed(findStatus)) {
+    if (dtStatusFailed(status)) {
         invoke_vector_callback(callback, NULL, NULL, NULL);
 
     } else {
 
         invoke_vector_callback(callback, nearestPos[0], nearestPos[1], nearestPos[2]);
+    }
+}
+
+void setPolyFlagsByRef(int ref, unsigned short flags)
+{
+    char buff[512];
+    dtStatus status;
+    status = m_navMesh->setPolyFlags((dtPolyRef)ref, flags);
+
+    if (dtStatusFailed(status)) {
+        emscripten_log("cannot set this flag");
+    } else {
+        sprintf(buff, "found poly %u set flags %u ", ref, flags);
+        emscripten_log(buff);        
     }
 }
 
@@ -520,21 +519,23 @@ void setPolyFlags(float posX, float posY, float posZ, float extendX, float exten
     filter.setIncludeFlags(3);
     filter.setExcludeFlags(0);
 
+    char buff[512];
+
     const float ext[3] = {extendX, extendY, extendZ};
     float startPos[3] = { posX, posY, posZ };
     float nearestPos[3];
     dtPolyRef ref = 0;
 
-    dtStatus findStatus;
+    dtStatus status;
 
-    findStatus = m_navQuery->findNearestPoly(startPos, ext, &filter, &ref, nearestPos);
+    status = m_navQuery->findNearestPoly(startPos, ext, &filter, &ref, nearestPos);
 
-    if (dtStatusFailed(findStatus)) {
-        printf("Cannot find a poly near: %f, %f, %f \n", posX, posY, posZ);
+    if (dtStatusFailed(status)) {
+        sprintf(buff, "Cannot find a poly near: %f, %f, %f ", posX, posY, posZ);
+        emscripten_log(buff);
 
     } else {
-        printf("Set poly %u as unwalkable \n", ref);
-        m_navMesh->setPolyFlags(ref, flags);
+        setPolyFlagsByRef((int)ref, flags);
     }
 }
 
@@ -545,7 +546,7 @@ void _queryPolygons(float posX, float posY, float posZ,
     float center[3]  = { posX, posY, posZ };
     float extents[3] = { extX, extY, extZ };
 
-    dtStatus findStatus;
+    dtStatus status;
 
     dtPolyRef polys[maxPolys];
     int polyCount;
@@ -554,13 +555,13 @@ void _queryPolygons(float posX, float posY, float posZ,
     filter.setIncludeFlags(3);
     filter.setExcludeFlags(0);
 
-    findStatus = m_navQuery->queryPolygons(center, extents, &filter, polys, &polyCount, maxPolys);
+    status = m_navQuery->queryPolygons(center, extents, &filter, polys, &polyCount, maxPolys);
 
     std::string data;
     data = "[";
 
-    if (dtStatusFailed(findStatus)) {
-        printf("Cannot query polygons: %u\n", findStatus);
+    if (dtStatusFailed(status)) {
+        printf("Cannot query polygons: %u\n", status);
 
     } else {
 
@@ -569,7 +570,7 @@ void _queryPolygons(float posX, float posY, float posZ,
             const dtMeshTile* tile = 0;
             const dtPoly* poly = 0;
             m_navMesh->getTileAndPolyByRefUnsafe(polys[p], &tile, &poly);
-            data += recastjsPolyJSON(poly, tile) + (p == polyCount - 1 ? "" : ",");
+            data += recastjsPolyJSON(poly, tile, polys[p]) + (p == polyCount - 1 ? "" : ",");
         }
 
         data += "]";
@@ -593,7 +594,7 @@ void findPath(float startPosX, float startPosY, float startPosZ,
 
     const float ext[3] = {2,4,2};
 
-    dtStatus findStatus;
+    dtStatus status;
 
     dtPolyRef path[maxPath+1];
     int pathCount;
@@ -620,10 +621,10 @@ void findPath(float startPosX, float startPosY, float startPosZ,
 
     printf("Use %u , %u as start / end polyRefs \n", startRef, endRef);
 
-    findStatus = m_navQuery->findPath(startRef, endRef, nearestStartPos, nearestEndPos, &filter, path, &pathCount, maxPath);
+    status = m_navQuery->findPath(startRef, endRef, nearestStartPos, nearestEndPos, &filter, path, &pathCount, maxPath);
 
-    if (dtStatusFailed(findStatus)) {
-        printf("Cannot find a path: %u\n", findStatus);
+    if (dtStatusFailed(status)) {
+        printf("Cannot find a path: %u\n", status);
 
     } else {
         printf("Found a %u polysteps path \n", pathCount);
@@ -636,11 +637,11 @@ void findPath(float startPosX, float startPosY, float startPosZ,
         int maxStraightPath = maxPath;
         int options = 0;
 
-        findStatus = m_navQuery->findStraightPath(nearestStartPos, nearestEndPos, path, pathCount, straightPath,
+        status = m_navQuery->findStraightPath(nearestStartPos, nearestEndPos, path, pathCount, straightPath,
                                     straightPathFlags, straightPathRefs, &straightPathCount, maxStraightPath, options);
 
-        if (dtStatusFailed(findStatus)) {
-            printf("Cannot find a straight path: %u\n", findStatus);
+        if (dtStatusFailed(status)) {
+            printf("Cannot find a straight path: %u\n", status);
 
         } else {
             printf("Found a %u steps path \n", straightPathCount);
@@ -824,8 +825,8 @@ bool crowdRequestMoveTarget(int agentIdx, float posX, float posY, float posZ)
     filter.setIncludeFlags(3);
     filter.setExcludeFlags(0);
 
-    dtStatus findStatus = m_navQuery->findNearestPoly(pos, ext, &filter, &m_targetRef, m_targetPos);
-    if (dtStatusFailed(findStatus)) {
+    dtStatus status = m_navQuery->findNearestPoly(pos, ext, &filter, &m_targetRef, m_targetPos);
+    if (dtStatusFailed(status)) {
         // emscripten_run_script("debug('Cannot find a poly near specified position');");
         return false;
     } else {
@@ -1306,6 +1307,8 @@ EMSCRIPTEN_BINDINGS(my_module) {
     function("findNearestPoint", &findNearestPoint);
     function("findPath", &findPath);
     function("setPolyFlags", &setPolyFlags);
+    function("setPolyFlagsByRef", &setPolyFlagsByRef);
+
     function("getRandomPoint", &getRandomPoint);
     function("_queryPolygons", &_queryPolygons);
 
