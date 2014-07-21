@@ -506,7 +506,8 @@ void setPolyFlagsByRef(int ref, unsigned short flags)
     status = m_navMesh->setPolyFlags((dtPolyRef)ref, flags);
 
     if (dtStatusFailed(status)) {
-        emscripten_log("cannot set this flag");
+        sprintf(buff, "cannot set flag %u on %u", flags, ref);
+        emscripten_log(buff);
     } else {
         sprintf(buff, "found poly %u set flags %u ", ref, flags);
         emscripten_log(buff);        

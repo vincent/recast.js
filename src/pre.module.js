@@ -91,6 +91,25 @@ EventEmitter.prototype.deferEmit = function (type) {
 };
 
 
+/**
+ * Bit operations, from http://stackoverflow.com/a/8436459/1689894
+ */
+
+function bit_test(num, bit){
+    return (num & bit) !== 0;
+}
+
+function bit_set(num, bit){
+    return num |= bit;
+}
+
+function bit_clear(num, bit){
+    return num &= ~bit;
+}
+
+function bit_toggle(num, bit){
+    return num ^= bit;
+}
 
 /*!
  * recast.js
@@ -551,6 +570,61 @@ recast.queryPolygons = function (posX, posY, posZ, extX, extY, extZ, maxPolys, c
   return recast._queryPolygons(posX, posY, posZ, extX, extY, extZ, maxPolys, callback_id);
 };
 
+recast.zones = { };
+
+recast.setZones = function (zones) {
+  var zonesKeys = Object.keys(zones);
+  for (var i = zonesKeys.length - 1; i >= 0; i--) {
+    var zone = new Zone(zonesKeys[i], zones[zonesKeys[i]]);
+    recast.zones[ zone.name ] = zone;
+  }
+};
+
+//////////////////////////////////////////
+
+function Zone (name, data) {
+  this.name  = name;
+  this.refs  = data.refs;
+  this.flags = 0;
+
+  for (var i = 0; i < data.flags.length; i++) {
+    this.setFlags(data.flags[i]);
+  }
+
+  this.syncFlags();
+}
+
+Zone.prototype.syncFlags = function() {
+  for (var i = 0; i < this.refs.length; i++) {
+    recast.setPolyFlagsByRef(this.refs[i], this.flags);
+  }
+  return this;
+};
+
+Zone.prototype.isWalkable = function() {
+  return this.is(recast.FLAG_WALK);
+};
+
+Zone.prototype.is = function(flags) {
+  return bit_test(this.flags, flags);
+};
+
+Zone.prototype.setFlags = function(flags) {
+  this.flags = Math.min(65535, bit_set(this.flags, flags));
+  return this.syncFlags();
+};
+
+Zone.prototype.clearFlags = function(flags) {
+  this.flags = bit_clear(this.flags, flags);
+  return this.syncFlags();
+};
+
+Zone.prototype.toggleFlags = function(flags) {
+  this.flags = Math.min(65535, bit_toggle(this.flags, flags));
+  return this.syncFlags();
+};
+
+//////////////////////////////////////////
 
 //////////////////////////////////////////
 
