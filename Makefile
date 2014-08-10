@@ -63,10 +63,6 @@ FILES = recastnavigation/DebugUtils/Source/DebugDraw.cpp \
 				\
 			src/JavascriptInterface/JavascriptInterface.cpp \
 			src/JavascriptInterface/main.cpp
-			# recastnavigation/RecastDemo/Source/SampleInterfaces.cpp \
-			# recastnavigation/RecastDemo/Source/Sample_TempObstacles.cpp \
-			# recastnavigation/RecastDemo/Source/Sample_SoloMesh.cpp \
-			# recastnavigation/RecastDemo/Source/Sample_TileMesh.cpp \
 
 FLAGS = 
 PRELOAD = 
@@ -74,7 +70,6 @@ PRELOAD =
 PREJS = --pre-js src/pre.module.js
 POSTJS = --post-js src/post.module.js
 LIBRARYJS = --js-library src/library_recast.js
-
 
 all: clean test build
 

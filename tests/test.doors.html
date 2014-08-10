@@ -22,7 +22,7 @@
   </head>
   <body>
     <h1 id="nodeunit-header">Recast.js Test Suite</h1>
-    <script src="recast.test.doors.js"></script>
+    <script src="recast.test.doors.zones.js"></script>
     <script>
     nodeunit.run({'recast.tests': exports});
     </script>
@@ -34,9 +34,9 @@
     Red polygons are unwalkable
     </p>
     
-    <button onclick="toggleDoors()">
-      Toggle doors
-    </button>
+    <button onclick="toggleDoor('door1')">Toggle door 1</button>
+    <button onclick="toggleDoor('door2')">Toggle door 2</button>
+    <button onclick="toggleDoor('door3')">Toggle door 3</button>
 
     <button onclick="if (! navigationMesh) { location.search += '&navigationmesh=1' } else { navigationMesh.parent ? scene.remove(navigationMesh) : scene.add(navigationMesh); }">
       Toggle navigation mesh

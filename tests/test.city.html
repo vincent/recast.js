@@ -1,0 +1,48 @@
+<html>
+  <head>
+    <title>Recast.js Test Suite</title>
+    <script src="../node_modules/nodeunit/examples/browser/nodeunit.js"></script>
+    <script src="../vendor/three.js"></script>
+    <script src="../vendor/ConvexGeometry.js"></script>
+    <script src="../vendor/OrbitControls.js"></script>
+    <script src="../vendor/OBJLoader.js"></script>
+    <script src="../vendor/MTLLoader.js"></script>
+    <script src="../vendor/OBJMTLLoader.js"></script>
+    <script src="../vendor/stats.js"></script>
+    <script src="../vendor/tween.min.js"></script>
+
+    <script src="../lib/recast.js"></script>
+    <link rel="stylesheet" href="../node_modules/nodeunit/share/nodeunit.css"/>
+    <style>
+      body { margin:0; padding:0 }
+    </style>
+    <script>
+      var recast = this.recast;
+      this.require = function () { return recast; };
+      this.exports = {};
+    </script>
+  </head>
+  <body>
+    <h1 id="nodeunit-header">Recast.js Test Suite</h1>
+    <script src="recast.test.city.js"></script>
+    <script>
+    nodeunit.run({'recast.tests': exports});
+    </script>
+    
+    <p>
+    In this example, you can see the mesh processed by recast.js <br>and rendered with three.js<br><br>
+    Each agents is controlled by recast.js, and a new random destination <br>is requested for each of them
+    <br><br>
+    Red polygons are unwalkable
+    </p>
+
+    <button id="sequence" onclick="sequence()" style="display:none">
+      Reboot sequence
+    </button>
+
+    <button onclick="if (! navigationMesh) { location.search += '&navigationmesh=1' } else { navigationMesh.parent ? scene.remove(navigationMesh) : scene.add(navigationMesh); }">
+      Toggle navigation mesh
+    </button>
+
+  </body>
+</html>

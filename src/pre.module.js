@@ -177,8 +177,6 @@ var _ajax = function(url, data, callback, type) {
 
 var _OBJDataLoader = function (contents, callback) {
   recast.initWithFileContent(contents.toString());
-  recast.build();
-  recast.initCrowd(1000, 1.0);
   callback(recast);
 };
 
@@ -244,6 +242,14 @@ var workerMain = function(event) {
         type: message.type,
         callback: message.callback
       });
+      break;
+
+    case 'build':
+      recast.build();
+      break;
+
+    case 'initCrowd':
+      recast.initCrowd(1000, 1.0);
       break;
 
     case 'OBJLoader':

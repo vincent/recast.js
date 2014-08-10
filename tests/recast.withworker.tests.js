@@ -80,6 +80,9 @@ exports['load an .obj file'] = function(test) {
      */
     recast.OBJLoader(ENVIRONMENT_IS_WEB ? '../tests/nav_test.obj' : '../tests/nav_test.obj', recast.cb(function(){
 
+        recast.build();
+        recast.initCrowd(1000, 1.0);    
+
         /**
          * Find a random navigable point on this mesh
          */

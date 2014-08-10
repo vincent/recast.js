@@ -3,3 +3,7 @@ npm-debug.log
 node_modules
 
 build
+
+tests/city*
+tests/Paris
+tests/SiriusCity
