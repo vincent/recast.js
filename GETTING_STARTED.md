@@ -1,9 +1,9 @@
-# Welcome to the recast.js wiki!
-
 # What is this all about
 
-Recast.js is meant to be used with a file describing a scene geometry. Using the [recastnavigation](https://github.com/memononen/recastnavigation) library, it will deduce a navigation mesh - a set of polygons on which your characters can move.
-Once this navigation mesh is computed, it is possible to use builtin pathfinding operations like "find the shortest path between point A and point B", taking into account various user-defined parameters like obstacles, slopes, and off-mesh connections.
+In a game context, Recast.js is meant to be used with a file describing a scene geometry. Using the [recastnavigation](https://github.com/memononen/recastnavigation) library, it will deduce a navigation mesh - a set of polygons on which your characters can move.
+
+Once this navigation mesh is computed, it is possible to use built-in pathfinding operations like "find the shortest path between point A and point B", taking into account various user-defined variables like obstacles, slopes, and off-mesh connections.
+
 If you decide to use it to animate your scene characters, it also provides a complete crowd system capable of managing all your characters movements using per-characters settings (speed, radius, ...)
 
 # Getting started
@@ -13,20 +13,20 @@ Assuming you've got an .obj file describing your scene geometry, you can get a R
 ```js
 var recast = new Recast();
 recast.OBJLoader( 'path/to/geometry.obj', function () {
-    // recast is ready
+  // recast is ready
 
-    // get a random navigable point A
-    recast.getRandomPoint( function (x, y, z) {
-        
-        // find the shortest route from origin to point A
-        // we asume 0,0,0 is a navigable point
-        recast.findPath( 0, 0, 0,   x, y, z,   function ( route ) {
+  // get a random navigable point A
+  recast.getRandomPoint( function (x, y, z) {
+    
+    // find the shortest route from origin to point A
+    // we asume 0,0,0 is a navigable point
+    recast.findPath( 0, 0, 0,   x, y, z,   function ( route ) {
 
-            console.log( "The shortest route contains", route.length, "corners" );
-            console.log( "These corners are", route );
-        })
-
+      console.log( "The shortest route contains", route.length, "corners" );
+      console.log( "These corners are", route );
     })
+
+  })
 })
 ```
 
@@ -52,7 +52,7 @@ recast.OBJLoader( 'path/to/geometry.obj', function () {
 
 ## Basic agents operations
 * [recast.addAgent](API#recast.addAgent) - Add an agent
-* [recast.updateCrowdAgentParameters](API#recast.updateCrowdAgentParameters) - Reset an agent settings
+* [recast.updateCrowdAgentParameters](API#recast.updateCrowdAgentParameters) - Add an agent settings
 * [recast.removeCrowdAgent](API#recast.removeCrowdAgent) - Remove an agent
 
 ## Crowd
@@ -70,4 +70,21 @@ recast.OBJLoader( 'path/to/geometry.obj', function () {
 
 ## Off-mesh connections
 * [recast.addOffMeshConnection](API#recast.addOffMeshConnection) - Add an off-mesh connection
+
+## Zones
+* [recast.Zone](API#recast.Zone) - Create a new zone
+* [zone.isWalkable](API#recast.Zone) - Test if a zone is walkable
+* [zone.is](API#recast.Zone) - Test a specific flag
+* [zone.setFlags](API#recast.Zone) - Set specified flags
+* [zone.clearFlags](API#recast.Zone) - Clear specified flags
+* [zone.toggleFlags](API#recast.Zone) - Toggle specified flags
+
+# Troubleshooting
+
+Some tips to help you getting rid of well-known traps
+
+* test your geometry in [Recast](https://github.com/memononen/recastnavigation) - it is easily runnable on Windows, MacOS and Linux
+* adjust settings wisely. Again, test them in Recast if you are not sure.
+
+
 
