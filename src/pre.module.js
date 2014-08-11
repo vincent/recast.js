@@ -588,6 +588,8 @@ recast.setZones = function (zones) {
 
 //////////////////////////////////////////
 
+recast.Zone = Zone;
+
 function Zone (name, data) {
   this.name  = name;
   this.refs  = data.refs;
