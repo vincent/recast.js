@@ -439,6 +439,56 @@ var workerMain = function(event) {
       }));
       break;
 
+    case 'addTempObstacle':
+      recast.addTempObstacle(message.data.posX, message.data.posY, message.data.posZ, message.data.radius);
+      postMessage({
+        vent: true,
+        type: message.type,
+        ddata: [ message.data ],
+        callback: message.callback
+      });
+      break;
+
+    case 'removeTempObstacle':
+      recast.removeTempObstacle(message.data);
+      postMessage({
+        vent: true,
+        type: message.type,
+        ddata: [ message.data ],
+        callback: message.callback
+      });
+      break;
+
+    case 'removeAllTempObstacles':
+      recast.removeAllTempObstacles();
+      postMessage({
+        vent: true,
+        type: message.type,
+        ddata: [ message.data ],
+        callback: message.callback
+      });
+      break;
+
+    case 'getAllTempObstacles':
+      recast.getAllTempObstacles(message.data.callback_id);
+      postMessage({
+        vent: true,
+        type: message.type,
+        ddata: [ message.data ],
+        callback: message.callback
+      });
+      break;
+
+    case 'addOffMeshConnection':
+      recast.addOffMeshConnection(message.data.startX, message.data.startY, message.data.startZ, message.data.endX, message.data.endY, message.data.endZ, message.data.radius, message.data.bidir);
+      postMessage({
+        vent: true,
+        type: message.type,
+        ddata: [ message.data ],
+        callback: message.callback
+      });
+      break;
+
     default:
       throw new Error(message.type + ' is not a known Recast method');
 
