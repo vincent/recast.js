@@ -248,6 +248,14 @@ var workerMain = function(event) {
       recast.build();
       break;
 
+    case 'buildSolo':
+      recast.buildSolo();
+      break;
+
+    case 'buildTiled':
+      recast.buildTiled();
+      break;
+
     case 'initCrowd':
       recast.initCrowd(1000, 1.0);
       break;
