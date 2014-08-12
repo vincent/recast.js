@@ -1,6 +1,6 @@
 {
   "name": "recastjs",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "A wrapper for the RecastDetour navigation library for node and the browser",
   "main": "./lib/recast",
   "scripts": {
