@@ -707,7 +707,10 @@ void getNavMeshVertices(int callback){
 
     char buff[m_pmesh->npolys * 1000];
 
-    sprintf(buff, "");
+    sprintf(buff, " ");
+
+    std::string data;
+    data = "[";
 
     for (int i = 0; i < m_pmesh->npolys; ++i)
     {
@@ -738,15 +741,23 @@ void getNavMeshVertices(int callback){
                     const float y = orig[1] + (v[1]+1)*ch;
                     const float z = orig[2] + v[2]*cs;
 
-                    sprintf(buff, "%s{\"x\":%f,\"y\":%f,\"z\":%f,\"col\":%u}%s", buff, x, y, z, color, (i == m_pmesh->npolys - 1 && k == 2 ? "" : ","));
-                }
+                    char item[512];
+
+                    sprintf(item, "{\"x\":%f,\"y\":%f,\"z\":%f,\"col\":%u}", x, y, z, color);
+
+                    data += item;
+
+                    if (i < m_pmesh->npolys - 1 || k < 2) {
+                        data += ",";
+                    }
+                 }
             }
         }
     }
 
-    sprintf(buff, "[%s]", buff);
+    data += " ]";
 
-    invoke_generic_callback_string(callback, buff);
+    invoke_generic_callback_string(callback, data.c_str());
 }
 
 

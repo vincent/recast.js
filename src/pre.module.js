@@ -261,7 +261,13 @@ var workerMain = function(event) {
       break;
 
     case 'getNavMeshVertices':
-      recast.getNavMeshVertices(recast.cb(message.data));
+      recast.getNavMeshVertices(recast.cb(function(data) {
+        postMessage({
+          type: message.type,
+          data: Array.prototype.slice.call(arguments),
+          callback: message.callback
+        });
+      }));
       break;
 
     case 'OBJLoader':
