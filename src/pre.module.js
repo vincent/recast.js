@@ -67,7 +67,7 @@ EventEmitter.prototype.emit = function (type) {
 
   // remove events that run only once
   if (this._listeners[type].once) this.remove(type);
-  
+
   return this;
 };
 
@@ -258,6 +258,10 @@ var workerMain = function(event) {
 
     case 'initCrowd':
       recast.initCrowd(1000, 1.0);
+      break;
+
+    case 'getNavMeshVertices':
+      recast.getNavMeshVertices(recast.cb(message.data));
       break;
 
     case 'OBJLoader':
@@ -775,6 +779,6 @@ VectorPool.prototype.add = function( v ) {
 };
 
 var vectorPool = new VectorPool(10000);
-vectorPool.ready = true; // just to make jshint happy 
+vectorPool.ready = true; // just to make jshint happy
 
 //////////////////////////////////////////

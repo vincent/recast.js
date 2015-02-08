@@ -2,7 +2,7 @@
 #include <math.h>
 #include <memory.h>
 #include <time.h>
-#include <sys/time.h>  
+#include <sys/time.h>
 
 #include <string>
 #include <float.h>
@@ -32,7 +32,7 @@ using namespace emscripten;
 
 ////////////////////////////
 
-#include "zlib.h"
+#include <zlib.h>
 
 
 void emscripten_log(const char* string, bool escape = true)
@@ -106,7 +106,7 @@ struct MeshProcess : public dtTileCacheMeshProcess
     {
         m_geom = geom;
     }
-    
+
     virtual void process(struct dtNavMeshCreateParams* params,
                          unsigned char* polyAreas, unsigned short* polyFlags)
     {
@@ -157,7 +157,7 @@ struct FastLZCompressor : public dtTileCacheCompressor
     {
         return (int)(bufferSize* 1.05f);
     }
-    
+
     virtual dtStatus compress(const unsigned char* buffer, const int bufferSize,
                               unsigned char* compressed, const int /*maxCompressedSize*/, int* compressedSize)
     {
@@ -167,7 +167,7 @@ struct FastLZCompressor : public dtTileCacheCompressor
 
         return DT_SUCCESS;
     }
-    
+
     virtual dtStatus decompress(const unsigned char* compressed, const int compressedSize,
                                 unsigned char* buffer, const int maxBufferSize, int* bufferSize)
     {
@@ -185,12 +185,12 @@ struct LinearAllocator : public dtTileCacheAlloc
     int capacity;
     int top;
     int high;
-    
+
     LinearAllocator(const int cap) : buffer(0), capacity(0), top(0), high(0)
     {
         resize(cap);
     }
-    
+
     ~LinearAllocator()
     {
         dtFree(buffer);
@@ -202,13 +202,13 @@ struct LinearAllocator : public dtTileCacheAlloc
         buffer = (unsigned char*)dtAlloc(cap, DT_ALLOC_PERM);
         capacity = cap;
     }
-    
+
     virtual void reset()
     {
         high = dtMax(high, top);
         top = 0;
     }
-    
+
     virtual void* alloc(const int size)
     {
         if (!buffer)
@@ -219,7 +219,7 @@ struct LinearAllocator : public dtTileCacheAlloc
         top += size;
         return mem;
     }
-    
+
     virtual void free(void* /*ptr*/)
     {
         // Empty
@@ -250,7 +250,7 @@ struct RasterizationContext
     {
         memset(tiles, 0, sizeof(TileCacheData)*MAX_LAYERS);
     }
-    
+
     ~RasterizationContext()
     {
         rcFreeHeightField(solid);
@@ -263,7 +263,7 @@ struct RasterizationContext
             tiles[i].data = 0;
         }
     }
-    
+
     rcHeightfield* solid;
     unsigned char* triareas;
     rcHeightfieldLayerSet* lset;
@@ -285,17 +285,17 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
     }
 
     char buff[512];
-    
+
     FastLZCompressor comp;
     RasterizationContext rc;
-    
+
     const float* verts = geom->getMesh()->getVerts();
     const int nverts = geom->getMesh()->getVertCount();
     const rcChunkyTriMesh* chunkyMesh = geom->getChunkyMesh();
-    
+
     // Tile bounds.
     const float tcs = cfg.tileSize * cfg.cs;
-    
+
     rcConfig tcfg;
     memcpy(&tcfg, &cfg, sizeof(tcfg));
 
@@ -309,7 +309,7 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
     tcfg.bmin[2] -= tcfg.borderSize*tcfg.cs;
     tcfg.bmax[0] += tcfg.borderSize*tcfg.cs;
     tcfg.bmax[2] += tcfg.borderSize*tcfg.cs;
-    
+
     // Allocate voxel heightfield where we rasterize our input data to.
     rc.solid = rcAllocHeightfield();
     if (!rc.solid)
@@ -322,7 +322,7 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
         emscripten_log("buildNavigation: Could not create solid heightfield.");
         return 0;
     }
-    
+
     // Allocate array that can hold triangle flags.
     // If you have multiple meshes you need to process, allocate
     // and array which can hold the max number of triangles you need to process.
@@ -332,7 +332,7 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
         emscripten_log("buildNavigation: Out of memory 'm_triareas' (%d).", chunkyMesh->maxTrisPerChunk);
         return 0;
     }
-    
+
     float tbmin[2], tbmax[2];
     tbmin[0] = tcfg.bmin[0];
     tbmin[1] = tcfg.bmin[2];
@@ -344,33 +344,33 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
     {
         emscripten_log("no overlapping rect chunks");
         return 0; // empty
-    
+
     } else {
         // sprintf(buff, "found %u overlapping rect chunks", ncid);
         // emscripten_log(buff);
     }
-    
+
     for (int i = 0; i < ncid; ++i)
     {
         const rcChunkyTriMeshNode& node = chunkyMesh->nodes[cid[i]];
         const int* tris = &chunkyMesh->tris[node.i*3];
         const int ntris = node.n;
-        
+
         memset(rc.triareas, 0, ntris*sizeof(unsigned char));
         rcMarkWalkableTriangles(ctx, tcfg.walkableSlopeAngle,
                                 verts, nverts, tris, ntris, rc.triareas);
-        
+
         rcRasterizeTriangles(ctx, verts, nverts, tris, rc.triareas, ntris, *rc.solid, tcfg.walkableClimb);
     }
-    
+
     // Once all geometry is rasterized, we do initial pass of filtering to
     // remove unwanted overhangs caused by the conservative rasterization
     // as well as filter spans where the character cannot possibly stand.
     rcFilterLowHangingWalkableObstacles(ctx, tcfg.walkableClimb, *rc.solid);
     rcFilterLedgeSpans(ctx, tcfg.walkableHeight, tcfg.walkableClimb, *rc.solid);
     rcFilterWalkableLowHeightSpans(ctx, tcfg.walkableHeight, *rc.solid);
-    
-    
+
+
     rc.chf = rcAllocCompactHeightfield();
     if (!rc.chf)
     {
@@ -382,14 +382,14 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
         emscripten_log("buildNavigation: Could not build compact data.");
         return 0;
     }
-    
+
     // Erode the walkable area by agent radius.
     if (!rcErodeWalkableArea(ctx, tcfg.walkableRadius, *rc.chf))
     {
         emscripten_log("buildNavigation: Could not erode.");
         return 0;
     }
-    
+
     // (Optional) Mark areas.
     const ConvexVolume* vols = geom->getConvexVolumes();
     for (int i  = 0; i < geom->getConvexVolumeCount(); ++i)
@@ -401,7 +401,7 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
                              vols[i].hmin, vols[i].hmax,
                              (unsigned char)vols[i].area, *rc.chf);
     }
-    
+
     rc.lset = rcAllocHeightfieldLayerSet();
     if (!rc.lset)
     {
@@ -413,7 +413,7 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
         emscripten_log("buildNavigation: Could not build heighfield layers.");
         return 0;
     }
-  
+
     // sprintf(buff, "found %u layers", rc.lset->nlayers);
     // emscripten_log(buff);
 
@@ -422,19 +422,19 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
     {
         TileCacheData* tile = &rc.tiles[rc.ntiles++];
         const rcHeightfieldLayer* layer = &rc.lset->layers[i];
-        
+
         // Store header
         dtTileCacheLayerHeader header;
         header.magic = DT_TILECACHE_MAGIC;
         header.version = DT_TILECACHE_VERSION;
-        
+
         // Tile layer location in the navmesh.
         header.tx = tx;
         header.ty = ty;
         header.tlayer = i;
         dtVcopy(header.bmin, layer->bmin);
         dtVcopy(header.bmax, layer->bmax);
-        
+
         // Tile info.
         header.width = (unsigned char)layer->width;
         header.height = (unsigned char)layer->height;
@@ -466,7 +466,7 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
         rc.tiles[i].data = 0;
         rc.tiles[i].dataSize = 0;
     }
-    
+
     // sprintf(buff, "return %u tiles", n);
     // emscripten_log(buff);
 
@@ -478,12 +478,12 @@ static bool isectSegAABB(const float* sp, const float* sq,
                          float& tmin, float& tmax)
 {
     static const float EPS = 1e-6f;
-    
+
     float d[3];
     rcVsub(d, sq, sp);
     tmin = 0;  // set to -FLT_MAX to get first hit on line
     tmax = FLT_MAX;     // set to max distance ray can travel (for segment)
-    
+
     // For all three slabs
     for (int i = 0; i < 3; i++)
     {
@@ -508,7 +508,7 @@ static bool isectSegAABB(const float* sp, const float* sq,
             if (tmin > tmax) return false;
         }
     }
-    
+
     return true;
 }
 
@@ -521,10 +521,10 @@ dtObstacleRef hitTestObstacle(const dtTileCache* tc, const float* sp, const floa
         const dtTileCacheObstacle* ob = tc->getObstacle(i);
         if (ob->state == DT_OBSTACLE_EMPTY)
             continue;
-        
+
         float bmin[3], bmax[3], t0,t1;
         tc->getObstacleBounds(ob, bmin,bmax);
-        
+
         if (isectSegAABB(sp,sq, bmin,bmax, t0,t1))
         {
             if (t0 < tmin)
@@ -587,7 +587,7 @@ bool m_monotonePartitioning = 1;
 
 float m_edgeMaxLen = 12.0f;  // , 50.0f, 1.0f);
 float m_edgeMaxError = 1.0f;  // , 3.0f, 0.1f);
-float m_vertsPerPoly = 6.0f;  // , 12.0f, 1.0f);        
+float m_vertsPerPoly = 6.0f;  // , 12.0f, 1.0f);
 
 float m_detailSampleDist = 6.0f;  // , 16.0f, 1.0f);
 float m_detailSampleMaxError = 1.0f;  // , 16.0f, 1.0f);
@@ -597,7 +597,7 @@ rcHeightfield* m_solid;
 rcCompactHeightfield* m_chf;
 rcContourSet* m_cset;
 rcPolyMesh* m_pmesh;
-rcConfig m_cfg; 
+rcConfig m_cfg;
 rcPolyMeshDetail* m_dmesh;
 
 BuildContext* m_ctx;
@@ -625,7 +625,7 @@ void debugConfig()
 
     printf(" m_edgeMaxLen=%f \n", m_edgeMaxLen);
     printf(" m_edgeMaxError=%f \n", m_edgeMaxError);
-    printf(" m_vertsPerPoly=%f \n", m_vertsPerPoly);        
+    printf(" m_vertsPerPoly=%f \n", m_vertsPerPoly);
 
     printf(" m_detailSampleDist=%f \n", m_detailSampleDist);
     printf(" m_detailSampleMaxError=%f \n", m_detailSampleMaxError);
@@ -651,7 +651,7 @@ void dumpConfig()
 
     sprintf(buff, "%s m_edgeMaxLen=%f ", buff, m_edgeMaxLen);
     sprintf(buff, "%s m_edgeMaxError=%f ", buff, m_edgeMaxError);
-    sprintf(buff, "%s m_vertsPerPoly=%f ", buff, m_vertsPerPoly);        
+    sprintf(buff, "%s m_vertsPerPoly=%f ", buff, m_vertsPerPoly);
 
     sprintf(buff, "%s m_detailSampleDist=%f ", buff, m_detailSampleDist);
     sprintf(buff, "%s m_detailSampleMaxError=%f ", buff, m_detailSampleMaxError);
@@ -782,7 +782,7 @@ void getNavHeightfieldRegions(int callback)
             const rcCompactCell& c = m_chf->cells[x+y*m_chf->width];
 
             data += "[";
-            
+
             for (unsigned i = c.index, ni = c.index+c.count; i < ni; ++i)
             {
                 const rcCompactSpan& s = m_chf->spans[i];
@@ -820,7 +820,7 @@ void getNavHeightfieldRegions(int callback)
     // char buff2[512];
     // sprintf(buff2, "cs=%f, ch=%f, height=%u, width=%u, len=%u", cs, ch, height, width, strlen(buff));
     // emscripten_log(buff2);
-    
+
     // sprintf(buff, "[%s]", buff);
 
     invoke_generic_callback_string(callback, data.c_str());
@@ -883,7 +883,7 @@ std::string recastjsPolyJSON(const dtPoly* poly, const dtMeshTile* tile, dtPolyR
     // data += successbuff;
 
     data += "\"vertices\":[";
-        
+
     for (int i = 0; i < (int)poly->vertCount; i++) {
         float* v = &tile->verts[poly->verts[i]*3];
 
@@ -987,7 +987,7 @@ void setPolyFlagsByRef(int ref, unsigned short flags)
         emscripten_log(buff);
     } else {
         sprintf(buff, "found poly %u set flags %u ", ref, flags);
-        emscripten_log(buff);        
+        emscripten_log(buff);
     }
 }
 
@@ -1028,7 +1028,7 @@ void addOffMeshConnection(float startX, float startY, float startZ,
                           /* , unsigned char area, unsigned short flags */ )
 {
     const unsigned char area = SAMPLE_POLYAREA_JUMP;
-    const unsigned short flags = SAMPLE_POLYFLAGS_JUMP; 
+    const unsigned short flags = SAMPLE_POLYFLAGS_JUMP;
 
     const float spos[3] = { startX, startY, startZ };
     const float epos[3] = { endX, endY, endZ };
@@ -1162,7 +1162,7 @@ void findPath(float startPosX, float startPosY, float startPosZ,
                     emscripten_run_script(buff);
                 } else {
                     sprintf(buff, "ignore %f, %f, %f", v[0], v[1], v[2]);
-                    emscripten_log(buff);                   
+                    emscripten_log(buff);
                 }
             }
         }
@@ -1184,7 +1184,7 @@ void set_regionMinSize(float val){          m_regionMinSize = val;          }
 void set_regionMergeSize(float val){        m_regionMergeSize = val;        }
 void set_edgeMaxLen(float val){             m_edgeMaxLen = val;             }
 void set_edgeMaxError(float val){           m_edgeMaxError = val;           }
-void set_vertsPerPoly(float val){           m_vertsPerPoly = val;           }       
+void set_vertsPerPoly(float val){           m_vertsPerPoly = val;           }
 void set_detailSampleDist(float val){       m_detailSampleDist = val;       }
 void set_detailSampleMaxError(float val){   m_detailSampleMaxError = val;   }
 void set_monotonePartitioning(int val){     m_monotonePartitioning = !!val; }
@@ -1198,7 +1198,7 @@ bool initWithFile(std::string filename)
     if (!m_geom || !m_geom->loadMesh(m_ctx, filename.c_str()))
     {
         printf("cannot load OBJ file \n");
-        return false;       
+        return false;
     }
     return true;
 }
@@ -1212,7 +1212,7 @@ bool initWithFileContent(std::string contents)
     if (!m_geom || !m_geom->loadMeshFromContents(m_ctx, contents.c_str()))
     {
         printf("cannot load OBJ contents \n");
-        return false;       
+        return false;
     }
 
     return true;
@@ -1233,7 +1233,7 @@ struct agentUserData {
     int idx;
 };
 
-void updateCrowdAgentParameters(const int idx, float posX, float posY, float posZ, float radius, float height, 
+void updateCrowdAgentParameters(const int idx, float posX, float posY, float posZ, float radius, float height,
                                                                 float maxAcceleration, float maxSpeed, unsigned char updateFlags, float separationWeight)
 {
     dtCrowdAgentParams ap;
@@ -1244,7 +1244,7 @@ void updateCrowdAgentParameters(const int idx, float posX, float posY, float pos
     ap.maxSpeed = maxSpeed;
     ap.collisionQueryRange = ap.radius * 12.0f;
     ap.pathOptimizationRange = ap.radius * 300.0f;
-    ap.updateFlags = updateFlags; 
+    ap.updateFlags = updateFlags;
     // if (m_toolParams.m_anticipateTurns)
     //  ap.updateFlags |= DT_CROWD_ANTICIPATE_TURNS;
     // if (m_toolParams.m_optimizeVis)
@@ -1264,7 +1264,7 @@ void updateCrowdAgentParameters(const int idx, float posX, float posY, float pos
     m_crowd->updateAgentParameters(idx, &ap);
 }
 
-int addCrowdAgent(float posX, float posY, float posZ, float radius, float height, 
+int addCrowdAgent(float posX, float posY, float posZ, float radius, float height,
                                     float maxAcceleration, float maxSpeed, unsigned char updateFlags, float separationWeight)
 {
     dtCrowdAgentParams ap;
@@ -1345,7 +1345,7 @@ bool crowdRequestMoveTarget(int agentIdx, float posX, float posY, float posZ)
         // emscripten_run_script("debug('MoveTarget adjusted');");
     }
 
-    m_crowd->requestMoveTarget(agentIdx, m_targetRef, m_targetPos); 
+    m_crowd->requestMoveTarget(agentIdx, m_targetRef, m_targetPos);
 
     return true;
 }
@@ -1474,7 +1474,7 @@ bool buildTiled()
 {
     dtStatus status;
     char buff[512];
-    
+
     if (!m_geom || !m_geom->getMesh())
     {
         emscripten_log("Geometry is not ready");
@@ -1484,7 +1484,7 @@ bool buildTiled()
     m_talloc = new LinearAllocator(32000);
     m_tcomp = new FastLZCompressor;
     m_tmproc = new MeshProcess;
-    
+
     m_tmproc->init(m_geom);
 
     // Init cache
@@ -1527,7 +1527,7 @@ bool buildTiled()
     cfg.detailSampleMaxError = m_cellHeight * m_detailSampleMaxError;
     rcVcopy(cfg.bmin, bmin);
     rcVcopy(cfg.bmax, bmax);
-    
+
     // Tile cache params.
     dtTileCacheParams tcparams;
     memset(&tcparams, 0, sizeof(tcparams));
@@ -1559,7 +1559,7 @@ bool buildTiled()
     }
 
     dtFreeNavMesh(m_navMesh);
-    
+
     m_navMesh = dtAllocNavMesh();
     if (!m_navMesh)
     {
@@ -1574,7 +1574,7 @@ bool buildTiled()
     params.tileHeight = m_tileSize*m_cellSize;
     params.maxTiles = m_maxTiles;
     params.maxPolys = m_maxPolysPerTile;
-    
+
     // sprintf(buff, "initNavMesh  tileWidth=%f  tileHeight=%f  maxTiles=%u  maxPolys=%u", params.tileWidth, params.tileHeight, params.maxTiles, params.maxPolys);
     // emscripten_log(buff);
 
@@ -1584,20 +1584,20 @@ bool buildTiled()
         emscripten_log("Could not init navmesh.");
         return false;
     }
-    
+
     status = m_navQuery->init(m_navMesh, 2048);
     if (dtStatusFailed(status))
     {
         emscripten_log("Could not init Detour navmesh query");
         return false;
     }
-    
+
     // Preprocess tiles.
-    
+
     m_cacheLayerCount = 0;
     m_cacheCompressedSize = 0;
     m_cacheRawSize = 0;
-    
+
     for (int y = 0; y < th; ++y)
     {
         for (int x = 0; x < tw; ++x)
@@ -1623,7 +1623,7 @@ bool buildTiled()
                     tile->data = 0;
                     continue;
                 }
-                
+
                 m_cacheLayerCount++;
                 m_cacheCompressedSize += tile->dataSize;
                 m_cacheRawSize += calcLayerBufferSize(tcparams.width, tcparams.height);
@@ -1649,9 +1649,9 @@ bool buildTiled()
     }
 
     // emscripten_log("Build initial meshes done");
-    
+
     m_cacheBuildMemUsage = m_talloc->high;
-    
+
     const dtNavMesh* nav = m_navMesh;
     int navmeshMemUsage = 0;
     for (int i = 0; i < nav->getMaxTiles(); ++i)
@@ -1681,7 +1681,7 @@ bool buildTiled()
 bool buildSolo()
 {
     dtStatus status;
-        
+
     char buff[1024];
 
     dd = new DebugDrawGL;
@@ -1692,7 +1692,7 @@ bool buildSolo()
         m_ctx->log(RC_LOG_ERROR, "buildNavigation: Input mesh is not specified.");
         return false;
     }
-    
+
     cleanup();
 
     const float* bmin  = m_geom->getMeshBoundsMin();
@@ -1701,11 +1701,11 @@ bool buildSolo()
     const int nverts   = m_geom->getMesh()->getVertCount();
     const int* tris    = m_geom->getMesh()->getTris();
     const int ntris    = m_geom->getMesh()->getTriCount();
-    
+
     //
     // Step 1. Initialize build config.
     //
-    
+
     // Init build configuration from GUI
     memset(&m_cfg, 0, sizeof(m_cfg));
     m_cfg.cs = m_cellSize;
@@ -1723,7 +1723,7 @@ bool buildSolo()
     m_cfg.borderSize = m_cfg.walkableRadius + 0.5; // Reserve enough padding.
     m_cfg.detailSampleDist = m_detailSampleDist < 0.9f ? 0 : m_cellSize * m_detailSampleDist;
     m_cfg.detailSampleMaxError = m_cellHeight * m_detailSampleMaxError;
-    
+
     // Set the area where the navigation will be build.
     // Here the bounds of the input mesh are used, but the
     // area could be specified by an user defined box, etc.
@@ -1736,19 +1736,19 @@ bool buildSolo()
 
     // emscripten_log("resetTimers");
 
-    // Start the build process. 
+    // Start the build process.
     //m_ctx->startTimer(RC_TIMER_TOTAL);
-    
+
     m_ctx->log(RC_LOG_PROGRESS, "Building navigation:");
     m_ctx->log(RC_LOG_PROGRESS, " - %d x %d cells", m_cfg.width, m_cfg.height);
     m_ctx->log(RC_LOG_PROGRESS, " - %.1fK verts, %.1fK tris", nverts/1000.0f, ntris/1000.0f);
-    
+
     // emscripten_log("Building navigation");
 
     //
     // Step 2. Rasterize input polygon soup.
     //
-    
+
     // Allocate voxel heightfield where we rasterize our input data to.
     m_solid = rcAllocHeightfield();
     if (!m_solid)
@@ -1763,7 +1763,7 @@ bool buildSolo()
         m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not create solid heightfield.");
         return false;
     }
-    
+
     // emscripten_log("Heightfield polygon soup");
 
     // Allocate array that can hold triangle area types.
@@ -1791,7 +1791,7 @@ bool buildSolo()
     // sprintf(buff, "m_ctx=%d, WalkableTriangles=%u, verts=%d, nverts=%d, trds=%d, m_trdareas=%x, ntrds=%d, m_soldd=%d, walkableClimb=%u", m_ctx, sizeof(m_triareas)/sizeof(unsigned char), verts, nverts, tris, m_triareas, ntris, m_solid, m_cfg.walkableClimb);
     // emscripten_log(buff);
     // dumpConfig();
-    
+
     rcRasterizeTriangles(m_ctx, verts, nverts, tris, m_triareas, ntris, *m_solid, m_cfg.walkableClimb);
 
     if (!m_keepInterResults)
@@ -1799,11 +1799,11 @@ bool buildSolo()
         delete [] m_triareas;
         m_triareas = 0;
     }
-    
+
     //
     // Step 3. Filter walkables surfaces.
     //
-    
+
     // emscripten_log("rcFilterLowHangingWalkableObstacles");
 
     // Once all geoemtry is rasterized, we do initial pass of filtering to
@@ -1833,13 +1833,13 @@ bool buildSolo()
         m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build compact data.");
         return false;
     }
-    
+
     if (!m_keepInterResults)
     {
         rcFreeHeightField(m_solid);
         m_solid = 0;
     }
-        
+
     // emscripten_log("rcErodeWalkableArea");
 
     // Erode the walkable area by agent radius.
@@ -1855,7 +1855,7 @@ bool buildSolo()
     const ConvexVolume* vols = m_geom->getConvexVolumes();
     for (int i  = 0; i < m_geom->getConvexVolumeCount(); ++i)
         rcMarkConvexPolyArea(m_ctx, vols[i].verts, vols[i].nverts, vols[i].hmin, vols[i].hmax, (unsigned char)vols[i].area, *m_chf);
-    
+
     if (m_monotonePartitioning)
     {
         // Partition the walkable surface into simple regions without holes.
@@ -1888,7 +1888,7 @@ bool buildSolo()
     //
 
     // emscripten_log("rcBuildContours");
-    
+
     // Create contours.
     m_cset = rcAllocContourSet();
     if (!m_cset)
@@ -1901,13 +1901,13 @@ bool buildSolo()
         m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not create contours.");
         return false;
     }
-    
+
     // printf("Trace and simplify region contours: %u conts (maxSimplificationError= %f, maxEdgeLen= %u)\n", m_cset->nconts, m_cfg.maxSimplificationError, m_cfg.maxEdgeLen);
 
     //
     // Step 6. Build polygons mesh from contours.
     //
-    
+
     // Build polygon navmesh from the contours.
     m_pmesh = rcAllocPolyMesh();
     if (!m_pmesh)
@@ -1920,13 +1920,13 @@ bool buildSolo()
         m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not triangulate contours.");
         return false;
     }
-    
+
     // printf("Build polygons mesh from contours. \n");
 
     //
     // Step 7. Create detail mesh which allows to access approximate height on each polygon.
     //
-    
+
     m_dmesh = rcAllocPolyMeshDetail();
     if (!m_dmesh)
     {
@@ -1952,11 +1952,11 @@ bool buildSolo()
 
     // At this point the navigation mesh data is ready, you can access it from m_pmesh.
     // See duDebugDrawPolyMesh or dtCreateNavMeshData as examples how to access the data.
-    
+
     //
     // (Optional) Step 8. Create Detour data from Recast poly mesh.
     //
-    
+
     // The GUI may allow more max points per polygon than Detour can handle.
     // Only build the detour navmesh if we do not exceed the limit.
     if (m_cfg.maxVertsPerPoly <= DT_VERTS_PER_POLYGON)
@@ -1971,7 +1971,7 @@ bool buildSolo()
 
             if (m_pmesh->areas[i] == RC_WALKABLE_AREA)
                 m_pmesh->areas[i] = SAMPLE_POLYAREA_GROUND;
-                
+
             if (m_pmesh->areas[i] == SAMPLE_POLYAREA_GROUND ||
                 m_pmesh->areas[i] == SAMPLE_POLYAREA_GRASS ||
                 m_pmesh->areas[i] == SAMPLE_POLYAREA_ROAD)
@@ -2021,13 +2021,13 @@ bool buildSolo()
 
         // printf("dtNavMeshCreateParams %p \n", params);
         // debugConfig();
-        
+
         if (!dtCreateNavMeshData(&params, &navData, &navDataSize))
         {
             m_ctx->log(RC_LOG_ERROR, "Could not build Detour navmesh.");
             return false;
         }
-        
+
         // printf("Built Detour navdata. %p \n", navData);
 
         m_navMesh = dtAllocNavMesh();
@@ -2050,7 +2050,7 @@ bool buildSolo()
             m_ctx->log(RC_LOG_ERROR, "Could not init Detour navmesh");
             return false;
         }
-        
+
         // printf("Init Detour navmesh. %p \n", navData);
 
         m_navQuery = dtAllocNavMeshQuery();

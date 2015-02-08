@@ -11,8 +11,8 @@ CC = $(EMSCRIPTEN_ROOT)/emcc
 # FASTCOMPILER = EMCC_FAST_COMPILER=0
 
 # PATH TO EMCC
-# LLVM = /usr/local/opt/llvm/bin
-# CC = /Users/vincent/Workspace/emscripten/emcc
+LLVM = /Users/allyouneedisgnu/Workspace/emscripten-fastcomp/build/Release/bin
+CC = /Users/allyouneedisgnu/Workspace/emscripten/emcc
 # FASTCOMPILER = EMCC_FAST_COMPILER=0
 
 CFLAGS = -O2 --closure 1 -g -s WARN_ON_UNDEFINED_SYMBOLS=0 -s VERBOSE=0 -s NO_EXIT_RUNTIME=1 -s LINKABLE=1 -s ALLOW_MEMORY_GROWTH=1 -s DISABLE_GL_EMULATION=1 -s DISABLE_EXCEPTION_CATCHING=1 -s ASSERTIONS=0 --bind
@@ -23,6 +23,7 @@ INCLUDES = -I recastnavigation/Recast/Include \
 				 -I recastnavigation/RecastDemo/Include \
 				 -I recastnavigation/DebugUtils/Include \
 				 -I recastnavigation/DetourTileCache/Include \
+				 -I src/zlib \
 				 -I src/JavascriptInterface
 FILES = recastnavigation/DebugUtils/Source/DebugDraw.cpp \
 			recastnavigation/DebugUtils/Source/DetourDebugDraw.cpp \
@@ -64,18 +65,21 @@ FILES = recastnavigation/DebugUtils/Source/DebugDraw.cpp \
 			src/JavascriptInterface/JavascriptInterface.cpp \
 			src/JavascriptInterface/main.cpp
 
-FLAGS = 
-PRELOAD = 
+FLAGS =
+PRELOAD =
 
 PREJS = --pre-js src/pre.module.js
 POSTJS = --post-js src/post.module.js
 LIBRARYJS = --js-library src/library_recast.js
 
-all: clean test build
+all: ensure clean test build
+
+ensure:
+	test -s "$(CC)" || { echo "Emscripten compiler, defined to be here: $(CC), does not exist! Exiting..."; exit 1; }
 
 build: $(wildcard  lib/*.js)
 	mkdir -p $(BUILDDIR)
-	$(FASTCOMPILER) $(PRE_FLAGS) $(CC) $(FLAGS) $(DEFINES) $(INCLUDES) $(CFLAGS) $(FILES) $(LIBRARYJS) -s EXPORTED_FUNCTIONS='[]' $(PREJS) $(POSTJS) -o $(BUILDDIR)/recast.js $(PRELOAD)
+	$(FASTCOMPILER) $(PRE_FLAGS) $(CC) $(FLAGS) $(DEFINES) $(INCLUDES) $(CFLAGS) $(FILES) $(LIBRARYJS) -s EXPORTED_FUNCTIONS='[]' $(PREJS) $(POSTJS) -o $(BUILDDIR)/recast.js $(PRELOAD) --memory-init-file 0
 
 test:
 	$(NODEUNIT) tests
