@@ -122,12 +122,12 @@ exports['our methods are present'] = function(test) {
 exports['handle an agent'] = function(test) {
     test.expect(11);
 
-    recast.set_cellSize(0.3);
-    recast.set_cellHeight(0.1);
-    recast.set_agentHeight(1.0);
-    recast.set_agentRadius(0.2);
-    recast.set_agentMaxClimb(4.0);
-    recast.set_agentMaxSlope(30.0);
+    recast.set_cellSize(0.5);
+    recast.set_cellHeight(0.5);
+    recast.set_agentHeight(2);
+    recast.set_agentRadius(0.8);
+    recast.set_agentMaxClimb(2.9);
+    recast.set_agentMaxSlope(45);
 
     /*
     recast.settings({
@@ -157,6 +157,7 @@ exports['handle an agent'] = function(test) {
         object.traverse(function(child) {
             if (child instanceof THREE.Mesh) {
                 child.material.side = THREE.DoubleSide;
+                // child.material.shading = THREE.FlatShading;
             }
         } );
         scene.add(object);
@@ -167,6 +168,9 @@ exports['handle an agent'] = function(test) {
      * Load an .OBJ file
      */
     recast.OBJLoader('nav_test.obj', function(){
+
+        recast.buildTiled();
+        recast.initCrowd(1000, 1.0);
 
         // recast.debugCreateNavMesh(0);
         // recast.debugCreateNavMeshPortals();
@@ -274,8 +278,26 @@ exports['handle an agent'] = function(test) {
             }
         };
 
+        window.addObstacle = function(pointX, pointY, pointZ) {
+            var radius = 1 + Math.random() * 5;
+            var obstacleMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(radius, radius, 2),
+                new THREE.MeshBasicMaterial({
+                    color: 0xff0000,
+                    shading: THREE.FlatShading,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.8,
+                    overdraw: true
+                })
+            );
+            obstacleMesh.position.set(pointX, pointY, pointZ);
+            scene.add(obstacleMesh);
+            recast.addTempObstacle(pointX, pointY, pointZ, radius);
+        };
+
         var circleMesh;
-        var paintCircle = function(pointX, pointY, pointZ){
+        var paintCircle = function(pointX, pointY, pointZ) {
 
             if (! circleMesh) {
                 circleMesh = new THREE.Mesh(
@@ -321,7 +343,13 @@ exports['handle an agent'] = function(test) {
                 var color = agent.neighbors * 128;
                 agentsObjects[agent.idx].children[0].material.color.set(color, color, color);
 
-                if (agent.idx === 0) {
+                if (parseInt(Math.random() * 10) === 5 &&
+                    parseInt(Math.random() * 10) === 5 &&
+                    parseInt(Math.random() * 10) === 5) {
+                    addObstacle(agent.position.x, agent.position.y, agent.position.z, 2);
+                }
+
+                if (0 && agent.idx === 0) {
 
                     // recast.findNearestPoly(
                     //     agentsObjects[agent.idx].position.x,

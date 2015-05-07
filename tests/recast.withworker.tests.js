@@ -57,11 +57,11 @@ exports['our methods are present'] = function(test) {
 exports['load an .obj file'] = function(test) {
     test.expect(9);
 
-    recast.set_cellSize(0.3);
-    recast.set_cellHeight(0.1);
-    recast.set_agentHeight(1.0);
-    recast.set_agentRadius(0.2);
-    recast.set_agentMaxClimb(4.0);
+    recast.set_cellSize(0.1);
+    recast.set_cellHeight(0.05);
+    recast.set_agentHeight(1.8);
+    recast.set_agentRadius(0.4);
+    recast.set_agentMaxClimb(2.0);
     recast.set_agentMaxSlope(30.0);
 
     /*
@@ -79,6 +79,9 @@ exports['load an .obj file'] = function(test) {
      * Load an .OBJ file
      */
     recast.OBJLoader(ENVIRONMENT_IS_WEB ? '../tests/nav_test.obj' : '../tests/nav_test.obj', recast.cb(function(){
+
+        recast.build();
+        recast.initCrowd(1000, 1.0);    
 
         /**
          * Find a random navigable point on this mesh

@@ -63,22 +63,15 @@ void BuildContext::doResetTimers()
 
 void BuildContext::doStartTimer(const rcTimerLabel label)
 {
-	m_startTime[label] = getPerfTime();
 }
 
 void BuildContext::doStopTimer(const rcTimerLabel label)
 {
-	const TimeVal endTime = getPerfTime();
-	const int deltaTime = (int)(endTime - m_startTime[label]);
-	if (m_accTime[label] == -1)
-		m_accTime[label] = deltaTime;
-	else
-		m_accTime[label] += deltaTime;
 }
 
 int BuildContext::doGetAccumulatedTime(const rcTimerLabel label) const
 {
-	return m_accTime[label];
+	return 0;
 }
 
 void BuildContext::dumpLog(const char* format, ...)

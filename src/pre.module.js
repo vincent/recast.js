@@ -67,7 +67,7 @@ EventEmitter.prototype.emit = function (type) {
 
   // remove events that run only once
   if (this._listeners[type].once) this.remove(type);
-  
+
   return this;
 };
 
@@ -91,6 +91,25 @@ EventEmitter.prototype.deferEmit = function (type) {
 };
 
 
+/**
+ * Bit operations, from http://stackoverflow.com/a/8436459/1689894
+ */
+
+function bit_test(num, bit){
+    return (num & bit) !== 0;
+}
+
+function bit_set(num, bit){
+    return num |= bit;
+}
+
+function bit_clear(num, bit){
+    return num &= ~bit;
+}
+
+function bit_toggle(num, bit){
+    return num ^= bit;
+}
 
 /*!
  * recast.js
@@ -158,8 +177,6 @@ var _ajax = function(url, data, callback, type) {
 
 var _OBJDataLoader = function (contents, callback) {
   recast.initWithFileContent(contents.toString());
-  recast.build();
-  recast.initCrowd(1000, 1.0);
   callback(recast);
 };
 
@@ -225,6 +242,32 @@ var workerMain = function(event) {
         type: message.type,
         callback: message.callback
       });
+      break;
+
+    case 'build':
+      recast.build();
+      break;
+
+    case 'buildSolo':
+      recast.buildSolo();
+      break;
+
+    case 'buildTiled':
+      recast.buildTiled();
+      break;
+
+    case 'initCrowd':
+      recast.initCrowd(1000, 1.0);
+      break;
+
+    case 'getNavMeshVertices':
+      recast.getNavMeshVertices(recast.cb(function(data) {
+        postMessage({
+          type: message.type,
+          data: Array.prototype.slice.call(arguments),
+          callback: message.callback
+        });
+      }));
       break;
 
     case 'OBJLoader':
@@ -330,6 +373,16 @@ var workerMain = function(event) {
       });
       break;
 
+    case 'setPolyFlagsByRef':
+      recast.setPolyFlagsByRef(message.data.ref, message.data.flags);
+      postMessage({
+        vent: true,
+        type: message.type,
+        data: message.data,
+        callback: message.callback
+      });
+      break;
+
     case 'addCrowdAgent':
       var idx = recast.addCrowdAgent(
         message.data.position.x,
@@ -402,6 +455,56 @@ var workerMain = function(event) {
           callback: message.callback
         });
       }));
+      break;
+
+    case 'addTempObstacle':
+      recast.addTempObstacle(message.data.posX, message.data.posY, message.data.posZ, message.data.radius);
+      postMessage({
+        vent: true,
+        type: message.type,
+        ddata: [ message.data ],
+        callback: message.callback
+      });
+      break;
+
+    case 'removeTempObstacle':
+      recast.removeTempObstacle(message.data);
+      postMessage({
+        vent: true,
+        type: message.type,
+        ddata: [ message.data ],
+        callback: message.callback
+      });
+      break;
+
+    case 'removeAllTempObstacles':
+      recast.removeAllTempObstacles();
+      postMessage({
+        vent: true,
+        type: message.type,
+        ddata: [ message.data ],
+        callback: message.callback
+      });
+      break;
+
+    case 'getAllTempObstacles':
+      recast.getAllTempObstacles(message.data.callback_id);
+      postMessage({
+        vent: true,
+        type: message.type,
+        ddata: [ message.data ],
+        callback: message.callback
+      });
+      break;
+
+    case 'addOffMeshConnection':
+      recast.addOffMeshConnection(message.data.startX, message.data.startY, message.data.startZ, message.data.endX, message.data.endY, message.data.endZ, message.data.radius, message.data.bidir);
+      postMessage({
+        vent: true,
+        type: message.type,
+        ddata: [ message.data ],
+        callback: message.callback
+      });
       break;
 
     default:
@@ -541,6 +644,63 @@ recast.queryPolygons = function (posX, posY, posZ, extX, extY, extZ, maxPolys, c
   return recast._queryPolygons(posX, posY, posZ, extX, extY, extZ, maxPolys, callback_id);
 };
 
+recast.zones = { };
+
+recast.setZones = function (zones) {
+  var zonesKeys = Object.keys(zones);
+  for (var i = zonesKeys.length - 1; i >= 0; i--) {
+    var zone = new Zone(zonesKeys[i], zones[zonesKeys[i]]);
+    recast.zones[ zone.name ] = zone;
+  }
+};
+
+//////////////////////////////////////////
+
+recast.Zone = Zone;
+
+function Zone (name, data) {
+  this.name  = name;
+  this.refs  = data.refs;
+  this.flags = 0;
+
+  for (var i = 0; i < data.flags.length; i++) {
+    this.setFlags(data.flags[i]);
+  }
+
+  this.syncFlags();
+}
+
+Zone.prototype.syncFlags = function() {
+  for (var i = 0; i < this.refs.length; i++) {
+    recast.setPolyFlagsByRef(this.refs[i], this.flags);
+  }
+  return this;
+};
+
+Zone.prototype.isWalkable = function() {
+  return this.is(recast.FLAG_WALK);
+};
+
+Zone.prototype.is = function(flags) {
+  return bit_test(this.flags, flags);
+};
+
+Zone.prototype.setFlags = function(flags) {
+  this.flags = Math.min(65535, bit_set(this.flags, flags));
+  return this.syncFlags();
+};
+
+Zone.prototype.clearFlags = function(flags) {
+  this.flags = bit_clear(this.flags, flags);
+  return this.syncFlags();
+};
+
+Zone.prototype.toggleFlags = function(flags) {
+  this.flags = Math.min(65535, bit_toggle(this.flags, flags));
+  return this.syncFlags();
+};
+
+//////////////////////////////////////////
 
 //////////////////////////////////////////
 
@@ -625,6 +785,6 @@ VectorPool.prototype.add = function( v ) {
 };
 
 var vectorPool = new VectorPool(10000);
-vectorPool.ready = true; // just to make jshint happy 
+vectorPool.ready = true; // just to make jshint happy
 
 //////////////////////////////////////////
