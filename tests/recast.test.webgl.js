@@ -29,7 +29,7 @@ controls.addEventListener('change', function(){
     render();
 });
 
-var buildParam = location.search.match(/agents=(\d+)/);
+var buildParam = location.search.match(/build=(\w+)/);
 var buildMethod = buildParam.length == 2 ? buildParam[1] : 'buildTiled';
 
 var agentsParam = location.search.match(/agents=(\d+)/);
