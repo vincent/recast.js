@@ -30,10 +30,10 @@ controls.addEventListener('change', function(){
 });
 
 var buildParam = location.search.match(/build=(\w+)/);
-var buildMethod = buildParam.length == 2 ? buildParam[1] : 'buildTiled';
+var buildMethod = (buildParam && buildParam.length == 2) ? buildParam[1] : 'buildTiled';
 
 var agentsParam = location.search.match(/agents=(\d+)/);
-var MAX_AGENTS = (agentsParam && agentsParam.length == 2 ) ? agentsParam[1] : 10;
+var MAX_AGENTS = (agentsParam && agentsParam.length == 2) ? agentsParam[1] : 10;
 var MAX_HOPS = 10;
 
 var agentsObjects = [];
