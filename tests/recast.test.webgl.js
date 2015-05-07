@@ -29,6 +29,9 @@ controls.addEventListener('change', function(){
     render();
 });
 
+var buildParam = location.search.match(/agents=(\d+)/);
+var buildMethod = buildParam.length == 2 ? buildParam[1] : 'buildTiled';
+
 var agentsParam = location.search.match(/agents=(\d+)/);
 var MAX_AGENTS = (agentsParam && agentsParam.length == 2 ) ? agentsParam[1] : 10;
 var MAX_HOPS = 10;
@@ -77,12 +80,12 @@ recast.setGLContext(renderer.context);
 function render () {
     renderer.render(scene, camera);
 
-    if (debugDraw.NavMesh)              { recast.drawObject('NavMesh');             }                        
-    if (debugDraw.NavMeshPortals)       { recast.drawObject('NavMeshPortals');      }          
-    if (debugDraw.RegionConnections)    { recast.drawObject('RegionConnections');   }    
-    if (debugDraw.RawContours)          { recast.drawObject('RawContours');         }                
-    if (debugDraw.Contours)             { recast.drawObject('Contours');            }                      
-    if (debugDraw.HeightfieldSolid)     { recast.drawObject('HeightfieldSolid');    }      
+    if (debugDraw.NavMesh)              { recast.drawObject('NavMesh');             }
+    if (debugDraw.NavMeshPortals)       { recast.drawObject('NavMeshPortals');      }
+    if (debugDraw.RegionConnections)    { recast.drawObject('RegionConnections');   }
+    if (debugDraw.RawContours)          { recast.drawObject('RawContours');         }
+    if (debugDraw.Contours)             { recast.drawObject('Contours');            }
+    if (debugDraw.HeightfieldSolid)     { recast.drawObject('HeightfieldSolid');    }
     if (debugDraw.HeightfieldWalkable)  { recast.drawObject('HeightfieldWalkable'); }
 }
 
@@ -150,7 +153,7 @@ exports['handle an agent'] = function(test) {
     stats.setMode(0);
     stats.begin();
 
-   
+
     var loader = new THREE.OBJLoader();
     loader.load('nav_test.obj', function(object){
         terrain = object;
@@ -169,7 +172,7 @@ exports['handle an agent'] = function(test) {
      */
     recast.OBJLoader('nav_test.obj', function(){
 
-        recast.buildTiled();
+        recast[buildMethod]();
         recast.initCrowd(1000, 1.0);
 
         // recast.debugCreateNavMesh(0);
@@ -202,7 +205,7 @@ exports['handle an agent'] = function(test) {
                     if (!vertices[i+2]) { break; }
 
                     var geometry = new THREE.ConvexGeometry([
-                        new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ), 
+                        new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ),
                         new THREE.Vector3( vertices[i+1].x, vertices[i+1].y, vertices[i+1].z ),
                         new THREE.Vector3( vertices[i+2].x, vertices[i+2].y, vertices[i+2].z )
                     ]);
@@ -327,16 +330,16 @@ exports['handle an agent'] = function(test) {
                 if (Math.abs(agentsObjects[agent.idx].rotation.y - angle) > 0) {
                     agentsObjects[agent.idx].rotation.y = angle;
                 }
-                
+
                 agentsObjects[agent.idx].position.set(
-                    agent.position.x, 
-                    agent.position.y, 
+                    agent.position.x,
+                    agent.position.y,
                     agent.position.z
                 );
 
                 // agentsObjects[agent.idx].arrowHelper.setDirection(
-                //     agent.velocity.x * 100, 
-                //     agent.velocity.y * 100, 
+                //     agent.velocity.x * 100,
+                //     agent.velocity.y * 100,
                 //     agent.velocity.z * 100
                 // );
 
