@@ -65,12 +65,12 @@ recast.setGLContext(renderer.context);
 function render () {
     renderer.render(scene, camera);
 
-    if (debugDraw.NavMesh)              { recast.drawObject('NavMesh');             }                        
-    if (debugDraw.NavMeshPortals)       { recast.drawObject('NavMeshPortals');      }          
-    if (debugDraw.RegionConnections)    { recast.drawObject('RegionConnections');   }    
-    if (debugDraw.RawContours)          { recast.drawObject('RawContours');         }                
-    if (debugDraw.Contours)             { recast.drawObject('Contours');            }                      
-    if (debugDraw.HeightfieldSolid)     { recast.drawObject('HeightfieldSolid');    }      
+    if (debugDraw.NavMesh)              { recast.drawObject('NavMesh');             }
+    if (debugDraw.NavMeshPortals)       { recast.drawObject('NavMeshPortals');      }
+    if (debugDraw.RegionConnections)    { recast.drawObject('RegionConnections');   }
+    if (debugDraw.RawContours)          { recast.drawObject('RawContours');         }
+    if (debugDraw.Contours)             { recast.drawObject('Contours');            }
+    if (debugDraw.HeightfieldSolid)     { recast.drawObject('HeightfieldSolid');    }
     if (debugDraw.HeightfieldWalkable)  { recast.drawObject('HeightfieldWalkable'); }
 }
 
@@ -89,7 +89,7 @@ function addMeshFromVertices (vertices, parent, plain) {
         if (!vertices[i+2]) { break; }
 
         var geometry = new THREE.ConvexGeometry([
-            new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ), 
+            new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ),
             new THREE.Vector3( vertices[i+1].x, vertices[i+1].y, vertices[i+1].z ),
             new THREE.Vector3( vertices[i+2].x, vertices[i+2].y, vertices[i+2].z )
         ]);
@@ -156,7 +156,7 @@ exports['handle doors'] = function(test) {
     stats.setMode(0);
     stats.begin();
 
-   
+
     var loader = new THREE.OBJLoader();
     loader.load('doors.obj', function(object){
         terrain = object;
@@ -212,10 +212,10 @@ exports['handle doors'] = function(test) {
             for (var door in doors) {
                 door = doors[door];
                 recast.queryPolygons(
-                    door.geometry.boundingSphere.center.x, 
-                    door.geometry.boundingSphere.center.y, 
-                    door.geometry.boundingSphere.center.z, 
-                    0.4, 0.1, 0.4, 
+                    door.geometry.boundingSphere.center.x,
+                    door.geometry.boundingSphere.center.y,
+                    door.geometry.boundingSphere.center.z,
+                    0.4, 0.1, 0.4,
                     recast.cb(function (polygons) {
                         var doorMesh = new THREE.Object3D();
                         for (var i = 0; i < polygons.length; i++) {
@@ -229,8 +229,8 @@ exports['handle doors'] = function(test) {
 
             recast.vent.on('update', function (agents) {
                 agent.position.set(
-                    agents[0].position.x, 
-                    agents[0].position.y, 
+                    agents[0].position.x,
+                    agents[0].position.y,
                     agents[0].position.z
                 );
             });
@@ -275,7 +275,6 @@ exports['handle doors'] = function(test) {
 
                 TWEEN.update();
                 recast.crowdUpdate(0.1);
-                recast.crowdGetActiveAgents();
 
                 last = time;
                 render();
@@ -293,7 +292,7 @@ exports['handle doors'] = function(test) {
                     door = doors[door];
                     for (var i = 0; i < door.refs.length; i++) {
                         recast.setPolyFlagsByRef(
-                            door.refs[i], 
+                            door.refs[i],
                             door.closed ? 0 : 0x01
                         );
                     }
@@ -304,7 +303,7 @@ exports['handle doors'] = function(test) {
                         }, 500)
                         .start();
 
-                    door.closed = ! door.closed;                    
+                    door.closed = ! door.closed;
                 }
             };
             window.toggleDoors = toggleDoors;

@@ -65,14 +65,14 @@ exports['load an .obj file'] = function(test) {
         agentMaxSlope: 30.0
     });
     */
-   
+
     /**
      * Load an .OBJ file
      */
     recast.OBJLoader('nav_test.obj', function(){
 
         recast.build();
-        recast.initCrowd(1000, 1.0);    
+        recast.initCrowd(1000, 1.0);
 
         /**
          * Find a random navigable point on this mesh
@@ -137,7 +137,7 @@ exports['manage the crowd'] = function(test) {
         agentMaxSlope: 30.0
     });
     */
-   
+
     /**
      * Load an .OBJ file
      */
@@ -177,7 +177,6 @@ exports['manage the crowd'] = function(test) {
             test.ok(typeof id === 'number', 'agent ID is a number');
 
             recast.crowdUpdate(1.0);
-            recast.crowdGetActiveAgents();
 
             // removeCrowdAgent
             // crowdUpdate

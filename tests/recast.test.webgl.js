@@ -409,7 +409,6 @@ exports['handle an agent'] = function(test) {
             window.requestAnimationFrame(animate);
 
             recast.crowdUpdate(0.1);
-            recast.crowdGetActiveAgents();
 
             last = time;
             render();

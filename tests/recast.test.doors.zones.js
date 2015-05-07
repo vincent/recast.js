@@ -65,12 +65,12 @@ recast.setGLContext(renderer.context);
 function render () {
     renderer.render(scene, camera);
 
-    if (debugDraw.NavMesh)              { recast.drawObject('NavMesh');             }                        
-    if (debugDraw.NavMeshPortals)       { recast.drawObject('NavMeshPortals');      }          
-    if (debugDraw.RegionConnections)    { recast.drawObject('RegionConnections');   }    
-    if (debugDraw.RawContours)          { recast.drawObject('RawContours');         }                
-    if (debugDraw.Contours)             { recast.drawObject('Contours');            }                      
-    if (debugDraw.HeightfieldSolid)     { recast.drawObject('HeightfieldSolid');    }      
+    if (debugDraw.NavMesh)              { recast.drawObject('NavMesh');             }
+    if (debugDraw.NavMeshPortals)       { recast.drawObject('NavMeshPortals');      }
+    if (debugDraw.RegionConnections)    { recast.drawObject('RegionConnections');   }
+    if (debugDraw.RawContours)          { recast.drawObject('RawContours');         }
+    if (debugDraw.Contours)             { recast.drawObject('Contours');            }
+    if (debugDraw.HeightfieldSolid)     { recast.drawObject('HeightfieldSolid');    }
     if (debugDraw.HeightfieldWalkable)  { recast.drawObject('HeightfieldWalkable'); }
 }
 
@@ -89,7 +89,7 @@ function addMeshFromVertices (vertices, parent, plain) {
         if (!vertices[i+2]) { break; }
 
         var geometry = new THREE.ConvexGeometry([
-            new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ), 
+            new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ),
             new THREE.Vector3( vertices[i+1].x, vertices[i+1].y, vertices[i+1].z ),
             new THREE.Vector3( vertices[i+2].x, vertices[i+2].y, vertices[i+2].z )
         ]);
@@ -156,7 +156,7 @@ exports['handle doors'] = function(test) {
     stats.setMode(0);
     stats.begin();
 
-   
+
     var loader = new THREE.OBJLoader();
     loader.load('doors.obj', function(object){
         terrain = object;
@@ -208,8 +208,8 @@ exports['handle doors'] = function(test) {
 
             recast.vent.on('update', function (agents) {
                 agent.position.set(
-                    agents[0].position.x, 
-                    agents[0].position.y, 
+                    agents[0].position.x,
+                    agents[0].position.y,
                     agents[0].position.z
                 );
             });
@@ -254,7 +254,6 @@ exports['handle doors'] = function(test) {
 
                 TWEEN.update();
                 recast.crowdUpdate(0.1);
-                recast.crowdGetActiveAgents();
 
                 last = time;
                 render();
@@ -277,7 +276,7 @@ exports['handle doors'] = function(test) {
                 //     }, 500)
                 //     .start();
 
-                // door.closed = ! door.closed;                    
+                // door.closed = ! door.closed;
             };
             window.toggleDoor = toggleDoor;
 
