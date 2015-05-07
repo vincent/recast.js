@@ -99,12 +99,12 @@ recast.setGLContext(renderer.context);
 function render () {
     renderer.render(scene, camera);
 
-    if (debugDraw.NavMesh)              { recast.drawObject('NavMesh');             }                        
-    if (debugDraw.NavMeshPortals)       { recast.drawObject('NavMeshPortals');      }          
-    if (debugDraw.RegionConnections)    { recast.drawObject('RegionConnections');   }    
-    if (debugDraw.RawContours)          { recast.drawObject('RawContours');         }                
-    if (debugDraw.Contours)             { recast.drawObject('Contours');            }                      
-    if (debugDraw.HeightfieldSolid)     { recast.drawObject('HeightfieldSolid');    }      
+    if (debugDraw.NavMesh)              { recast.drawObject('NavMesh');             }
+    if (debugDraw.NavMeshPortals)       { recast.drawObject('NavMeshPortals');      }
+    if (debugDraw.RegionConnections)    { recast.drawObject('RegionConnections');   }
+    if (debugDraw.RawContours)          { recast.drawObject('RawContours');         }
+    if (debugDraw.Contours)             { recast.drawObject('Contours');            }
+    if (debugDraw.HeightfieldSolid)     { recast.drawObject('HeightfieldSolid');    }
     if (debugDraw.HeightfieldWalkable)  { recast.drawObject('HeightfieldWalkable'); }
 }
 
@@ -153,7 +153,7 @@ exports['handle an agent'] = function(test) {
     stats.setMode(0);
     stats.begin();
 
-   
+
     var loader = new THREE.OBJLoader();
     loader.load('nav_test.obj', function(object){
         terrain = object;
@@ -179,10 +179,10 @@ exports['handle an agent'] = function(test) {
                 if (Math.abs(agentsObjects[agent.idx].rotation.y - angle) > 0) {
                     agentsObjects[agent.idx].rotation.y = angle;
                 }
-                
+
                 agentsObjects[agent.idx].position.set(
-                    agent.position.x, 
-                    agent.position.y, 
+                    agent.position.x,
+                    agent.position.y,
                     agent.position.z
                 );
 
@@ -215,8 +215,8 @@ exports['handle an agent'] = function(test) {
             scene.add(createSpline(start, end, 3));
         }
 
-        recast.buildSolo();
-        recast.initCrowd(1000, 1.0);    
+        recast.buildTiled();
+        recast.initCrowd(1000, 1.0);
 
         /**
          * Add some agents
