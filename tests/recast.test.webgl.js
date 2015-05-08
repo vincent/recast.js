@@ -73,11 +73,9 @@ var navigationMesh, sequence;
 
 var terrain, agents = [];
 var debugDraw = {};
-var recast = require('../lib/recast.withworker');
+var recast = require('../lib/recast');
 
-recast = new recast('../lib/recast');
-
-// recast.setGLContext(renderer.context);
+recast.setGLContext(renderer.context);
 
 function render () {
     renderer.render(scene, camera);
