@@ -29,6 +29,8 @@ controls.addEventListener('change', function(){
     render();
 });
 
+var addObstacles = location.search.match(/addObstacles/);
+
 var buildParam = location.search.match(/build=(\w+)/);
 var buildMethod = (buildParam && buildParam.length == 2) ? buildParam[1] : 'buildTiled';
 
@@ -347,7 +349,7 @@ exports['handle an agent'] = function(test) {
                 agentsObjects[agent.idx].children[0].material.color.set(color, color, color);
 
                 if (parseInt(Math.random() * 1000) === 12) {
-                    addObstacle(agent.position.x, agent.position.y, agent.position.z, 2);
+                    if (addObstacles) addObstacle(agent.position.x, agent.position.y, agent.position.z, 2);
                 }
 
                 if (0 && agent.idx === 0) {
