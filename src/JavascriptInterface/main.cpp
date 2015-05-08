@@ -542,6 +542,10 @@ dtObstacleRef hitTestObstacle(const dtTileCache* tc, const float* sp, const floa
 //////////////
 rcMeshLoaderObj* meshLoader;
 
+int maxAgents = 1000;
+dtCrowdAgentDebugInfo* m_agentDebug;
+dtCrowdAgent** agents;
+
 ////////////////////////////
 // FROM SAMPLE
 //////////////
@@ -743,16 +747,16 @@ void getNavMeshVertices(int callback){
 
                     char item[512];
 
-                    sprintf(item, "{\"x\":%f,\"y\":%f,\"z\":%f,\"col\":%u}", x, y, z, color);
+                    sprintf(item, "{\"x\":%f,\"y\":%f,\"z\":%f,\"col\":%u},", x, y, z, color);
 
                     data += item;
-
-                    if (i < m_pmesh->npolys - 1 || k < 2) {
-                        data += ",";
-                    }
-                 }
+                }
             }
         }
+    }
+
+    if (data.compare(data.size()-1, 1, ",") == 0) {
+        data = data.substr(0, data.size()-1);
     }
 
     data += " ]";
@@ -1233,6 +1237,8 @@ bool initCrowd(const int maxAgents, const float maxAgentRadius)
 {
     m_crowd->init(maxAgents, maxAgentRadius, m_navMesh);
 
+    agents = (dtCrowdAgent**)dtAlloc(sizeof(dtCrowdAgent*)*maxAgents, DT_ALLOC_PERM);
+
     // Make polygons with 'disabled' flag invalid.
     m_crowd->getEditableFilter(0)->setIncludeFlags(SAMPLE_POLYFLAGS_ALL);
     m_crowd->getEditableFilter(0)->setExcludeFlags(SAMPLE_POLYFLAGS_DISABLED);
@@ -1363,7 +1369,6 @@ bool crowdRequestMoveTarget(int agentIdx, float posX, float posY, float posZ)
 
 bool crowdUpdate(float dt)
 {
-    dtCrowdAgentDebugInfo* m_agentDebug;
 
     memset(&m_agentDebug, 0, sizeof(m_agentDebug));
 
@@ -1378,9 +1383,6 @@ bool crowdUpdate(float dt)
 
 bool _crowdGetActiveAgents(int callback_id)
 {
-    int maxAgents = 1000;
-
-    dtCrowdAgent** agents = (dtCrowdAgent**)dtAlloc(sizeof(dtCrowdAgent*)*maxAgents, DT_ALLOC_PERM);
     int nagents = m_crowd->getActiveAgents(agents, maxAgents);
 
     for (int i = 0; i < nagents; i++) {
