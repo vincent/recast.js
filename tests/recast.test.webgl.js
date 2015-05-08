@@ -346,9 +346,7 @@ exports['handle an agent'] = function(test) {
                 var color = agent.neighbors * 128;
                 agentsObjects[agent.idx].children[0].material.color.set(color, color, color);
 
-                if (parseInt(Math.random() * 10) === 5 &&
-                    parseInt(Math.random() * 10) === 5 &&
-                    parseInt(Math.random() * 10) === 5) {
+                if (parseInt(Math.random() * 100) === 12) {
                     addObstacle(agent.position.x, agent.position.y, agent.position.z, 2);
                 }
 
