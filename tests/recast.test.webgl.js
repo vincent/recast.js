@@ -379,6 +379,10 @@ exports['handle an agent'] = function(test) {
                     // );
                 }
             }
+
+            render();
+            if (stats) stats.update();
+            window.requestAnimationFrame(animate);
         });
 
         /**
@@ -411,10 +415,6 @@ exports['handle an agent'] = function(test) {
             recast.crowdGetActiveAgents();
 
             last = time;
-            render();
-
-            if (stats) stats.update();
-            window.requestAnimationFrame(animate);
         };
 
         animate(new Date().getTime());
