@@ -28,7 +28,7 @@ Tests
 
 Some tests exist in the [tests](https://github.com/vincent/recast.js/tree/master/tests) directory.
 They describe regular usages of the library, and should pass both in node (npm test) and in the browser.
-There are both simple and worker versions. 
+There are both simple and worker versions.
 
 Build
 =========
@@ -36,6 +36,8 @@ Build
 It supposes you already have a working emscripten toolchain installed. You can also define your paths in the Makefile.
 The Emscripten build can be ran with
 `make build`
+
+To update the build against the latest [RecastDetour](https://github.com/memononen/recastnavigation) version, use `make update-source build`
 
 Contribute
 =========

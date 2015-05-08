@@ -1686,7 +1686,7 @@ bool buildTiled()
     sprintf(buff, "navmeshTileMemUsage = %u B  m_cacheCompressedSize = %u B  %u tiles over %ux%u", navmeshMemUsage, m_cacheCompressedSize, nav->getMaxTiles(), th, tw);
     emscripten_log(buff);
 
-    emscripten_run_script("recast.navmeshType = 'tiled';");
+    emscripten_run_script("recast.navmeshType = 'tiled'; recast.vent.emit('built', recast.navmeshType);");
 
     return true;
 }
@@ -2084,7 +2084,7 @@ bool buildSolo()
         return false;
     }
 
-    emscripten_run_script("recast.navmeshType = 'solo';");
+    emscripten_run_script("recast.navmeshType = 'solo'; recast.vent.emit('built', recast.navmeshType);");
 
     return true;
 }
