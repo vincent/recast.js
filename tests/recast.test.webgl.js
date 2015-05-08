@@ -406,7 +406,6 @@ exports['handle an agent'] = function(test) {
 
         var last = new Date().getTime();
         var animate = function animate (time) {
-            window.requestAnimationFrame(animate);
 
             recast.crowdUpdate(0.1);
             recast.crowdGetActiveAgents();
@@ -415,6 +414,7 @@ exports['handle an agent'] = function(test) {
             render();
 
             if (stats) stats.update();
+            window.requestAnimationFrame(animate);
         };
 
         animate(new Date().getTime());
