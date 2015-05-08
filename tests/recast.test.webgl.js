@@ -77,7 +77,7 @@ var recast = require('../lib/recast.withworker');
 
 recast = new recast('../lib/recast');
 
-recast.setGLContext(renderer.context);
+// recast.setGLContext(renderer.context);
 
 function render () {
     renderer.render(scene, camera);
