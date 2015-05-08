@@ -275,6 +275,7 @@ exports['handle doors'] = function(test) {
 
                 TWEEN.update();
                 recast.crowdUpdate(0.1);
+                recast.crowdGetActiveAgents();
 
                 last = time;
                 render();
