@@ -1376,11 +1376,11 @@ bool crowdUpdate(float dt)
     return true;
 }
 
+dtCrowdAgent** agents = (dtCrowdAgent**)dtAlloc(sizeof(dtCrowdAgent*)*1000, DT_ALLOC_PERM);
 bool _crowdGetActiveAgents(int callback_id)
 {
     int maxAgents = 1000;
 
-    dtCrowdAgent** agents = (dtCrowdAgent**)dtAlloc(sizeof(dtCrowdAgent*)*maxAgents, DT_ALLOC_PERM);
     int nagents = m_crowd->getActiveAgents(agents, maxAgents);
 
     for (int i = 0; i < nagents; i++) {

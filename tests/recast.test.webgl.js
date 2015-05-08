@@ -406,8 +406,6 @@ exports['handle an agent'] = function(test) {
 
         var routes;
 
-        var routes;
-
         var last = new Date().getTime();
         var animate = function animate (time) {
 
@@ -419,29 +417,24 @@ exports['handle an agent'] = function(test) {
 
         animate(new Date().getTime());
 
-        sequence = function() {
+        function goAwayAgent (agent, next) {
+            recast.getRandomPoint(recast.cb(function(pt2x, pt2y, pt2z){
+                recast.crowdRequestMoveTarget(agent.id, pt2x, pt2y, pt2z);
+                next();
+            }));
+        }
+
+        var goAway = function () {
             document.getElementById('sequence').style.display = 'none';
-            routes = 0;
-            goAway();
+            async.eachLimit(agentsObjects, 10,
+                goAwayAgent,
+                function () {
+                    document.getElementById('sequence').style.display = 'block';
+                });
         };
 
-        var goAway = function(){
-            for (var i = 0; i < agentsObjects.length; i++) {
-                (function (i) {
-                    recast.getRandomPoint(recast.cb(function(pt2x, pt2y, pt2z){
-                        recast.crowdRequestMoveTarget(i, pt2x, pt2y, pt2z);
-                        if (++routes < MAX_HOPS) {
-                            test.ok(true, 'route ' + routes + ': to ' + Math.round(pt2x, 2) + ',' + Math.round(pt2y, 2)+ ',' + Math.round(pt2z, 2));
-                            setTimeout(goAway, 8000 * Math.random());
-                        } else {
-                            document.getElementById('sequence').style.display = 'block';
-                            // test.done();
-                        }
-                    }));
-                })(i);
-            }
-        };
+        sequence = goAway;
 
-        sequence();
+        goAway();
     });
 };
