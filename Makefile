@@ -81,6 +81,7 @@ ensure:
 	test -s "$(CC)" || { echo "Emscripten compiler, defined to be here: $(CC), does not exist! Exiting..."; exit 1; }
 
 build: $(wildcard  lib/*.js)
+	env
 	mkdir -p $(BUILDDIR)
 	$(FASTCOMPILER) $(PRE_FLAGS) $(CC) $(FLAGS) $(DEFINES) $(INCLUDES) $(CFLAGS) $(FILES) $(LIBRARYJS) -s EXPORTED_FUNCTIONS='[]' $(PREJS) $(POSTJS) -o $(BUILDDIR)/recast.js $(PRELOAD) --memory-init-file 0
 
