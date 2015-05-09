@@ -7,6 +7,8 @@ It embeds an Emscripten-compiled bundle of the [RecastDetour navigation c++ libr
 
 [Demo](http://vincent.github.io/recast.js/tests/test.webgl.html) - [Getting started](https://github.com/vincent/recast.js/wiki) - [API](https://github.com/vincent/recast.js/wiki/API)
 
+[![Build Status](http://ci.three-arena.com/job/Recast.js/badge/icon)](http://ci.three-arena.com/job/Recast.js/)
+
 What can I do with it ?
 =========
 
