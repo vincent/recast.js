@@ -70,7 +70,7 @@ LIBRARYJS = --js-library src/library_recast.js
 all: ensure clean test build
 
 update-source:
-	cd recastnavigation; git reset --hard origin/master; patch -p1 < ../src/recastnavigation.patch
+	git submodule init; cd recastnavigation; git reset --hard origin/master; patch -p1 < ../src/recastnavigation.patch
 
 ensure:
 	test -s "$(CC)" || { echo "Emscripten compiler, defined to be here: $(CC), does not exist! Exiting..."; exit 1; }
