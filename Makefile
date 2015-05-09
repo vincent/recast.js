@@ -7,7 +7,7 @@ NODELINT = $(CWD)/node_modules/nodelint/nodelint
 
 BUILDDIR = lib
 
-CC = $(EMSCRIPTEN_ROOT)/emcc
+CC = $(EMSCRIPTEN)/emcc
 # FASTCOMPILER = EMCC_FAST_COMPILER=0
 
 # PATH TO EMCC
