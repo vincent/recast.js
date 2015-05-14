@@ -70,7 +70,7 @@ LIBRARYJS = --js-library src/library_recast.js
 all: clean test build
 
 update-source:
-	git submodule init; cd recastnavigation; git reset --hard origin/master; patch -p1 < ../src/recastnavigation.patch
+	git submodule init; git submodule update; cd recastnavigation; git reset --hard origin/master; patch -p1 < ../src/recastnavigation.patch
 
 build: $(wildcard  lib/*.js)
 	mkdir -p $(BUILDDIR)
