@@ -5,6 +5,7 @@
 #include <sys/time.h>
 
 #include <string>
+#include <sstream>
 #include <float.h>
 #include <random>
 
@@ -2095,11 +2096,204 @@ bool build()
     return buildSolo();
 }
 
+bool saveVolumesAndOffMeshLinks()
+{
+    if (!m_geom || !m_geom->getMesh())
+    {
+        printf("cannot load OBJ contents \n");
+        return false;
+    }
+
+    std::string filename = "test_filename";
+    return m_geom->save();
+}
+
+bool saveVolumesAndOffMeshLinks()
+{
+    if (!m_geom || !m_geom->getMesh())
+    {
+        printf("cannot load OBJ contents \n");
+        return false;
+    }
+
+    std::string filename = "test_filename";
+    std::string data;
+    char buff[1024];
+
+    int m_offMeshConCount                   = m_geom->getOffMeshConnectionCount();
+    int m_volumeCount                       = m_geom->getConvexVolumeCount();
+    const ConvexVolume* m_volumes           = m_geom->getConvexVolumes();
+    const float* m_offMeshConVerts          = m_geom->getOffMeshConnectionVerts();
+    const float* m_offMeshConRads           = m_geom->getOffMeshConnectionRads();
+    const unsigned char* m_offMeshConDirs   = m_geom->getOffMeshConnectionDirs();
+    const unsigned char* m_offMeshConAreas  = m_geom->getOffMeshConnectionAreas();
+    const unsigned short* m_offMeshConFlags = m_geom->getOffMeshConnectionFlags();
+
+    // Store mesh filename.
+    data += "f ";
+    data += filename.c_str();
+    data += "\\n";
+
+    // Store off-mesh links.
+    for (int i = 0; i < m_offMeshConCount; ++i)
+    {
+        const float* v = &m_offMeshConVerts[i*3*2];
+        const float rad = m_offMeshConRads[i];
+        const int bidir = m_offMeshConDirs[i];
+        const int area = m_offMeshConAreas[i];
+        const int flags = m_offMeshConFlags[i];
+        sprintf(buff, "c %f %f %f  %f %f %f  %f %d %d %d\\n",
+                v[0], v[1], v[2], v[3], v[4], v[5], rad, bidir, area, flags);
+        data += buff;
+    }
+
+    // Convex volumes
+    for (int i = 0; i < m_volumeCount; ++i)
+    {
+        const ConvexVolume* vol = &m_volumes[i];
+        sprintf(buff, "v %d %d %f %f\\n", vol->nverts, vol->area, vol->hmin, vol->hmax);
+        data += buff;
+
+        for (int j = 0; j < vol->nverts; ++j) {
+            sprintf(buff, "%f %f %f\\n", vol->verts[j*3+0], vol->verts[j*3+1], vol->verts[j*3+2]);
+            data += buff;
+        }
+    }
+
+
+    emscripten_log(data.c_str());
+
+    return true;
+}
+
+
+static const int NAVMESHSET_MAGIC = 'M'<<24 | 'S'<<16 | 'E'<<8 | 'T'; //'MSET';
+static const int NAVMESHSET_VERSION = 1;
+
+struct NavMeshSetHeader
+{
+    int magic;
+    int version;
+    int numTiles;
+    dtNavMeshParams params;
+};
+
+struct NavMeshTileHeader
+{
+    dtTileRef tileRef;
+    int dataSize;
+};
+
+void saveAllTiled(int callback_id)
+{
+    std::stringstream stream(std::stringstream::out|std::stringstream::binary);
+    std::string serialized;
+    const dtNavMesh* mesh = m_navMesh;
+
+    char data[100000];
+
+    if (!mesh) return;
+
+    // Store header.
+    NavMeshSetHeader header;
+    header.magic = NAVMESHSET_MAGIC;
+    header.version = NAVMESHSET_VERSION;
+    header.numTiles = 0;
+    for (int i = 0; i < mesh->getMaxTiles(); ++i)
+    {
+        const dtMeshTile* tile = mesh->getTile(i);
+        if (!tile || !tile->header || !tile->dataSize) continue;
+        header.numTiles++;
+    }
+    memcpy(&header.params, mesh->getParams(), sizeof(dtNavMeshParams));
+    // stream.write((char *)&header, sizeof(NavMeshSetHeader));
+    memcpy(data, &header, sizeof(NavMeshSetHeader));
+
+    // Store tiles.
+    for (int i = 0; i < mesh->getMaxTiles(); ++i)
+    {
+        const dtMeshTile* tile = mesh->getTile(i);
+        if (!tile || !tile->header || !tile->dataSize) continue;
+
+        NavMeshTileHeader tileHeader;
+        tileHeader.tileRef = mesh->getTileRef(tile);
+        tileHeader.dataSize = tile->dataSize;
+        // stream.write((char *)&tileHeader, sizeof(tileHeader));
+        // stream.write((char *)&tile->data, tile->dataSize);
+        // emscripten_log((char *)&tile->data);
+        memcpy(data, &tileHeader, sizeof(tileHeader));
+        memcpy(data, &tile->data, sizeof(tile->dataSize));
+    }
+
+    std::string str = stream.str();
+
+    invoke_generic_callback_string(callback_id, data);
+}
+
+void loadAllTiled(std::string buffer)
+{
+    std::istringstream stream;
+
+    // Read header.
+    NavMeshSetHeader header;
+    stream.read((char *)&header, sizeof(NavMeshSetHeader));
+
+    if (header.magic != NAVMESHSET_MAGIC)
+    {
+        emscripten_log("cannot read magic");
+        return;
+    }
+    if (header.version != NAVMESHSET_VERSION)
+    {
+        emscripten_log("cannot read version");
+        return;
+    }
+
+    m_navMesh = dtAllocNavMesh();
+    if (!m_navMesh)
+    {
+        emscripten_log("cannot create navmesh");
+        return;
+    }
+    dtStatus status = m_navMesh->init(&header.params);
+    if (dtStatusFailed(status))
+    {
+        emscripten_log("cannot init navmesh");
+        return;
+    }
+
+    // Read tiles.
+    for (int i = 0; i < header.numTiles; ++i)
+    {
+        NavMeshTileHeader tileHeader;
+        stream.read((char *)&tileHeader, sizeof(tileHeader));
+
+        if (!tileHeader.tileRef || !tileHeader.dataSize) {
+            emscripten_log("cannot read tileRef nor dataSize");
+            break;
+        }
+
+        unsigned char* data = (unsigned char*)dtAlloc(tileHeader.dataSize, DT_ALLOC_PERM);
+        if (!data) break;
+
+        memset(data, 0, tileHeader.dataSize);
+        stream.read((char *)&data, tileHeader.dataSize);
+
+        m_navMesh->addTile(data, tileHeader.dataSize, DT_TILE_FREE_DATA, tileHeader.tileRef, 0);
+    }
+
+    return;
+}
+
+
+
 EMSCRIPTEN_BINDINGS(my_module) {
     function("dumpConfig", &dumpConfig);
 
     function("initWithFile", &initWithFile);
     function("initWithFileContent", &initWithFileContent);
+
+    function("save", &saveAllTiled);
 
     function("build", &build);
     function("buildSolo",  &buildSolo);

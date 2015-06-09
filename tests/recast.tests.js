@@ -65,14 +65,14 @@ exports['load an .obj file'] = function(test) {
         agentMaxSlope: 30.0
     });
     */
-   
+
     /**
      * Load an .OBJ file
      */
     recast.OBJLoader('nav_test.obj', function(){
 
         recast.build();
-        recast.initCrowd(1000, 1.0);    
+        recast.initCrowd(1000, 1.0);
 
         /**
          * Find a random navigable point on this mesh
@@ -137,7 +137,7 @@ exports['manage the crowd'] = function(test) {
         agentMaxSlope: 30.0
     });
     */
-   
+
     /**
      * Load an .OBJ file
      */
@@ -185,3 +185,27 @@ exports['manage the crowd'] = function(test) {
         }));
     });
 };
+
+
+exports['save a .nav file'] = function(test) {
+
+    recast.set_cellSize(0.3);
+    recast.set_cellHeight(0.2);
+    recast.set_agentHeight(0.8);
+    recast.set_agentRadius(0.2);
+    recast.set_agentMaxClimb(4.0);
+    recast.set_agentMaxSlope(30.0);
+
+    recast.OBJLoader('nav_test.obj', function(){
+
+        recast.buildTiled();
+
+        recast.save(recast.cb(function (serialized) {
+            // console.log(serialized);
+
+
+            test.done();
+        }));
+    });
+};
+

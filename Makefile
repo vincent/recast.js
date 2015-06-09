@@ -24,6 +24,7 @@ INCLUDES = -I recastnavigation/Recast/Include \
 				 -I recastnavigation/DebugUtils/Include \
 				 -I recastnavigation/DetourTileCache/Include \
 				 -I src/zlib \
+				 -I src/boost \
 				 -I src/JavascriptInterface
 FILES = recastnavigation/DebugUtils/Source/DebugDraw.cpp \
 			recastnavigation/DebugUtils/Source/DetourDebugDraw.cpp \
