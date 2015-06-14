@@ -11,6 +11,8 @@
 
 var recast = require('../lib/recast.withworker');
 
+var fs = require('fs');
+
 var ENVIRONMENT_IS_NODE = typeof process === 'object' && typeof require === 'function';
 var ENVIRONMENT_IS_WEB = typeof window === 'object';
 var ENVIRONMENT_IS_WORKER = typeof importScripts === 'function';
@@ -74,14 +76,14 @@ exports['load an .obj file'] = function(test) {
         agentMaxSlope: 30.0
     });
     */
-   
+
     /**
      * Load an .OBJ file
      */
     recast.OBJLoader(ENVIRONMENT_IS_WEB ? '../tests/nav_test.obj' : '../tests/nav_test.obj', recast.cb(function(){
 
-        recast.build();
-        recast.initCrowd(1000, 1.0);    
+        recast.loadTileMesh('./navmesh2.bin', recast.cb(function(){
+        recast.initCrowd(1000, 1.0);
 
         /**
          * Find a random navigable point on this mesh
@@ -92,9 +94,9 @@ exports['load an .obj file'] = function(test) {
             test.ok(typeof pt1z === 'number', 'point coord is a number');
 
             /**
-             * Find the nearest navigable point from 0,0,0 with a maximum extend of 10,10,10
+             * Find the nearest navigable point from pt1x,pt1y,pt1z with a maximum extend of 10,10,10
              */
-            recast.findNearestPoint(0, 0, 0, 10, 10, 10, recast.cb(function(pt2x, pt2y, pt2z){
+            recast.findNearestPoint(pt1x, pt1y, pt1z, 10, 10, 10, recast.cb(function(pt2x, pt2y, pt2z){
                 test.ok(typeof pt2x === 'number', 'point coord is a number');
                 test.ok(typeof pt2y === 'number', 'point coord is a number');
                 test.ok(typeof pt2z === 'number', 'point coord is a number');
@@ -102,9 +104,9 @@ exports['load an .obj file'] = function(test) {
                 var extend = 10;
 
                 /**
-                 * Find the nearest navigable polygon from 0,0,0 with a maximum extend of 10
+                 * Find the nearest navigable polygon from pt2x,pt2y,pt2z with a maximum extend of 10
                  */
-                recast.findNearestPoly(0, 0, 0, extend, extend, extend, recast.cb(function(polygon){
+                recast.findNearestPoly(pt2x, pt2y, pt2z, extend, extend, extend, recast.cb(function(polygon){
                     test.ok(polygon.vertices, 'origin poly has some vertices');
 
                     test.ok(polygon.vertices && typeof polygon.vertices.length !== 'undefined', 'origin poly has ' + polygon.vertices.length + ' vertices');
@@ -120,6 +122,7 @@ exports['load an .obj file'] = function(test) {
                 }));
             }));
 
+        }));
         }));
     }));
 };
@@ -146,7 +149,7 @@ exports['manage the crowd'] = function(test) {
         agentMaxSlope: 30.0
     });
     */
-   
+
     /**
      * Load an .OBJ file
      */
@@ -197,7 +200,7 @@ exports['manage the crowd'] = function(test) {
 
                                 // FIXME: so dirty
                                 if (ENVIRONMENT_IS_NODE) {
-                                    setTimeout(function(){ process.exit(0); }, 1000);
+                                    // setTimeout(function(){ process.exit(0); }, 1000);
                                 }
                             }));
                         }, 2000);
@@ -212,3 +215,67 @@ exports['manage the crowd'] = function(test) {
         }));
     }));
 };
+
+
+exports['save a tiled navmesh'] = function(test) {
+
+    setTimeout(function () {
+
+    recast.set_cellSize(0.3);
+    recast.set_cellHeight(0.2);
+    recast.set_agentHeight(0.8);
+    recast.set_agentRadius(0.2);
+    recast.set_agentMaxClimb(4.0);
+    recast.set_agentMaxSlope(30.0);
+
+    recast.OBJLoader('nav_test.obj', recast.cb(function(){
+
+        recast.buildTiled();
+
+        recast.saveTileMesh('navmesh.bin', recast.cb(function (error, serialized) {
+
+            if (fs.writeFile) {
+
+                var buffer = new Buffer(serialized.length);
+                for (var i = 0; i < serialized.length; i++) {
+                    buffer.writeUInt8(serialized[i], i);
+                }
+
+                fs.writeFile('navmesh.bin', buffer, function (err) {
+                    if (err) throw err;
+                    test.done();
+                });
+            } else {
+                test.done();
+            }
+
+        }));
+    }));
+
+    }, 10000);
+};
+
+exports['load a tiled navmesh'] = function(test) {
+
+    setTimeout(function () {
+
+    recast.set_cellSize(0.3);
+    recast.set_cellHeight(0.2);
+    recast.set_agentHeight(0.8);
+    recast.set_agentRadius(0.2);
+    recast.set_agentMaxClimb(4.0);
+    recast.set_agentMaxSlope(30.0);
+
+    recast.OBJLoader('nav_test.obj', recast.cb(function(){
+
+        recast.loadTileMesh('./navmesh2.bin', recast.cb(function(){
+
+            recast.initCrowd(1000, 1.0);
+
+            test.done();
+        }));
+    }));
+
+    }, 20000);
+};
+

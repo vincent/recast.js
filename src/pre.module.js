@@ -288,6 +288,26 @@ var workerMain = function(event) {
       });
       break;
 
+    case 'saveTileMesh':
+      recast.saveTileMesh(message.data, recast.cb(function() {
+        postMessage({
+          type: message.type,
+          data: Array.prototype.slice.call(arguments),
+          callback: message.callback
+        });
+      }));
+      break;
+
+    case 'loadTileMesh':
+      recast.loadTileMesh(message.data, recast.cb(function() {
+        postMessage({
+          type: message.type,
+          data: Array.prototype.slice.call(arguments),
+          callback: message.callback
+        });
+      }));
+      break;
+
     case 'findNearestPoint':
       recast.findNearestPoint(
         message.data.position.x,
@@ -654,15 +674,15 @@ recast.loadTileMesh = function (path, callback_id) {
     var fs = require('fs');
     fs.readFile(path, function(err, data) {
       if (err) throw new Error(err);
-      console.log('readFile', path);
+      // FIXME
       FS.writeFile(path, data);
-      console.log('wrote internal file', path);
       recast._loadTileMesh(path, callback_id);
     });
 
   // with ajax
   } else {
     _ajax(path, {}, function(data) {
+      // FIXME
       FS.writeFile(path, data);
       recast._loadTileMesh(path, callback_id);
     });

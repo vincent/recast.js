@@ -292,8 +292,8 @@ exports['handle an agent'] = function(test) {
                 })
             );
             obstacleMesh.position.set(pointX, pointY, pointZ);
-            scene.add(obstacleMesh);
-            recast.addTempObstacle(pointX, pointY, pointZ, radius);
+            //scene.add(obstacleMesh);
+            //recast.addTempObstacle(pointX, pointY, pointZ, radius);
         };
 
         var circleMesh;
@@ -346,7 +346,7 @@ exports['handle an agent'] = function(test) {
                 if (parseInt(Math.random() * 10) === 5 &&
                     parseInt(Math.random() * 10) === 5 &&
                     parseInt(Math.random() * 10) === 5) {
-                    addObstacle(agent.position.x, agent.position.y, agent.position.z, 2);
+                    // addObstacle(agent.position.x, agent.position.y, agent.position.z, 2);
                 }
 
                 if (0 && agent.idx === 0) {
@@ -359,13 +359,13 @@ exports['handle an agent'] = function(test) {
                     //     recast.cb(paintPoly)
                     // );
 
-                    recast.queryPolygons(
-                        agentsObjects[agent.idx].position.x,
-                        agentsObjects[agent.idx].position.y,
-                        agentsObjects[agent.idx].position.z,
-                        0.3, 0.3, 0.3,
-                        recast.cb(paintPolys)
-                    );
+                    // recast.queryPolygons(
+                    //     agentsObjects[agent.idx].position.x,
+                    //     agentsObjects[agent.idx].position.y,
+                    //     agentsObjects[agent.idx].position.z,
+                    //     0.3, 0.3, 0.3,
+                    //     recast.cb(paintPolys)
+                    // );
 
                     // recast.findNearestPoint(
                     //     agentsObjects[agent.idx].position.x,

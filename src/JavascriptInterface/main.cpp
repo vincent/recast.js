@@ -346,7 +346,7 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
     const int ncid = rcGetChunksOverlappingRect(chunkyMesh, tbmin, tbmax, cid, 512);
     if (!ncid)
     {
-        emscripten_log("no overlapping rect chunks");
+        // emscripten_log("no overlapping rect chunks");
         return 0; // empty
 
     } else {
@@ -929,7 +929,7 @@ void findNearestPoly(float cx, float cy, float cz,
     const float p[3] = {cx,cy,cz};
     const float ext[3] = {ex,ey,ez};
     float nearestPt[3];
-    char buff[64];
+    char buffer[64];
 
     dtQueryFilter filter;
     filter.setIncludeFlags(3);
@@ -940,9 +940,16 @@ void findNearestPoly(float cx, float cy, float cz,
     dtStatus status = m_navQuery->findNearestPoly(p, ext, &filter, &ref, 0);
 
     if (dtStatusFailed(status) || ref == 0) {
-        printf("Cannot find nearestPoly: %u\n", status);
+
+        sprintf(buffer, "Cannot find a polygon near [%f, %f, %f]", cx, cy, cz);
+        emscripten_log(buffer);
+
+        invoke_generic_callback_string(callback, "null");
 
     } else {
+
+        sprintf(buffer, "Found a polygon near [%f, %f, %f] : %u", cx, cy, cz, ref);
+        emscripten_log(buffer);
 
         const dtMeshTile* tile = 0;
         const dtPoly* poly = 0;
@@ -951,10 +958,7 @@ void findNearestPoly(float cx, float cy, float cz,
         std::string data = recastjsPolyJSON(poly, tile, ref);
 
         invoke_generic_callback_string(callback, data.c_str());
-        return;
     }
-
-    invoke_generic_callback_string(callback, "null");
 }
 
 void findNearestPoint(float cx, float cy, float cz,
@@ -963,6 +967,8 @@ void findNearestPoint(float cx, float cy, float cz,
                      dtPolyRef* nearestRef, float* nearestPt*/
                     int callback)
 {
+    char buffer[128];
+
     if (! m_navQuery) {
         emscripten_log("NavMeshQuery is not ready");
         return;
@@ -982,6 +988,8 @@ void findNearestPoint(float cx, float cy, float cz,
     dtStatus status = m_navQuery->findNearestPoly(p, ext, &filter, &ref, nearestPos);
 
     if (dtStatusFailed(status)) {
+        sprintf(buffer, "Cannot find a point near [%f, %f, %f]", cx, cy, cz);
+        emscripten_log(buffer);
         invoke_vector_callback(callback, NULL, NULL, NULL);
 
     } else {
@@ -1239,8 +1247,10 @@ bool initWithFileContent(std::string contents)
 
 bool initCrowd(const int maxAgents, const float maxAgentRadius)
 {
+    // emscripten_log("initCrowd");
     m_crowd->init(maxAgents, maxAgentRadius, m_navMesh);
 
+    // emscripten_log("allocate agents");
     agents = (dtCrowdAgent**)dtAlloc(sizeof(dtCrowdAgent*)*maxAgents, DT_ALLOC_PERM);
 
     // Make polygons with 'disabled' flag invalid.
@@ -1602,6 +1612,14 @@ bool buildTiled()
         return false;
     }
 
+    m_navQuery = dtAllocNavMeshQuery();
+    if (!m_navQuery)
+    {
+        dtFree(m_navQuery);
+        emscripten_log("Could not allocate NavMeshQuery");
+        return false;
+    }
+
     status = m_navQuery->init(m_navMesh, 2048);
     if (dtStatusFailed(status))
     {
@@ -1687,8 +1705,8 @@ bool buildTiled()
         return false;
     }
 
-    sprintf(buff, "navmeshTileMemUsage = %u B  m_cacheCompressedSize = %u B  %u tiles over %ux%u", navmeshMemUsage, m_cacheCompressedSize, nav->getMaxTiles(), th, tw);
-    emscripten_log(buff);
+    // sprintf(buff, "navmeshTileMemUsage = %u B  m_cacheCompressedSize = %u B  %u tiles over %ux%u", navmeshMemUsage, m_cacheCompressedSize, nav->getMaxTiles(), th, tw);
+    // emscripten_log(buff);
 
     emscripten_run_script("recast.navmeshType = 'tiled';");
 
@@ -2222,10 +2240,15 @@ std::string getFileString2(std::string path) {
 
 void _saveTileMesh(std::string path, int callback_id)
 {
+    char buff[1024];
     const dtNavMesh* mesh = m_navMesh;
 
     FILE* fp = fopen(path.c_str(), "wb");
-    if (!fp) return;
+    if (!fp) {
+        sprintf(buff, "cannot open %s", path.c_str());
+        emscripten_log(buff);
+        return;
+    }
 
     // Store header.
     NavMeshSetHeader header;
@@ -2242,10 +2265,9 @@ void _saveTileMesh(std::string path, int callback_id)
     memcpy(&header.params, mesh->getParams(), sizeof(dtNavMeshParams));
     fwrite(&header, sizeof(NavMeshSetHeader), 1, fp);
 
-    char buff[1024];
-    dtNavMeshParams* params = &header.params;
-    sprintf(buff, "write params: tiles=%d tileWidth=%f tileHeight=%f maxTiles=%d maxPolys=%d ", header.numTiles, params->tileWidth, params->tileHeight, params->maxTiles, params->maxPolys);
-    emscripten_log(buff);
+    // dtNavMeshParams* params = &header.params;
+    // sprintf(buff, "write params: tiles=%d tileWidth=%f tileHeight=%f maxTiles=%d maxPolys=%d ", header.numTiles, params->tileWidth, params->tileHeight, params->maxTiles, params->maxPolys);
+    // emscripten_log(buff);
 
     // Store tiles.
     for (int i = 0; i < mesh->getMaxTiles(); ++i)
@@ -2330,8 +2352,8 @@ void _loadTileMesh(std::string path, int callback_id)
         return;
     }
 
-    sprintf(buff, "reading %d tiles", header.numTiles);
-    emscripten_log(buff);
+    // sprintf(buff, "reading %d tiles", header.numTiles);
+    // emscripten_log(buff);
 
     // Read tiles.
     for (int i = 0; i < header.numTiles; ++i)
@@ -2360,9 +2382,26 @@ void _loadTileMesh(std::string path, int callback_id)
 
     fclose(fp);
 
+    m_crowd = dtAllocCrowd();
+    if (!m_crowd)
+    {
+        dtFree(m_crowd);
+        emscripten_log("Could not create Detour Crowd");
+        return;
+    }
+
+    m_navQuery = dtAllocNavMeshQuery();
+    if (!m_navQuery)
+    {
+        dtFree(m_navQuery);
+        emscripten_log("Could not allocate NavMeshQuery");
+        return;
+    }
+
     status = m_navQuery->init(m_navMesh, 2048);
     if (dtStatusFailed(status))
     {
+        dtFree(m_navQuery);
         emscripten_log("Could not init Detour navmesh query");
         return;
     }
