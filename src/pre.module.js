@@ -163,7 +163,7 @@ var _ajax = function(url, data, callback, type) {
   }
   data_string = data_array.join('&');
   req = new XMLHttpRequest();
-  req.open(type, url, false);
+  req.open(type, url, true);
   req.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
   req.onreadystatechange = function() {
     if (req.readyState == 4 && req.status == 200) {
@@ -643,6 +643,32 @@ recast.queryPolygons = function (posX, posY, posZ, extX, extY, extZ, maxPolys, c
   }
   return recast._queryPolygons(posX, posY, posZ, extX, extY, extZ, maxPolys, callback_id);
 };
+
+recast.saveTileMesh = function (path, callback_id) {
+  recast._saveTileMesh(path, callback_id);
+};
+
+recast.loadTileMesh = function (path, callback_id) {
+  // with node FS api
+  if (ENVIRONMENT_IS_NODE) {
+    var fs = require('fs');
+    fs.readFile(path, function(err, data) {
+      if (err) throw new Error(err);
+      console.log('readFile', path);
+      FS.writeFile(path, data);
+      console.log('wrote internal file', path);
+      recast._loadTileMesh(path, callback_id);
+    });
+
+  // with ajax
+  } else {
+    _ajax(path, {}, function(data) {
+      FS.writeFile(path, data);
+      recast._loadTileMesh(path, callback_id);
+    });
+  }
+};
+
 
 recast.zones = { };
 

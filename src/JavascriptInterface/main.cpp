@@ -1,13 +1,15 @@
-#include <stdio.h>
 #include <math.h>
-#include <memory.h>
 #include <time.h>
+#include <stdio.h>
+#include <float.h>
+#include <memory.h>
 #include <sys/time.h>
 
+#include <random>
 #include <string>
 #include <sstream>
-#include <float.h>
-#include <random>
+#include <fstream>
+#include <iostream>
 
 #include <Recast.h>
 #include <InputGeom.h>
@@ -86,6 +88,7 @@ extern "C" {
                               const float radius, const int active,  const int state, const int neighbors,
                               const bool  partial,const float desiredSpeed);
     extern void flush_active_agents_callback();
+    extern void invoke_file_callback(int callback_id, const char* filename);
     extern void invoke_vector_callback(int callback_id, const float x,  const float y, const float z);
     extern void invoke_update_callback(int callback_id);
     extern void invoke_generic_callback_string(int callback_id, const char* data);
@@ -2105,10 +2108,10 @@ bool saveVolumesAndOffMeshLinks()
     }
 
     std::string filename = "test_filename";
-    return m_geom->save();
+    return m_geom->save(filename.c_str());
 }
 
-bool saveVolumesAndOffMeshLinks()
+bool saveVolumesAndOffMeshLinks2()
 {
     if (!m_geom || !m_geom->getMesh())
     {
@@ -2184,15 +2187,45 @@ struct NavMeshTileHeader
     int dataSize;
 };
 
-void saveAllTiled(int callback_id)
+static const int TILECACHESET_MAGIC = 'T'<<24 | 'S'<<16 | 'E'<<8 | 'T'; //'TSET';
+static const int TILECACHESET_VERSION = 1;
+
+struct TileCacheSetHeader
 {
-    std::stringstream stream(std::stringstream::out|std::stringstream::binary);
-    std::string serialized;
+    int magic;
+    int version;
+    int numTiles;
+    dtNavMeshParams meshParams;
+    dtTileCacheParams cacheParams;
+};
+
+struct TileCacheTileHeader
+{
+    dtCompressedTileRef tileRef;
+    int dataSize;
+};
+
+std::string getFileString(std::string path) {
+    std::istringstream ifs(path.c_str());
+    return std::string((std::istreambuf_iterator<char>(ifs)),
+                       (std::istreambuf_iterator<char>()));
+}
+
+std::string getFileString2(std::string path) {
+    std::ifstream inFile;
+    inFile.open(path.c_str());
+
+    std::stringstream strStream;
+    strStream << inFile.rdbuf();
+    return strStream.str();
+}
+
+void _saveTileMesh(std::string path, int callback_id)
+{
     const dtNavMesh* mesh = m_navMesh;
 
-    char data[100000];
-
-    if (!mesh) return;
+    FILE* fp = fopen(path.c_str(), "wb");
+    if (!fp) return;
 
     // Store header.
     NavMeshSetHeader header;
@@ -2205,9 +2238,14 @@ void saveAllTiled(int callback_id)
         if (!tile || !tile->header || !tile->dataSize) continue;
         header.numTiles++;
     }
+
     memcpy(&header.params, mesh->getParams(), sizeof(dtNavMeshParams));
-    // stream.write((char *)&header, sizeof(NavMeshSetHeader));
-    memcpy(data, &header, sizeof(NavMeshSetHeader));
+    fwrite(&header, sizeof(NavMeshSetHeader), 1, fp);
+
+    char buff[1024];
+    dtNavMeshParams* params = &header.params;
+    sprintf(buff, "write params: tiles=%d tileWidth=%f tileHeight=%f maxTiles=%d maxPolys=%d ", header.numTiles, params->tileWidth, params->tileHeight, params->maxTiles, params->maxPolys);
+    emscripten_log(buff);
 
     // Store tiles.
     for (int i = 0; i < mesh->getMaxTiles(); ++i)
@@ -2218,43 +2256,73 @@ void saveAllTiled(int callback_id)
         NavMeshTileHeader tileHeader;
         tileHeader.tileRef = mesh->getTileRef(tile);
         tileHeader.dataSize = tile->dataSize;
-        // stream.write((char *)&tileHeader, sizeof(tileHeader));
-        // stream.write((char *)&tile->data, tile->dataSize);
-        // emscripten_log((char *)&tile->data);
-        memcpy(data, &tileHeader, sizeof(tileHeader));
-        memcpy(data, &tile->data, sizeof(tile->dataSize));
+        fwrite(&tileHeader, sizeof(tileHeader), 1, fp);
+
+        fwrite(tile->data, tile->dataSize, 1, fp);
     }
 
-    std::string str = stream.str();
+    fclose(fp);
 
-    invoke_generic_callback_string(callback_id, data);
+    invoke_file_callback(callback_id, path.c_str());
 }
 
-void loadAllTiled(std::string buffer)
+void _loadTileMesh(std::string path, int callback_id)
 {
-    std::istringstream stream;
+    char buff[1024];
+
+    // sprintf(buff, "load tile mesh from %s", path.c_str());
+    // emscripten_log(buff);
+
+    FILE* fp = fopen(path.c_str(), "rb");
+    if (!fp) {
+        sprintf(buff, "cannot open %s", path.c_str());
+        emscripten_log(buff);
+        return;
+    }
 
     // Read header.
     NavMeshSetHeader header;
-    stream.read((char *)&header, sizeof(NavMeshSetHeader));
-
+    size_t readLen = fread(&header, sizeof(NavMeshSetHeader), 1, fp);
+    if (readLen != 1)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot read header");
+        emscripten_log(buff);
+        return;
+    }
     if (header.magic != NAVMESHSET_MAGIC)
     {
-        emscripten_log("cannot read magic");
+        fclose(fp);
+        sprintf(buff, "cannot read magic: %d", header.magic);
+        emscripten_log(buff);
         return;
     }
     if (header.version != NAVMESHSET_VERSION)
     {
-        emscripten_log("cannot read version");
+        fclose(fp);
+        sprintf(buff, "cannot read magic: %d", header.version);
+        emscripten_log(buff);
         return;
     }
+
+    dtFreeNavMesh(m_navMesh);
 
     m_navMesh = dtAllocNavMesh();
     if (!m_navMesh)
     {
-        emscripten_log("cannot create navmesh");
+        emscripten_log("cannot allocate navmesh");
         return;
     }
+
+    dtNavMeshParams* params = &header.params;
+    rcVcopy(params->orig, m_geom->getMeshBoundsMin());
+    params->tileWidth = m_tileSize*m_cellSize;
+    params->tileHeight = m_tileSize*m_cellSize;
+    params->maxTiles = m_maxTiles;
+    params->maxPolys = m_maxPolysPerTile;
+    // sprintf(buff, "init navmesh: tiles=%d tileWidth=%f tileHeight=%f maxTiles=%d maxPolys=%d ", header.numTiles, params->tileWidth, params->tileHeight, params->maxTiles, params->maxPolys);
+    // emscripten_log(buff);
+
     dtStatus status = m_navMesh->init(&header.params);
     if (dtStatusFailed(status))
     {
@@ -2262,27 +2330,45 @@ void loadAllTiled(std::string buffer)
         return;
     }
 
+    sprintf(buff, "reading %d tiles", header.numTiles);
+    emscripten_log(buff);
+
     // Read tiles.
     for (int i = 0; i < header.numTiles; ++i)
     {
         NavMeshTileHeader tileHeader;
-        stream.read((char *)&tileHeader, sizeof(tileHeader));
-
-        if (!tileHeader.tileRef || !tileHeader.dataSize) {
-            emscripten_log("cannot read tileRef nor dataSize");
-            break;
+        readLen = fread(&tileHeader, sizeof(tileHeader), 1, fp);
+        if (readLen != 1) {
+            emscripten_log("error while reading data");
+            return;
         }
+
+        if (!tileHeader.tileRef || !tileHeader.dataSize)
+            break;
 
         unsigned char* data = (unsigned char*)dtAlloc(tileHeader.dataSize, DT_ALLOC_PERM);
         if (!data) break;
-
         memset(data, 0, tileHeader.dataSize);
-        stream.read((char *)&data, tileHeader.dataSize);
+        readLen = fread(data, tileHeader.dataSize, 1, fp);
+        if (readLen != 1) {
+            emscripten_log("error while reading data");
+            return;
+        }
 
         m_navMesh->addTile(data, tileHeader.dataSize, DT_TILE_FREE_DATA, tileHeader.tileRef, 0);
     }
 
-    return;
+    fclose(fp);
+
+    status = m_navQuery->init(m_navMesh, 2048);
+    if (dtStatusFailed(status))
+    {
+        emscripten_log("Could not init Detour navmesh query");
+        return;
+    }
+
+    // emscripten_log("finished to load file");
+    invoke_generic_callback_string(callback_id, "{ \"status\":\"done\" }");
 }
 
 
@@ -2293,7 +2379,8 @@ EMSCRIPTEN_BINDINGS(my_module) {
     function("initWithFile", &initWithFile);
     function("initWithFileContent", &initWithFileContent);
 
-    function("save", &saveAllTiled);
+    function("_saveTileMesh", &_saveTileMesh);
+    function("_loadTileMesh", &_loadTileMesh);
 
     function("build", &build);
     function("buildSolo",  &buildSolo);

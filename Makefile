@@ -11,11 +11,11 @@ CC = $(EMSCRIPTEN_ROOT)/emcc
 # FASTCOMPILER = EMCC_FAST_COMPILER=0
 
 # PATH TO EMCC
-LLVM = /home/vincent/Workspace/emscripten-fastcomp/build/bin
-CC = /home/vincent/Workspace/emscripten/emcc
+LLVM = ~/Workspace/emscripten-fastcomp/build/Release/bin
+CC = ~/Workspace/emscripten/emcc
 # FASTCOMPILER = EMCC_FAST_COMPILER=0
 
-CFLAGS = -O2 --closure 1 -g -s WARN_ON_UNDEFINED_SYMBOLS=0 -s VERBOSE=0 -s NO_EXIT_RUNTIME=1 -s LINKABLE=1 -s ALLOW_MEMORY_GROWTH=1 -s DISABLE_GL_EMULATION=1 -s DISABLE_EXCEPTION_CATCHING=1 -s ASSERTIONS=0 --bind
+CFLAGS = -O2 --closure 1 -g -s DEMANGLE_SUPPORT=1 -s WARN_ON_UNDEFINED_SYMBOLS=0 -s VERBOSE=0 -s NO_EXIT_RUNTIME=1 -s LINKABLE=1 -s ALLOW_MEMORY_GROWTH=1 -s DISABLE_GL_EMULATION=1 -s DISABLE_EXCEPTION_CATCHING=1 -s ASSERTIONS=0 --bind
 DEFINES = -D NOT_GCC -D EMSCRIPTEN -D USES_UNIX_DIR
 INCLUDES = -I recastnavigation/Recast/Include \
 				 -I recastnavigation/Detour/Include \

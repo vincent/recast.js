@@ -27,6 +27,10 @@
       Module.__RECAST_CALLBACKS[callback_id](x, y, z);
     },
 
+    invoke_file_callback: function (callback_id, filename) {
+      Module.__RECAST_CALLBACKS[callback_id](null, FS.readFile(Module.Pointer_stringify(filename)));
+    },
+
     invoke_update_callback: function (callback_id) {
       Module.__RECAST_CALLBACKS[callback_id](agentPoolBuffer);
     },
@@ -66,6 +70,6 @@
     agentPool_get: function (idx, position_x, position_y, position_z, velocity_x, velocity_y, velocity_z, radius, active, state, neighbors, partial, desiredSpeed) {
       agentPoolBuffer.push(agentPool.get(idx, position_x, position_y, position_z, velocity_x, velocity_y, velocity_z, radius, active, state, neighbors, partial, desiredSpeed));
     }
-    
+
   });
 })();
