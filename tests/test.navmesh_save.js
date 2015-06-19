@@ -17,15 +17,9 @@ exports['save a tiled navmesh'] = function(test) {
 
     settings(recast);
 
-        console.log('load');
-
     recast.OBJLoader('nav_test.obj', function(){
 
-        console.log('build');
-
         recast.buildTiled();
-
-        console.log('save');
 
         recast.saveTileMesh('./navmesh.bin', recast.cb(function (error, serialized) {
 
