@@ -559,7 +559,7 @@ dtNavMeshQuery* m_navQuery;
 dtCrowd* m_crowd;
 
 int m_maxTiles = 128;
-int m_maxPolysPerTile = 10;
+int m_maxPolysPerTile = 32768;
 float m_tileSize = 48;
 
 dtTileCache* m_tileCache;
@@ -704,6 +704,9 @@ void debugOffMeshConnections() {
 
 void cleanup()
 {
+    // dtFreeNavMeshQuery(m_navQuery);
+    // dtFreeNavMesh(m_navMesh);
+    // dtFreeCrowd(m_crowd);
 }
 
 
@@ -948,8 +951,8 @@ void findNearestPoly(float cx, float cy, float cz,
 
     } else {
 
-        sprintf(buffer, "Found a polygon near [%f, %f, %f] : %u", cx, cy, cz, ref);
-        emscripten_log(buffer);
+        // sprintf(buffer, "Found a polygon near [%f, %f, %f] : %u", cx, cy, cz, ref);
+        // emscripten_log(buffer);
 
         const dtMeshTile* tile = 0;
         const dtPoly* poly = 0;
@@ -1220,7 +1223,6 @@ void set_monotonePartitioning(int val){     m_monotonePartitioning = !!val; }
 
 bool initWithFile(std::string filename)
 {
-    printf("loading from file");
     m_geom = new InputGeom;
     if (!m_geom || !m_geom->loadMesh(m_ctx, filename.c_str()))
     {
@@ -1232,9 +1234,6 @@ bool initWithFile(std::string filename)
 
 bool initWithFileContent(std::string contents)
 {
-    printf("loading from contents \n");
-    // printf(contents.c_str());
-
     m_geom = new InputGeom;
     if (!m_geom || !m_geom->loadMeshFromContents(m_ctx, contents.c_str()))
     {
@@ -1666,8 +1665,8 @@ bool buildTiled()
         }
     }
 
-    // sprintf(buff, "Build initial %u tiles", th*tw);
-    // emscripten_log(buff);
+    sprintf(buff, "Build initial %u tiles", th*tw);
+    emscripten_log(buff);
 
     // Build initial meshes
     for (int y = 0; y < th; ++y) {
@@ -2279,8 +2278,10 @@ void _saveTileMesh(std::string path, int callback_id)
         tileHeader.tileRef = mesh->getTileRef(tile);
         tileHeader.dataSize = tile->dataSize;
         fwrite(&tileHeader, sizeof(tileHeader), 1, fp);
-
         fwrite(tile->data, tile->dataSize, 1, fp);
+
+        // sprintf(buff, "stored tile: %u (%d btyes)", tileHeader.tileRef, tileHeader.dataSize);
+        // emscripten_log(buff);
     }
 
     fclose(fp);
@@ -2292,8 +2293,8 @@ void _loadTileMesh(std::string path, int callback_id)
 {
     char buff[1024];
 
-    // sprintf(buff, "load tile mesh from %s", path.c_str());
-    // emscripten_log(buff);
+    sprintf(buff, "load tile mesh from %s", path.c_str());
+    emscripten_log(buff);
 
     FILE* fp = fopen(path.c_str(), "rb");
     if (!fp) {
@@ -2305,6 +2306,7 @@ void _loadTileMesh(std::string path, int callback_id)
     // Read header.
     NavMeshSetHeader header;
     size_t readLen = fread(&header, sizeof(NavMeshSetHeader), 1, fp);
+
     if (readLen != 1)
     {
         fclose(fp);
@@ -2322,7 +2324,7 @@ void _loadTileMesh(std::string path, int callback_id)
     if (header.version != NAVMESHSET_VERSION)
     {
         fclose(fp);
-        sprintf(buff, "cannot read magic: %d", header.version);
+        sprintf(buff, "cannot read version: %d", header.version);
         emscripten_log(buff);
         return;
     }
@@ -2336,15 +2338,6 @@ void _loadTileMesh(std::string path, int callback_id)
         return;
     }
 
-    dtNavMeshParams* params = &header.params;
-    rcVcopy(params->orig, m_geom->getMeshBoundsMin());
-    params->tileWidth = m_tileSize*m_cellSize;
-    params->tileHeight = m_tileSize*m_cellSize;
-    params->maxTiles = m_maxTiles;
-    params->maxPolys = m_maxPolysPerTile;
-    // sprintf(buff, "init navmesh: tiles=%d tileWidth=%f tileHeight=%f maxTiles=%d maxPolys=%d ", header.numTiles, params->tileWidth, params->tileHeight, params->maxTiles, params->maxPolys);
-    // emscripten_log(buff);
-
     dtStatus status = m_navMesh->init(&header.params);
     if (dtStatusFailed(status))
     {
@@ -2356,8 +2349,12 @@ void _loadTileMesh(std::string path, int callback_id)
     // emscripten_log(buff);
 
     // Read tiles.
+    int i = 0;
     for (int i = 0; i < header.numTiles; ++i)
     {
+        // sprintf(buff, "load tile #%d", i);
+        // emscripten_log(buff);
+
         NavMeshTileHeader tileHeader;
         readLen = fread(&tileHeader, sizeof(tileHeader), 1, fp);
         if (readLen != 1) {
@@ -2365,30 +2362,33 @@ void _loadTileMesh(std::string path, int callback_id)
             return;
         }
 
-        if (!tileHeader.tileRef || !tileHeader.dataSize)
+        if (!tileHeader.tileRef || !tileHeader.dataSize) {
+            sprintf(buff, "tile %u: cannot read ref (%u) or data size (%d)", tileHeader.tileRef, tileHeader.tileRef, tileHeader.dataSize);
+            emscripten_log(buff);
             break;
+        }
 
         unsigned char* data = (unsigned char*)dtAlloc(tileHeader.dataSize, DT_ALLOC_PERM);
-        if (!data) break;
+        if (!data) {
+            sprintf(buff, "tile %u: cannot allocate memory to hold data (%u bytes)", tileHeader.tileRef, tileHeader.dataSize);
+            emscripten_log(buff);
+            break;
+        }
         memset(data, 0, tileHeader.dataSize);
         readLen = fread(data, tileHeader.dataSize, 1, fp);
         if (readLen != 1) {
-            emscripten_log("error while reading data");
+            sprintf(buff, "tile %u: error while reading tile data (%u bytes)", tileHeader.tileRef, tileHeader.dataSize);
+            emscripten_log(buff);
             return;
         }
 
         m_navMesh->addTile(data, tileHeader.dataSize, DT_TILE_FREE_DATA, tileHeader.tileRef, 0);
     }
 
-    fclose(fp);
+    // sprintf(buff, "%d tiles loaded", i);
+    // emscripten_log(buff);
 
-    m_crowd = dtAllocCrowd();
-    if (!m_crowd)
-    {
-        dtFree(m_crowd);
-        emscripten_log("Could not create Detour Crowd");
-        return;
-    }
+    fclose(fp);
 
     m_navQuery = dtAllocNavMeshQuery();
     if (!m_navQuery)
@@ -2403,6 +2403,14 @@ void _loadTileMesh(std::string path, int callback_id)
     {
         dtFree(m_navQuery);
         emscripten_log("Could not init Detour navmesh query");
+        return;
+    }
+
+    m_crowd = dtAllocCrowd();
+    if (!m_crowd)
+    {
+        dtFree(m_crowd);
+        emscripten_log("Could not create Detour Crowd");
         return;
     }
 

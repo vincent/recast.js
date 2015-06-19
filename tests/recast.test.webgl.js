@@ -15,7 +15,7 @@ renderer.domElement.style.position = 'absolute';
 renderer.domElement.style.bottom = 0;
 renderer.domElement.style.right = 0;
 document.body.appendChild(renderer.domElement);
-renderer.setClearColorHex(0xFFFFFF, 1.0);
+renderer.setClearColor(0xFFFFFF, 1.0);
 renderer.clear();
 
 var width = renderer.domElement.width;
@@ -122,24 +122,12 @@ exports['our methods are present'] = function(test) {
 exports['handle an agent'] = function(test) {
     test.expect(11);
 
-    recast.set_cellSize(0.5);
-    recast.set_cellHeight(0.5);
-    recast.set_agentHeight(2);
-    recast.set_agentRadius(0.8);
-    recast.set_agentMaxClimb(2.9);
-    recast.set_agentMaxSlope(45);
-
-    /*
-    recast.settings({
-        cellSize: 2.0,
-        cellHeight: 1.5,
-        agentHeight: 2.0,
-        agentRadius: 0.2,
-        agentMaxClimb: 4.0,
-        agentMaxSlope: 30.0
-    });
-    */
-
+    recast.set_cellSize(0.3);
+    recast.set_cellHeight(0.2);
+    recast.set_agentHeight(0.8);
+    recast.set_agentRadius(0.2);
+    recast.set_agentMaxClimb(4.0);
+    recast.set_agentMaxSlope(30.0);
 
     var stats = new Stats();
     stats.setMode(1); // 0: fps, 1: ms
@@ -169,7 +157,10 @@ exports['handle an agent'] = function(test) {
      */
     recast.OBJLoader('nav_test.obj', function(){
 
-      recast.loadTileMesh('./navmesh2.bin', recast.cb(function(){
+      recast.loadTileMesh('./navmesh.dist.bin', recast.cb(function(){
+
+        // recast.buildTiled();
+
         recast.initCrowd(1000, 1.0);
 
         // recast.debugCreateNavMesh(0);
@@ -179,45 +170,6 @@ exports['handle an agent'] = function(test) {
         // recast.debugCreateContours();
         // recast.debugCreateHeightfieldSolid();
         // recast.debugCreateHeightfieldWalkable();
-
-        /**
-         * Get navmesh geometry and draw it
-         */
-        if (location.search.match(/navigationmesh=1/)) {
-            recast.getNavMeshVertices(recast.cb(function (vertices) {
-
-                navigationMesh = new THREE.Object3D();
-                // var materials = [ new THREE.MeshNormalMaterial() ];
-                var materials = [ new THREE.MeshBasicMaterial({
-                    color: 0x000055,
-                    shading: THREE.FlatShading,
-                    side: THREE.DoubleSide,
-                    wireframe: false,
-                    transparent: true,
-                    opacity: 0.3,
-                    overdraw: true
-                }) ];
-
-                for (var i = 0; i < vertices.length; i++) {
-                    if (!vertices[i+2]) { break; }
-
-                    var geometry = new THREE.ConvexGeometry([
-                        new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ),
-                        new THREE.Vector3( vertices[i+1].x, vertices[i+1].y, vertices[i+1].z ),
-                        new THREE.Vector3( vertices[i+2].x, vertices[i+2].y, vertices[i+2].z )
-                    ]);
-
-                    var child = THREE.SceneUtils.createMultiMaterialObject(geometry, materials);
-                    navigationMesh.add(child);
-
-                    i += 2;
-                }
-
-                // scene.add(navigationMesh);
-
-                // renderer.render(scene, camera);
-            }));
-        }
 
         var polyMesh, polyGrp, polys = {}, polyGrpIndex = 0;
         var paintPolys = function(polygons){
@@ -438,6 +390,6 @@ exports['handle an agent'] = function(test) {
         };
 
         sequence();
-    }));
+      }));
     });
 };
