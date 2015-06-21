@@ -2116,76 +2116,9 @@ bool build()
     return buildSolo();
 }
 
-bool saveVolumesAndOffMeshLinks()
-{
-    if (!m_geom || !m_geom->getMesh())
-    {
-        printf("cannot load OBJ contents \n");
-        return false;
-    }
-
-    std::string filename = "test_filename";
-    return m_geom->save(filename.c_str());
-}
-
-bool saveVolumesAndOffMeshLinks2()
-{
-    if (!m_geom || !m_geom->getMesh())
-    {
-        printf("cannot load OBJ contents \n");
-        return false;
-    }
-
-    std::string filename = "test_filename";
-    std::string data;
-    char buff[1024];
-
-    int m_offMeshConCount                   = m_geom->getOffMeshConnectionCount();
-    int m_volumeCount                       = m_geom->getConvexVolumeCount();
-    const ConvexVolume* m_volumes           = m_geom->getConvexVolumes();
-    const float* m_offMeshConVerts          = m_geom->getOffMeshConnectionVerts();
-    const float* m_offMeshConRads           = m_geom->getOffMeshConnectionRads();
-    const unsigned char* m_offMeshConDirs   = m_geom->getOffMeshConnectionDirs();
-    const unsigned char* m_offMeshConAreas  = m_geom->getOffMeshConnectionAreas();
-    const unsigned short* m_offMeshConFlags = m_geom->getOffMeshConnectionFlags();
-
-    // Store mesh filename.
-    data += "f ";
-    data += filename.c_str();
-    data += "\\n";
-
-    // Store off-mesh links.
-    for (int i = 0; i < m_offMeshConCount; ++i)
-    {
-        const float* v = &m_offMeshConVerts[i*3*2];
-        const float rad = m_offMeshConRads[i];
-        const int bidir = m_offMeshConDirs[i];
-        const int area = m_offMeshConAreas[i];
-        const int flags = m_offMeshConFlags[i];
-        sprintf(buff, "c %f %f %f  %f %f %f  %f %d %d %d\\n",
-                v[0], v[1], v[2], v[3], v[4], v[5], rad, bidir, area, flags);
-        data += buff;
-    }
-
-    // Convex volumes
-    for (int i = 0; i < m_volumeCount; ++i)
-    {
-        const ConvexVolume* vol = &m_volumes[i];
-        sprintf(buff, "v %d %d %f %f\\n", vol->nverts, vol->area, vol->hmin, vol->hmax);
-        data += buff;
-
-        for (int j = 0; j < vol->nverts; ++j) {
-            sprintf(buff, "%f %f %f\\n", vol->verts[j*3+0], vol->verts[j*3+1], vol->verts[j*3+2]);
-            data += buff;
-        }
-    }
-
-
-    emscripten_log(data.c_str());
-
-    return true;
-}
-
+///////////////////////////////////
+/// SAVE & LOAD NAVMESH
+///////////////////////
 
 static const int NAVMESHSET_MAGIC = 'M'<<24 | 'S'<<16 | 'E'<<8 | 'T'; //'MSET';
 static const int NAVMESHSET_VERSION = 1;
@@ -2203,39 +2136,6 @@ struct NavMeshTileHeader
     dtTileRef tileRef;
     int dataSize;
 };
-
-static const int TILECACHESET_MAGIC = 'T'<<24 | 'S'<<16 | 'E'<<8 | 'T'; //'TSET';
-static const int TILECACHESET_VERSION = 1;
-
-struct TileCacheSetHeader
-{
-    int magic;
-    int version;
-    int numTiles;
-    dtNavMeshParams meshParams;
-    dtTileCacheParams cacheParams;
-};
-
-struct TileCacheTileHeader
-{
-    dtCompressedTileRef tileRef;
-    int dataSize;
-};
-
-std::string getFileString(std::string path) {
-    std::istringstream ifs(path.c_str());
-    return std::string((std::istreambuf_iterator<char>(ifs)),
-                       (std::istreambuf_iterator<char>()));
-}
-
-std::string getFileString2(std::string path) {
-    std::ifstream inFile;
-    inFile.open(path.c_str());
-
-    std::stringstream strStream;
-    strStream << inFile.rdbuf();
-    return strStream.str();
-}
 
 void _saveTileMesh(std::string path, int callback_id)
 {
@@ -2293,8 +2193,8 @@ void _loadTileMesh(std::string path, int callback_id)
 {
     char buff[1024];
 
-    sprintf(buff, "load tile mesh from %s", path.c_str());
-    emscripten_log(buff);
+    // sprintf(buff, "load tile mesh from %s", path.c_str());
+    // emscripten_log(buff);
 
     FILE* fp = fopen(path.c_str(), "rb");
     if (!fp) {
@@ -2419,6 +2319,226 @@ void _loadTileMesh(std::string path, int callback_id)
 }
 
 
+///////////////////////////////////
+/// SAVE & LOAD NAVMESH
+///////////////////////
+
+static const int TILECACHESET_MAGIC = 'T'<<24 | 'S'<<16 | 'E'<<8 | 'T'; //'TSET';
+static const int TILECACHESET_VERSION = 1;
+
+struct TileCacheSetHeader
+{
+    int magic;
+    int version;
+    int numTiles;
+    dtNavMeshParams meshParams;
+    dtTileCacheParams cacheParams;
+};
+
+struct TileCacheTileHeader
+{
+    dtCompressedTileRef tileRef;
+    int dataSize;
+};
+
+void _saveTileCache(std::string path, int callback_id)
+{
+    char buff[1024];
+
+    if (!m_tileCache) return;
+
+    FILE* fp = fopen(path.c_str(), "wb");
+    if (!fp) {
+        sprintf(buff, "cannot open %s", path.c_str());
+        emscripten_log(buff);
+        return;
+    }
+
+    // Store header.
+    TileCacheSetHeader header;
+    header.magic = TILECACHESET_MAGIC;
+    header.version = TILECACHESET_VERSION;
+    header.numTiles = 0;
+    for (int i = 0; i < m_tileCache->getTileCount(); ++i)
+    {
+        const dtCompressedTile* tile = m_tileCache->getTile(i);
+        if (!tile || !tile->header || !tile->dataSize) continue;
+        header.numTiles++;
+    }
+    memcpy(&header.cacheParams, m_tileCache->getParams(), sizeof(dtTileCacheParams));
+    memcpy(&header.meshParams, m_navMesh->getParams(), sizeof(dtNavMeshParams));
+    fwrite(&header, sizeof(TileCacheSetHeader), 1, fp);
+
+    // Store tiles.
+    for (int i = 0; i < m_tileCache->getTileCount(); ++i)
+    {
+        const dtCompressedTile* tile = m_tileCache->getTile(i);
+        if (!tile || !tile->header || !tile->dataSize) continue;
+
+        TileCacheTileHeader tileHeader;
+        tileHeader.tileRef = m_tileCache->getTileRef(tile);
+        tileHeader.dataSize = tile->dataSize;
+        fwrite(&tileHeader, sizeof(tileHeader), 1, fp);
+
+        fwrite(tile->data, tile->dataSize, 1, fp);
+    }
+
+    fclose(fp);
+
+    invoke_file_callback(callback_id, path.c_str());
+}
+
+void _loadTileCache(std::string path, int callback_id)
+{
+    char buff[1024];
+
+    // sprintf(buff, "load tile cache from %s", path.c_str());
+    // emscripten_log(buff);
+
+    FILE* fp = fopen(path.c_str(), "rb");
+    if (!fp) {
+        sprintf(buff, "cannot open %s", path.c_str());
+        emscripten_log(buff);
+        return;
+    }
+
+    // Read header.
+    TileCacheSetHeader header;
+    size_t readLen = fread(&header, sizeof(TileCacheSetHeader), 1, fp);
+
+    if (readLen != 1)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot read header");
+        emscripten_log(buff);
+        return;
+    }
+    if (header.magic != TILECACHESET_MAGIC)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot read magic %d", header.magic);
+        emscripten_log(buff);
+        return;
+    }
+    if (header.version != TILECACHESET_VERSION)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot read version %d", header.version);
+        emscripten_log(buff);
+        return;
+    }
+
+    dtFreeNavMesh(m_navMesh);
+
+    m_navMesh = dtAllocNavMesh();
+    if (!m_navMesh)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot allocate navmesh");
+        emscripten_log(buff);
+        return;
+    }
+
+    dtStatus status = m_navMesh->init(&header.meshParams);
+    if (dtStatusFailed(status))
+    {
+        fclose(fp);
+        sprintf(buff, "cannot init navmesh");
+        emscripten_log(buff);
+        return;
+    }
+
+    m_tileCache = dtAllocTileCache();
+    if (!m_tileCache)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot allocate tilecache");
+        emscripten_log(buff);
+        return;
+    }
+
+    m_talloc = new LinearAllocator(32000);
+    m_tcomp = new FastLZCompressor;
+    m_tmproc = new MeshProcess;
+
+    status = m_tileCache->init(&header.cacheParams, m_talloc, m_tcomp, m_tmproc);
+    if (dtStatusFailed(status))
+    {
+        fclose(fp);
+        sprintf(buff, "cannot init tilecache");
+        emscripten_log(buff);
+        return;
+    }
+
+    // sprintf(buff, "reading %d tiles", header.numTiles);
+    // emscripten_log(buff);
+
+    // Read tiles.
+    for (int i = 0; i < header.numTiles; ++i)
+    {
+        // sprintf(buff, "load tile #%d", i);
+        // emscripten_log(buff);
+
+        TileCacheTileHeader tileHeader;
+        readLen = fread(&tileHeader, sizeof(tileHeader), 1, fp);
+        if (readLen != 1) {
+            emscripten_log("error while reading data");
+            return;
+        }
+
+        if (!tileHeader.tileRef || !tileHeader.dataSize) {
+            sprintf(buff, "tile %u: cannot read ref (%u) or data size (%d)", tileHeader.tileRef, tileHeader.tileRef, tileHeader.dataSize);
+            emscripten_log(buff);
+            break;
+        }
+
+        unsigned char* data = (unsigned char*)dtAlloc(tileHeader.dataSize, DT_ALLOC_PERM);
+        if (!data) {
+            sprintf(buff, "tile %u: cannot allocate memory to hold data (%u bytes)", tileHeader.tileRef, tileHeader.dataSize);
+            emscripten_log(buff);
+            break;
+        }
+        memset(data, 0, tileHeader.dataSize);
+        fread(data, tileHeader.dataSize, 1, fp);
+
+        dtCompressedTileRef tile = 0;
+        m_tileCache->addTile(data, tileHeader.dataSize, DT_COMPRESSEDTILE_FREE_DATA, &tile);
+
+        if (tile)
+            m_tileCache->buildNavMeshTile(tile, m_navMesh);
+    }
+
+    fclose(fp);
+
+    m_navQuery = dtAllocNavMeshQuery();
+    if (!m_navQuery)
+    {
+        dtFree(m_navQuery);
+        emscripten_log("Could not allocate NavMeshQuery");
+        return;
+    }
+
+    status = m_navQuery->init(m_navMesh, 2048);
+    if (dtStatusFailed(status))
+    {
+        dtFree(m_navQuery);
+        emscripten_log("Could not init Detour navmesh query");
+        return;
+    }
+
+    m_crowd = dtAllocCrowd();
+    if (!m_crowd)
+    {
+        dtFree(m_crowd);
+        emscripten_log("Could not create Detour Crowd");
+        return;
+    }
+
+    // emscripten_log("finished to load file");
+    invoke_generic_callback_string(callback_id, "{ \"status\":\"done\" }");
+}
+
+
 
 EMSCRIPTEN_BINDINGS(my_module) {
     function("dumpConfig", &dumpConfig);
@@ -2428,6 +2548,9 @@ EMSCRIPTEN_BINDINGS(my_module) {
 
     function("_saveTileMesh", &_saveTileMesh);
     function("_loadTileMesh", &_loadTileMesh);
+
+    function("_saveTileCache", &_saveTileCache);
+    function("_loadTileCache", &_loadTileCache);
 
     function("build", &build);
     function("buildSolo",  &buildSolo);

@@ -708,6 +708,31 @@ recast.loadTileMesh = function (path, callback_id) {
   }
 };
 
+recast.saveTileCache = function (path, callback_id) {
+  recast._saveTileCache(path, callback_id);
+};
+
+recast.loadTileCache = function (path, callback_id) {
+  // with node FS api
+  if (ENVIRONMENT_IS_NODE) {
+    var fs = require('fs');
+    fs.readFile(path, function(err, data) {
+      if (err) throw new Error(err);
+      // FIXME
+      FS.writeFile(path, data, { encoding: 'binary' });
+      recast._loadTileCache(path, callback_id);
+    });
+
+  // with ajax
+  } else {
+    _ajax(path, {}, function(data) {
+      // FIXME
+      FS.writeFile(path, new Int8Array(data), { encoding: 'binary' });
+      recast._loadTileCache(path, callback_id);
+    }, null, 'arraybuffer');
+  }
+};
+
 
 recast.zones = { };
 
