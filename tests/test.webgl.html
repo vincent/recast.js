@@ -21,10 +21,6 @@
   </head>
   <body>
     <h1 id="nodeunit-header">Recast.js Test Suite</h1>
-    <script src="recast.test.webgl.js"></script>
-    <script>
-    nodeunit.run({'recast.tests': exports});
-    </script>
 
     <p>
     Example of a crowd managed by recastjs, using a tilecache<br><br>
@@ -63,5 +59,13 @@
       <input name="toggle" type="radio" onchange="debugDraw['DrawContours'] = ! debugDraw['DrawContours'];"/> Draw contours<br>
     </form>
     -->
+
+    <div id="wrapper"></div>
+
+    <script src="recast.test.webgl.js"></script>
+    <script>
+    nodeunit.run({'recast.tests': exports});
+    </script>
+
   </body>
 </html>

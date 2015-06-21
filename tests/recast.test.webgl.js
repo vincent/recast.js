@@ -10,44 +10,36 @@
 'use strict';
 
 var renderer = new THREE.WebGLRenderer({antialias: true});
-renderer.setSize(document.body.clientWidth, document.body.clientWidth * 4/3);
+renderer.setSize($(document.body).width(), $(document.body).width() * 3/4);
 // renderer.domElement.style.position = 'absolute';
 // renderer.domElement.style.bottom = 0;
 // renderer.domElement.style.right = 0;
-document.body.appendChild(renderer.domElement);
+document.getElementById('wrapper').appendChild(renderer.domElement);
 renderer.setClearColor(0xFFFFFF, 1.0);
 renderer.clear();
 
 var mouse = new THREE.Vector2();
 var raycaster = new THREE.Raycaster();
 renderer.domElement.addEventListener('click', function (e) {
-
-    var x = e.pageX - $(e.currentTarget).offset().left;
-    var y = e.pageY - $(e.currentTarget).offset().top;
-
-    mouse.x = ( x / e.currentTarget.width ) * 2 - 1;
-    mouse.y = - ( y / e.currentTarget.height ) * 2 + 1;
-
-    // update the picking ray with the camera and mouse position
-    raycaster.setFromCamera(mouse, camera);
-
-    // calculate objects intersecting the picking ray
-    var intersects = raycaster.intersectObjects(terrain.children, true);
-
-    if (intersects.length) {
-        var point = intersects[0].point;
+    raycast(e, function (point) {
         recast.findNearestPoint(point.x, point.y, point.z, 2, 2, 2,
             recast.cb(function(x, y, z){
-                addObstacle(x, y, z);
+
+                if (e.shiftKey) {
+                    addOffMeshLink(x, y, z);
+
+                } else {
+                    addObstacle(x, y, z);
+                }
             }));
-    }
+    });
+
 });
 
 var width = renderer.domElement.width;
 var height = renderer.domElement.height;
 var camera = new THREE.PerspectiveCamera( 45, width / height, 1, 10000);
-camera.position.y = 50;
-camera.position.z = 50;
+camera.position.z = 100;
 
 var controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.addEventListener('change', function(){
@@ -102,6 +94,25 @@ function render () {
     renderer.render(scene, camera);
 }
 
+function raycast (e, callback) {
+    var x = e.pageX - $(e.currentTarget).offset().left;
+    var y = e.pageY - $(e.currentTarget).offset().top;
+
+    mouse.x = ( x / e.currentTarget.width ) * 2 - 1;
+    mouse.y = - ( y / e.currentTarget.height ) * 2 + 1;
+
+    // update the picking ray with the camera and mouse position
+    raycaster.setFromCamera(mouse, camera);
+
+    // calculate objects intersecting the picking ray
+    var intersects = raycaster.intersectObjects(terrain.children, true);
+
+    if (intersects.length) {
+        var point = intersects[0].point;
+        callback(point);
+    }
+}
+
 function addObstacle (x, y, z) {
     var radius = 3;
     var obstacleMesh = new THREE.Mesh(
@@ -119,6 +130,54 @@ function addObstacle (x, y, z) {
     scene.add(obstacleMesh);
     recast.addTempObstacle(x, y, z, radius);
 }
+
+var omlpair = {};
+function addOffMeshLink (x, y, z) {
+
+    var point = { x:x, y:y, z:z };
+
+    if (! omlpair.from) {
+        omlpair.from = point;
+
+    } else if (! omlpair.to) {
+        omlpair.to = point;
+        recast.addOffMeshConnection(
+            omlpair.from.x, omlpair.from.y, omlpair.from.z,
+            omlpair.to.x,   omlpair.to.y,   omlpair.to.z,
+            3, 1);
+
+        var start = new THREE.Vector3(omlpair.from.x, omlpair.from.y, omlpair.from.z);
+        var end   = new THREE.Vector3(omlpair.to.x,   omlpair.to.y,   omlpair.to.z);
+
+        scene.add(createSpline(start, end, 3));
+
+        omlpair = {};
+    }
+}
+
+var splineMaterial = new THREE.LineBasicMaterial({
+  color: 0x00ff00,
+  transparent: true,
+  opacity: 0.6,
+  linewidth: 5,
+  vertexColors: THREE.VertexColors
+});
+
+function createSpline(start, end, elevation) {
+
+    var geometry = new THREE.Geometry();
+    geometry.vertices.push(start);
+    geometry.vertices.push(new THREE.Vector3(
+        (start.x + end.x)  / 2,
+        ((start.y + end.y) / 2) + elevation,
+        (start.z + end.z)  / 2
+    ));
+    geometry.vertices.push(end);
+
+    return new THREE.Line(geometry, splineMaterial);
+}
+
+
 
 // Check our library is here
 exports['recast is present'] = function(test) {
