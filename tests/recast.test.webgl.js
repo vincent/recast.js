@@ -6,14 +6,14 @@
  * Released under the MIT license
  */
 /*jshint onevar: false, indent:4 */
-/*global exports: true, require: true, THREE: true, Stats: true */
+/*global exports: true, require: true, THREE: true, Stats: true, $: true */
 'use strict';
 
 var renderer = new THREE.WebGLRenderer({antialias: true});
-renderer.setSize(document.body.clientWidth * 0.6, document.body.clientHeight * 0.8);
-renderer.domElement.style.position = 'absolute';
-renderer.domElement.style.bottom = 0;
-renderer.domElement.style.right = 0;
+renderer.setSize(document.body.clientWidth, document.body.clientWidth * 4/3);
+// renderer.domElement.style.position = 'absolute';
+// renderer.domElement.style.bottom = 0;
+// renderer.domElement.style.right = 0;
 document.body.appendChild(renderer.domElement);
 renderer.setClearColor(0xFFFFFF, 1.0);
 renderer.clear();
