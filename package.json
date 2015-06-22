@@ -27,5 +27,7 @@
   "devDependencies": {
     "nodeunit": "^0.9.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "minimist": "^1.1.1"
+  }
 }
