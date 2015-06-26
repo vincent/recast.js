@@ -39,7 +39,9 @@ renderer.domElement.addEventListener('click', function (e) {
 var width = renderer.domElement.width;
 var height = renderer.domElement.height;
 var camera = new THREE.PerspectiveCamera( 45, width / height, 1, 10000);
+camera.position.y = 70;
 camera.position.z = 100;
+camera.lookAt(new THREE.Vector3());
 
 var controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.addEventListener('change', function(){

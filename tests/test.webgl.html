@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="../node_modules/nodeunit/share/nodeunit.css"/>
     <style>
       body { margin:0; padding:0 }
+      #wrapper { position: absolute; top: 0; }
+      #text { position: absolute; top: 0; }
     </style>
     <script>
       var recast = this.recast;
@@ -20,47 +22,47 @@
     </script>
   </head>
   <body>
-    <h1 id="nodeunit-header">Recast.js Test Suite</h1>
-
-    <p>
-    Example of a crowd managed by recastjs, using a tilecache<br><br>
-    Each agents is given a new random destination from time to time<br><br>
-    Click on the mesh to add obstacles<br><br>
-    </p>
-
-    <a href="test.webgl.html?agents=10">10 agents</a>
-    <a href="test.webgl.html?agents=50">50 agents</a>
-    <a href="test.webgl.html?agents=100">100 agents</a>
-    <a href="test.webgl.html?agents=200">200 agents</a>
-    <a href="test.webgl.html?agents=500">500 agents</a>
-    <a href="test.webgl.html?agents=1000">1000 agents</a>
-    <br><br>
-
-
-    <button onclick="if (! navigationMesh) { location.search += '&navigationmesh=1' } else { navigationMesh.parent ? scene.remove(navigationMesh) : scene.add(navigationMesh); }">
-      Toggle navigation mesh
-    </button>
-
-    <button id="sequence" onclick="sequence()" style="display:none">
-      Reboot sequence
-    </button>
-
-    <!--
-    <br><br>
-    <form autocomplete="off">
-      <input name="toggle" type="radio" onchange="terrain.parent ? scene.remove(terrain) : scene.add(terrain)" checked/> Terrain<br>
-      <input name="toggle" type="radio" onchange="debugDraw['NavMesh'] = ! debugDraw['NavMesh'];"/> NavMesh<br>
-      <input name="toggle" type="radio" onchange="debugDraw['NavMeshPortals'] = ! debugDraw['NavMeshPortals'];"/> NavMeshPortals<br>
-      <input name="toggle" type="radio" onchange="debugDraw['RegionConnections'] = ! debugDraw['RegionConnections'];"/> RegionConnections<br>
-      <input name="toggle" type="radio" onchange="debugDraw['RawContours'] = ! debugDraw['RawContours'];"/> RawContours<br>
-      <input name="toggle" type="radio" onchange="debugDraw['Contours'] = ! debugDraw['Contours'];"/> Contours<br>
-      <input name="toggle" type="radio" onchange="debugDraw['HeightfieldSolid'] = ! debugDraw['HeightfieldSolid'];"/> HeightfieldSolid<br>
-      <input name="toggle" type="radio" onchange="debugDraw['HeightfieldWalkable'] = ! debugDraw['HeightfieldWalkable'];"/> HeightfieldWalkable<br>
-      <input name="toggle" type="radio" onchange="debugDraw['DrawContours'] = ! debugDraw['DrawContours'];"/> Draw contours<br>
-    </form>
-    -->
-
     <div id="wrapper"></div>
+
+    <div id="text">
+      <p>
+      Example of a crowd managed by recastjs, using a tilecache<br><br>
+      Each agents is given a new random destination from time to time<br><br>
+      Click on the mesh to add obstacles<br><br>
+      </p>
+
+      <a href="test.webgl.html?agents=10">10 agents</a>
+      <a href="test.webgl.html?agents=50">50 agents</a>
+      <a href="test.webgl.html?agents=100">100 agents</a>
+      <a href="test.webgl.html?agents=200">200 agents</a>
+      <a href="test.webgl.html?agents=500">500 agents</a>
+      <a href="test.webgl.html?agents=1000">1000 agents</a>
+      <br><br>
+
+
+      <button onclick="if (! navigationMesh) { location.search += '&navigationmesh=1' } else { navigationMesh.parent ? scene.remove(navigationMesh) : scene.add(navigationMesh); }">
+        Toggle navigation mesh
+      </button>
+
+      <button id="sequence" onclick="sequence()" style="display:none">
+        Reboot sequence
+      </button>
+
+      <!--
+      <br><br>
+      <form autocomplete="off">
+        <input name="toggle" type="radio" onchange="terrain.parent ? scene.remove(terrain) : scene.add(terrain)" checked/> Terrain<br>
+        <input name="toggle" type="radio" onchange="debugDraw['NavMesh'] = ! debugDraw['NavMesh'];"/> NavMesh<br>
+        <input name="toggle" type="radio" onchange="debugDraw['NavMeshPortals'] = ! debugDraw['NavMeshPortals'];"/> NavMeshPortals<br>
+        <input name="toggle" type="radio" onchange="debugDraw['RegionConnections'] = ! debugDraw['RegionConnections'];"/> RegionConnections<br>
+        <input name="toggle" type="radio" onchange="debugDraw['RawContours'] = ! debugDraw['RawContours'];"/> RawContours<br>
+        <input name="toggle" type="radio" onchange="debugDraw['Contours'] = ! debugDraw['Contours'];"/> Contours<br>
+        <input name="toggle" type="radio" onchange="debugDraw['HeightfieldSolid'] = ! debugDraw['HeightfieldSolid'];"/> HeightfieldSolid<br>
+        <input name="toggle" type="radio" onchange="debugDraw['HeightfieldWalkable'] = ! debugDraw['HeightfieldWalkable'];"/> HeightfieldWalkable<br>
+        <input name="toggle" type="radio" onchange="debugDraw['DrawContours'] = ! debugDraw['DrawContours'];"/> Draw contours<br>
+      </form>
+      -->
+    </div>
 
     <script src="recast.test.webgl.js"></script>
     <script>
