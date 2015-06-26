@@ -1,12 +1,15 @@
-#include <stdio.h>
 #include <math.h>
-#include <memory.h>
 #include <time.h>
+#include <stdio.h>
+#include <float.h>
+#include <memory.h>
 #include <sys/time.h>
 
-#include <string>
-#include <float.h>
 #include <random>
+#include <string>
+#include <sstream>
+#include <fstream>
+#include <iostream>
 
 #include <Recast.h>
 #include <InputGeom.h>
@@ -85,6 +88,7 @@ extern "C" {
                               const float radius, const int active,  const int state, const int neighbors,
                               const bool  partial,const float desiredSpeed);
     extern void flush_active_agents_callback();
+    extern void invoke_file_callback(int callback_id, const char* filename);
     extern void invoke_vector_callback(int callback_id, const float x,  const float y, const float z);
     extern void invoke_update_callback(int callback_id);
     extern void invoke_generic_callback_string(int callback_id, const char* data);
@@ -342,7 +346,7 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
     const int ncid = rcGetChunksOverlappingRect(chunkyMesh, tbmin, tbmax, cid, 512);
     if (!ncid)
     {
-        emscripten_log("no overlapping rect chunks");
+        // emscripten_log("no overlapping rect chunks");
         return 0; // empty
 
     } else {
@@ -555,7 +559,7 @@ dtNavMeshQuery* m_navQuery;
 dtCrowd* m_crowd;
 
 int m_maxTiles = 128;
-int m_maxPolysPerTile = 10;
+int m_maxPolysPerTile = 32768;
 float m_tileSize = 48;
 
 dtTileCache* m_tileCache;
@@ -700,6 +704,9 @@ void debugOffMeshConnections() {
 
 void cleanup()
 {
+    // dtFreeNavMeshQuery(m_navQuery);
+    // dtFreeNavMesh(m_navMesh);
+    // dtFreeCrowd(m_crowd);
 }
 
 
@@ -925,7 +932,7 @@ void findNearestPoly(float cx, float cy, float cz,
     const float p[3] = {cx,cy,cz};
     const float ext[3] = {ex,ey,ez};
     float nearestPt[3];
-    char buff[64];
+    char buffer[64];
 
     dtQueryFilter filter;
     filter.setIncludeFlags(3);
@@ -936,9 +943,16 @@ void findNearestPoly(float cx, float cy, float cz,
     dtStatus status = m_navQuery->findNearestPoly(p, ext, &filter, &ref, 0);
 
     if (dtStatusFailed(status) || ref == 0) {
-        printf("Cannot find nearestPoly: %u\n", status);
+
+        sprintf(buffer, "Cannot find a polygon near [%f, %f, %f]", cx, cy, cz);
+        emscripten_log(buffer);
+
+        invoke_generic_callback_string(callback, "null");
 
     } else {
+
+        // sprintf(buffer, "Found a polygon near [%f, %f, %f] : %u", cx, cy, cz, ref);
+        // emscripten_log(buffer);
 
         const dtMeshTile* tile = 0;
         const dtPoly* poly = 0;
@@ -947,10 +961,7 @@ void findNearestPoly(float cx, float cy, float cz,
         std::string data = recastjsPolyJSON(poly, tile, ref);
 
         invoke_generic_callback_string(callback, data.c_str());
-        return;
     }
-
-    invoke_generic_callback_string(callback, "null");
 }
 
 void findNearestPoint(float cx, float cy, float cz,
@@ -959,6 +970,8 @@ void findNearestPoint(float cx, float cy, float cz,
                      dtPolyRef* nearestRef, float* nearestPt*/
                     int callback)
 {
+    char buffer[128];
+
     if (! m_navQuery) {
         emscripten_log("NavMeshQuery is not ready");
         return;
@@ -978,6 +991,8 @@ void findNearestPoint(float cx, float cy, float cz,
     dtStatus status = m_navQuery->findNearestPoly(p, ext, &filter, &ref, nearestPos);
 
     if (dtStatusFailed(status)) {
+        sprintf(buffer, "Cannot find a point near [%f, %f, %f]", cx, cy, cz);
+        emscripten_log(buffer);
         invoke_vector_callback(callback, NULL, NULL, NULL);
 
     } else {
@@ -1208,7 +1223,6 @@ void set_monotonePartitioning(int val){     m_monotonePartitioning = !!val; }
 
 bool initWithFile(std::string filename)
 {
-    printf("loading from file");
     m_geom = new InputGeom;
     if (!m_geom || !m_geom->loadMesh(m_ctx, filename.c_str()))
     {
@@ -1220,9 +1234,6 @@ bool initWithFile(std::string filename)
 
 bool initWithFileContent(std::string contents)
 {
-    printf("loading from contents \n");
-    // printf(contents.c_str());
-
     m_geom = new InputGeom;
     if (!m_geom || !m_geom->loadMeshFromContents(m_ctx, contents.c_str()))
     {
@@ -1235,8 +1246,10 @@ bool initWithFileContent(std::string contents)
 
 bool initCrowd(const int maxAgents, const float maxAgentRadius)
 {
+    // emscripten_log("initCrowd");
     m_crowd->init(maxAgents, maxAgentRadius, m_navMesh);
 
+    // emscripten_log("allocate agents");
     agents = (dtCrowdAgent**)dtAlloc(sizeof(dtCrowdAgent*)*maxAgents, DT_ALLOC_PERM);
 
     // Make polygons with 'disabled' flag invalid.
@@ -1598,6 +1611,14 @@ bool buildTiled()
         return false;
     }
 
+    m_navQuery = dtAllocNavMeshQuery();
+    if (!m_navQuery)
+    {
+        dtFree(m_navQuery);
+        emscripten_log("Could not allocate NavMeshQuery");
+        return false;
+    }
+
     status = m_navQuery->init(m_navMesh, 2048);
     if (dtStatusFailed(status))
     {
@@ -1644,8 +1665,8 @@ bool buildTiled()
         }
     }
 
-    // sprintf(buff, "Build initial %u tiles", th*tw);
-    // emscripten_log(buff);
+    sprintf(buff, "Build initial %u tiles", th*tw);
+    emscripten_log(buff);
 
     // Build initial meshes
     for (int y = 0; y < th; ++y) {
@@ -1683,8 +1704,8 @@ bool buildTiled()
         return false;
     }
 
-    sprintf(buff, "navmeshTileMemUsage = %u B  m_cacheCompressedSize = %u B  %u tiles over %ux%u", navmeshMemUsage, m_cacheCompressedSize, nav->getMaxTiles(), th, tw);
-    emscripten_log(buff);
+    // sprintf(buff, "navmeshTileMemUsage = %u B  m_cacheCompressedSize = %u B  %u tiles over %ux%u", navmeshMemUsage, m_cacheCompressedSize, nav->getMaxTiles(), th, tw);
+    // emscripten_log(buff);
 
     emscripten_run_script("recast.navmeshType = 'tiled'; recast.vent.emit('built', recast.navmeshType);");
 
@@ -2095,11 +2116,441 @@ bool build()
     return buildSolo();
 }
 
+///////////////////////////////////
+/// SAVE & LOAD NAVMESH
+///////////////////////
+
+static const int NAVMESHSET_MAGIC = 'M'<<24 | 'S'<<16 | 'E'<<8 | 'T'; //'MSET';
+static const int NAVMESHSET_VERSION = 1;
+
+struct NavMeshSetHeader
+{
+    int magic;
+    int version;
+    int numTiles;
+    dtNavMeshParams params;
+};
+
+struct NavMeshTileHeader
+{
+    dtTileRef tileRef;
+    int dataSize;
+};
+
+void _saveTileMesh(std::string path, int callback_id)
+{
+    char buff[1024];
+    const dtNavMesh* mesh = m_navMesh;
+
+    FILE* fp = fopen(path.c_str(), "wb");
+    if (!fp) {
+        sprintf(buff, "cannot open %s", path.c_str());
+        emscripten_log(buff);
+        return;
+    }
+
+    // Store header.
+    NavMeshSetHeader header;
+    header.magic = NAVMESHSET_MAGIC;
+    header.version = NAVMESHSET_VERSION;
+    header.numTiles = 0;
+    for (int i = 0; i < mesh->getMaxTiles(); ++i)
+    {
+        const dtMeshTile* tile = mesh->getTile(i);
+        if (!tile || !tile->header || !tile->dataSize) continue;
+        header.numTiles++;
+    }
+
+    memcpy(&header.params, mesh->getParams(), sizeof(dtNavMeshParams));
+    fwrite(&header, sizeof(NavMeshSetHeader), 1, fp);
+
+    // dtNavMeshParams* params = &header.params;
+    // sprintf(buff, "write params: tiles=%d tileWidth=%f tileHeight=%f maxTiles=%d maxPolys=%d ", header.numTiles, params->tileWidth, params->tileHeight, params->maxTiles, params->maxPolys);
+    // emscripten_log(buff);
+
+    // Store tiles.
+    for (int i = 0; i < mesh->getMaxTiles(); ++i)
+    {
+        const dtMeshTile* tile = mesh->getTile(i);
+        if (!tile || !tile->header || !tile->dataSize) continue;
+
+        NavMeshTileHeader tileHeader;
+        tileHeader.tileRef = mesh->getTileRef(tile);
+        tileHeader.dataSize = tile->dataSize;
+        fwrite(&tileHeader, sizeof(tileHeader), 1, fp);
+        fwrite(tile->data, tile->dataSize, 1, fp);
+
+        // sprintf(buff, "stored tile: %u (%d btyes)", tileHeader.tileRef, tileHeader.dataSize);
+        // emscripten_log(buff);
+    }
+
+    fclose(fp);
+
+    invoke_file_callback(callback_id, path.c_str());
+}
+
+void _loadTileMesh(std::string path, int callback_id)
+{
+    char buff[1024];
+
+    // sprintf(buff, "load tile mesh from %s", path.c_str());
+    // emscripten_log(buff);
+
+    FILE* fp = fopen(path.c_str(), "rb");
+    if (!fp) {
+        sprintf(buff, "cannot open %s", path.c_str());
+        emscripten_log(buff);
+        return;
+    }
+
+    // Read header.
+    NavMeshSetHeader header;
+    size_t readLen = fread(&header, sizeof(NavMeshSetHeader), 1, fp);
+
+    if (readLen != 1)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot read header");
+        emscripten_log(buff);
+        return;
+    }
+    if (header.magic != NAVMESHSET_MAGIC)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot read magic: %d", header.magic);
+        emscripten_log(buff);
+        return;
+    }
+    if (header.version != NAVMESHSET_VERSION)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot read version: %d", header.version);
+        emscripten_log(buff);
+        return;
+    }
+
+    dtFreeNavMesh(m_navMesh);
+
+    m_navMesh = dtAllocNavMesh();
+    if (!m_navMesh)
+    {
+        emscripten_log("cannot allocate navmesh");
+        return;
+    }
+
+    dtStatus status = m_navMesh->init(&header.params);
+    if (dtStatusFailed(status))
+    {
+        emscripten_log("cannot init navmesh");
+        return;
+    }
+
+    // sprintf(buff, "reading %d tiles", header.numTiles);
+    // emscripten_log(buff);
+
+    // Read tiles.
+    int i = 0;
+    for (int i = 0; i < header.numTiles; ++i)
+    {
+        // sprintf(buff, "load tile #%d", i);
+        // emscripten_log(buff);
+
+        NavMeshTileHeader tileHeader;
+        readLen = fread(&tileHeader, sizeof(tileHeader), 1, fp);
+        if (readLen != 1) {
+            emscripten_log("error while reading data");
+            return;
+        }
+
+        if (!tileHeader.tileRef || !tileHeader.dataSize) {
+            sprintf(buff, "tile %u: cannot read ref (%u) or data size (%d)", tileHeader.tileRef, tileHeader.tileRef, tileHeader.dataSize);
+            emscripten_log(buff);
+            break;
+        }
+
+        unsigned char* data = (unsigned char*)dtAlloc(tileHeader.dataSize, DT_ALLOC_PERM);
+        if (!data) {
+            sprintf(buff, "tile %u: cannot allocate memory to hold data (%u bytes)", tileHeader.tileRef, tileHeader.dataSize);
+            emscripten_log(buff);
+            break;
+        }
+        memset(data, 0, tileHeader.dataSize);
+        readLen = fread(data, tileHeader.dataSize, 1, fp);
+        if (readLen != 1) {
+            sprintf(buff, "tile %u: error while reading tile data (%u bytes)", tileHeader.tileRef, tileHeader.dataSize);
+            emscripten_log(buff);
+            return;
+        }
+
+        m_navMesh->addTile(data, tileHeader.dataSize, DT_TILE_FREE_DATA, tileHeader.tileRef, 0);
+    }
+
+    // sprintf(buff, "%d tiles loaded", i);
+    // emscripten_log(buff);
+
+    fclose(fp);
+
+    m_navQuery = dtAllocNavMeshQuery();
+    if (!m_navQuery)
+    {
+        dtFree(m_navQuery);
+        emscripten_log("Could not allocate NavMeshQuery");
+        return;
+    }
+
+    status = m_navQuery->init(m_navMesh, 2048);
+    if (dtStatusFailed(status))
+    {
+        dtFree(m_navQuery);
+        emscripten_log("Could not init Detour navmesh query");
+        return;
+    }
+
+    m_crowd = dtAllocCrowd();
+    if (!m_crowd)
+    {
+        dtFree(m_crowd);
+        emscripten_log("Could not create Detour Crowd");
+        return;
+    }
+
+    // emscripten_log("finished to load file");
+    invoke_generic_callback_string(callback_id, "{ \"status\":\"done\" }");
+}
+
+
+///////////////////////////////////
+/// SAVE & LOAD NAVMESH
+///////////////////////
+
+static const int TILECACHESET_MAGIC = 'T'<<24 | 'S'<<16 | 'E'<<8 | 'T'; //'TSET';
+static const int TILECACHESET_VERSION = 1;
+
+struct TileCacheSetHeader
+{
+    int magic;
+    int version;
+    int numTiles;
+    dtNavMeshParams meshParams;
+    dtTileCacheParams cacheParams;
+};
+
+struct TileCacheTileHeader
+{
+    dtCompressedTileRef tileRef;
+    int dataSize;
+};
+
+void _saveTileCache(std::string path, int callback_id)
+{
+    char buff[1024];
+
+    if (!m_tileCache) return;
+
+    FILE* fp = fopen(path.c_str(), "wb");
+    if (!fp) {
+        sprintf(buff, "cannot open %s", path.c_str());
+        emscripten_log(buff);
+        return;
+    }
+
+    // Store header.
+    TileCacheSetHeader header;
+    header.magic = TILECACHESET_MAGIC;
+    header.version = TILECACHESET_VERSION;
+    header.numTiles = 0;
+    for (int i = 0; i < m_tileCache->getTileCount(); ++i)
+    {
+        const dtCompressedTile* tile = m_tileCache->getTile(i);
+        if (!tile || !tile->header || !tile->dataSize) continue;
+        header.numTiles++;
+    }
+    memcpy(&header.cacheParams, m_tileCache->getParams(), sizeof(dtTileCacheParams));
+    memcpy(&header.meshParams, m_navMesh->getParams(), sizeof(dtNavMeshParams));
+    fwrite(&header, sizeof(TileCacheSetHeader), 1, fp);
+
+    // Store tiles.
+    for (int i = 0; i < m_tileCache->getTileCount(); ++i)
+    {
+        const dtCompressedTile* tile = m_tileCache->getTile(i);
+        if (!tile || !tile->header || !tile->dataSize) continue;
+
+        TileCacheTileHeader tileHeader;
+        tileHeader.tileRef = m_tileCache->getTileRef(tile);
+        tileHeader.dataSize = tile->dataSize;
+        fwrite(&tileHeader, sizeof(tileHeader), 1, fp);
+
+        fwrite(tile->data, tile->dataSize, 1, fp);
+    }
+
+    fclose(fp);
+
+    invoke_file_callback(callback_id, path.c_str());
+}
+
+void _loadTileCache(std::string path, int callback_id)
+{
+    char buff[1024];
+
+    // sprintf(buff, "load tile cache from %s", path.c_str());
+    // emscripten_log(buff);
+
+    FILE* fp = fopen(path.c_str(), "rb");
+    if (!fp) {
+        sprintf(buff, "cannot open %s", path.c_str());
+        emscripten_log(buff);
+        return;
+    }
+
+    // Read header.
+    TileCacheSetHeader header;
+    size_t readLen = fread(&header, sizeof(TileCacheSetHeader), 1, fp);
+
+    if (readLen != 1)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot read header");
+        emscripten_log(buff);
+        return;
+    }
+    if (header.magic != TILECACHESET_MAGIC)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot read magic %d", header.magic);
+        emscripten_log(buff);
+        return;
+    }
+    if (header.version != TILECACHESET_VERSION)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot read version %d", header.version);
+        emscripten_log(buff);
+        return;
+    }
+
+    dtFreeNavMesh(m_navMesh);
+
+    m_navMesh = dtAllocNavMesh();
+    if (!m_navMesh)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot allocate navmesh");
+        emscripten_log(buff);
+        return;
+    }
+
+    dtStatus status = m_navMesh->init(&header.meshParams);
+    if (dtStatusFailed(status))
+    {
+        fclose(fp);
+        sprintf(buff, "cannot init navmesh");
+        emscripten_log(buff);
+        return;
+    }
+
+    m_tileCache = dtAllocTileCache();
+    if (!m_tileCache)
+    {
+        fclose(fp);
+        sprintf(buff, "cannot allocate tilecache");
+        emscripten_log(buff);
+        return;
+    }
+
+    m_talloc = new LinearAllocator(32000);
+    m_tcomp = new FastLZCompressor;
+    m_tmproc = new MeshProcess;
+
+    status = m_tileCache->init(&header.cacheParams, m_talloc, m_tcomp, m_tmproc);
+    if (dtStatusFailed(status))
+    {
+        fclose(fp);
+        sprintf(buff, "cannot init tilecache");
+        emscripten_log(buff);
+        return;
+    }
+
+    // sprintf(buff, "reading %d tiles", header.numTiles);
+    // emscripten_log(buff);
+
+    // Read tiles.
+    for (int i = 0; i < header.numTiles; ++i)
+    {
+        // sprintf(buff, "load tile #%d", i);
+        // emscripten_log(buff);
+
+        TileCacheTileHeader tileHeader;
+        readLen = fread(&tileHeader, sizeof(tileHeader), 1, fp);
+        if (readLen != 1) {
+            emscripten_log("error while reading data");
+            return;
+        }
+
+        if (!tileHeader.tileRef || !tileHeader.dataSize) {
+            sprintf(buff, "tile %u: cannot read ref (%u) or data size (%d)", tileHeader.tileRef, tileHeader.tileRef, tileHeader.dataSize);
+            emscripten_log(buff);
+            break;
+        }
+
+        unsigned char* data = (unsigned char*)dtAlloc(tileHeader.dataSize, DT_ALLOC_PERM);
+        if (!data) {
+            sprintf(buff, "tile %u: cannot allocate memory to hold data (%u bytes)", tileHeader.tileRef, tileHeader.dataSize);
+            emscripten_log(buff);
+            break;
+        }
+        memset(data, 0, tileHeader.dataSize);
+        fread(data, tileHeader.dataSize, 1, fp);
+
+        dtCompressedTileRef tile = 0;
+        m_tileCache->addTile(data, tileHeader.dataSize, DT_COMPRESSEDTILE_FREE_DATA, &tile);
+
+        if (tile)
+            m_tileCache->buildNavMeshTile(tile, m_navMesh);
+    }
+
+    fclose(fp);
+
+    m_navQuery = dtAllocNavMeshQuery();
+    if (!m_navQuery)
+    {
+        dtFree(m_navQuery);
+        emscripten_log("Could not allocate NavMeshQuery");
+        return;
+    }
+
+    status = m_navQuery->init(m_navMesh, 2048);
+    if (dtStatusFailed(status))
+    {
+        dtFree(m_navQuery);
+        emscripten_log("Could not init Detour navmesh query");
+        return;
+    }
+
+    m_crowd = dtAllocCrowd();
+    if (!m_crowd)
+    {
+        dtFree(m_crowd);
+        emscripten_log("Could not create Detour Crowd");
+        return;
+    }
+
+    // emscripten_log("finished to load file");
+    invoke_generic_callback_string(callback_id, "{ \"status\":\"done\" }");
+}
+
+
+
 EMSCRIPTEN_BINDINGS(my_module) {
     function("dumpConfig", &dumpConfig);
 
     function("initWithFile", &initWithFile);
     function("initWithFileContent", &initWithFileContent);
+
+    function("_saveTileMesh", &_saveTileMesh);
+    function("_loadTileMesh", &_loadTileMesh);
+
+    function("_saveTileCache", &_saveTileCache);
+    function("_loadTileCache", &_loadTileCache);
 
     function("build", &build);
     function("buildSolo",  &buildSolo);

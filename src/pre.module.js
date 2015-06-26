@@ -111,6 +111,22 @@ function bit_toggle(num, bit){
     return num ^= bit;
 }
 
+/**
+ * String <=> ArrayBuffer
+ */
+function ab2str(buf) {
+  return String.fromCharCode.apply(null, new Uint16Array(buf));
+}
+
+function str2ab(str) {
+  var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
+  var bufView = new Uint8Array(buf);
+  for (var i=0, strLen=str.length; i<strLen; i++) {
+    bufView[i] = str.charCodeAt(i);
+  }
+  return buf;
+}
+
 /*!
  * recast.js
  * https://github.com/vincent/recast.js
@@ -144,7 +160,7 @@ recast.on = recast.vent.on;
 recast.emit = recast.vent.emit;
 recast.deferEmit = recast.vent.deferEmit;
 
-var _ajax = function(url, data, callback, type) {
+var _ajax = function(url, data, callback, type, responseType) {
   var data_array, data_string, idx, req, value;
   if (! data) {
     data = {};
@@ -163,11 +179,14 @@ var _ajax = function(url, data, callback, type) {
   }
   data_string = data_array.join('&');
   req = new XMLHttpRequest();
-  req.open(type, url, false);
+  req.open(type, url, true);
   req.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+  if (responseType) {
+    req.responseType = 'arraybuffer';responseType
+  }
   req.onreadystatechange = function() {
     if (req.readyState == 4 && req.status == 200) {
-      return callback(req.responseText);
+      return callback(responseType === 'arraybuffer' ? req.response : req.responseText);
     }
   };
   // debug('ajax request', data_string);
@@ -286,6 +305,26 @@ var workerMain = function(event) {
           callback: message.callback
         });
       });
+      break;
+
+    case 'saveTileMesh':
+      recast.saveTileMesh(message.data, recast.cb(function() {
+        postMessage({
+          type: message.type,
+          data: Array.prototype.slice.call(arguments),
+          callback: message.callback
+        });
+      }));
+      break;
+
+    case 'loadTileMesh':
+      recast.loadTileMesh(message.data, recast.cb(function() {
+        postMessage({
+          type: message.type,
+          data: Array.prototype.slice.call(arguments),
+          callback: message.callback
+        });
+      }));
       break;
 
     case 'findNearestPoint':
@@ -643,6 +682,57 @@ recast.queryPolygons = function (posX, posY, posZ, extX, extY, extZ, maxPolys, c
   }
   return recast._queryPolygons(posX, posY, posZ, extX, extY, extZ, maxPolys, callback_id);
 };
+
+recast.saveTileMesh = function (path, callback_id) {
+  recast._saveTileMesh(path, callback_id);
+};
+
+recast.loadTileMesh = function (path, callback_id) {
+  // with node FS api
+  if (ENVIRONMENT_IS_NODE) {
+    var fs = require('fs');
+    fs.readFile(path, function(err, data) {
+      if (err) throw new Error(err);
+      // FIXME
+      FS.writeFile(path, data, { encoding: 'binary' });
+      recast._loadTileMesh(path, callback_id);
+    });
+
+  // with ajax
+  } else {
+    _ajax(path, {}, function(data) {
+      // FIXME
+      FS.writeFile(path, new Int8Array(data), { encoding: 'binary' });
+      recast._loadTileMesh(path, callback_id);
+    }, null, 'arraybuffer');
+  }
+};
+
+recast.saveTileCache = function (path, callback_id) {
+  recast._saveTileCache(path, callback_id);
+};
+
+recast.loadTileCache = function (path, callback_id) {
+  // with node FS api
+  if (ENVIRONMENT_IS_NODE) {
+    var fs = require('fs');
+    fs.readFile(path, function(err, data) {
+      if (err) throw new Error(err);
+      // FIXME
+      FS.writeFile(path, data, { encoding: 'binary' });
+      recast._loadTileCache(path, callback_id);
+    });
+
+  // with ajax
+  } else {
+    _ajax(path, {}, function(data) {
+      // FIXME
+      FS.writeFile(path, new Int8Array(data), { encoding: 'binary' });
+      recast._loadTileCache(path, callback_id);
+    }, null, 'arraybuffer');
+  }
+};
+
 
 recast.zones = { };
 
