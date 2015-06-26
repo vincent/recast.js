@@ -7,6 +7,8 @@ It embeds an Emscripten-compiled bundle of the [RecastDetour navigation c++ libr
 
 [Demo](http://vincent.github.io/recast.js/tests/test.webgl.html) - [Getting started](https://github.com/vincent/recast.js/wiki) - [API](https://github.com/vincent/recast.js/wiki/API)
 
+[![Build Status](http://ci.three-arena.com/job/Recast.js/badge/icon)](http://ci.three-arena.com/job/Recast.js/)
+
 What can I do with it ?
 =========
 
@@ -28,7 +30,7 @@ Tests
 
 Some tests exist in the [tests](https://github.com/vincent/recast.js/tree/master/tests) directory.
 They describe regular usages of the library, and should pass both in node (npm test) and in the browser.
-There are both simple and worker versions. 
+There are both simple and worker versions.
 
 Build
 =========
@@ -36,6 +38,8 @@ Build
 It supposes you already have a working emscripten toolchain installed. You can also define your paths in the Makefile.
 The Emscripten build can be ran with
 `make build`
+
+To update the build against the latest [RecastDetour](https://github.com/memononen/recastnavigation) version, use `make update-source build`
 
 Contribute
 =========

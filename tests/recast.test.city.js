@@ -192,19 +192,8 @@ exports['handle an agent'] = function(test) {
      */
     recast.OBJLoader('Paris/Paris2010_0.obj', function(){
 
-        console.log('build');
         recast.build();
         recast.initCrowd(1000, 1.0);
-
-        console.log('continue');
-
-        // recast.debugCreateNavMesh(0);
-        // recast.debugCreateNavMeshPortals();
-        // recast.debugCreateRegionConnections();
-        // recast.debugCreateRawContours();
-        // recast.debugCreateContours();
-        // recast.debugCreateHeightfieldSolid();
-        // recast.debugCreateHeightfieldWalkable();
 
         /**
          * Get navmesh geometry and draw it

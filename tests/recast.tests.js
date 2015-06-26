@@ -9,7 +9,7 @@
 /*global exports: true, require: true */
 'use strict';
 
-var recast = require('../lib/recast');
+var recast   = require('../lib/recast');
 
 // Check our library is here
 exports['recast is present'] = function(test) {
@@ -46,25 +46,17 @@ exports['our methods are present'] = function(test) {
 
 // Check file loading
 exports['load an .obj file'] = function(test) {
-    test.expect(9);
 
-    // recast.set_cellSize(0.3);
-    // recast.set_cellHeight(0.2);
-    // recast.set_agentHeight(0.8);
-    // recast.set_agentRadius(0.2);
-    // recast.set_agentMaxClimb(4.0);
-    // recast.set_agentMaxSlope(30.0);
+    test.expect(5);
 
-    /*
     recast.settings({
-        cellSize: 2.0,
-        cellHeight: 1.5,
-        agentHeight: 2.0,
-        agentRadius: 0.2,
-        agentMaxClimb: 4.0,
+        cellSize: 0.1,
+        cellHeight: 0.05,
+        agentHeight: 1.8,
+        agentRadius: 0.4,
+        agentMaxClimb: 2.0,
         agentMaxSlope: 30.0
     });
-    */
 
     /**
      * Load an .OBJ file
@@ -72,23 +64,19 @@ exports['load an .obj file'] = function(test) {
     recast.OBJLoader('nav_test.obj', function(){
 
         recast.build();
-        recast.initCrowd(1000, 1.0);
 
         /**
          * Find a random navigable point on this mesh
          */
         recast.getRandomPoint(recast.cb(function(pt1x, pt1y, pt1z){
-            test.ok(typeof pt1x === 'number', 'point coord is a number');
-            test.ok(typeof pt1y === 'number', 'point coord is a number');
-            test.ok(typeof pt1z === 'number', 'point coord is a number');
+            test.ok(typeof pt1x === 'number' && typeof pt1y === 'number' && typeof pt1z === 'number', 'find a random point');
+
 
             /**
              * Find the nearest navigable point from 0,0,0 with a maximum extend of 10,10,10
              */
             recast.findNearestPoint(0, 0, 0, 10, 10, 10, recast.cb(function(pt2x, pt2y, pt2z){
-                test.ok(typeof pt2x === 'number', 'point coord is a number');
-                test.ok(typeof pt2y === 'number', 'point coord is a number');
-                test.ok(typeof pt2z === 'number', 'point coord is a number');
+                test.ok(typeof pt2x === 'number' && typeof pt2y === 'number' && typeof pt2z === 'number', 'find the nearest point');
 
                 var extend = 10;
 
@@ -115,72 +103,3 @@ exports['load an .obj file'] = function(test) {
     });
 };
 
-
-// Check file loading
-exports['manage the crowd'] = function(test) {
-    test.expect(6);
-
-    recast.set_cellSize(1.0);
-    recast.set_cellHeight(2.0);
-    recast.set_agentHeight(2.0);
-    recast.set_agentRadius(0.2);
-    recast.set_agentMaxClimb(4.0);
-    recast.set_agentMaxSlope(30.0);
-
-    /*
-    recast.settings({
-        cellSize: 2.0,
-        cellHeight: 1.5,
-        agentHeight: 2.0,
-        agentRadius: 0.2,
-        agentMaxClimb: 4.0,
-        agentMaxSlope: 30.0
-    });
-    */
-
-    /**
-     * Load an .OBJ file
-     */
-    recast.OBJLoader('nav_test.obj', function () {
-
-        recast.vent.on('update', function (agents) {
-            test.ok(agents && typeof agents.length !== 'undefined', 'crowd has ' + agents.length + ' agent');
-            test.strictEqual(agents.length, 1);
-            test.done();
-        });
-
-        /**
-         * Find a random navigable point on this mesh
-         */
-        recast.getRandomPoint(recast.cb(function(pt1x, pt1y, pt1z){
-            test.ok(typeof pt1x === 'number', 'point coord is a number');
-            test.ok(typeof pt1y === 'number', 'point coord is a number');
-            test.ok(typeof pt1z === 'number', 'point coord is a number');
-
-            /**
-             * Add an agent, retain its ID
-             */
-            var id = recast.addAgent({
-                position: {
-                    x: pt1x,
-                    y: pt1y,
-                    z: pt1z
-                },
-                radius: 0.5,
-                height: 0.8,
-                maxAcceleration: 1.0,
-                maxSpeed: 2.0,
-                updateFlags: 0,
-                separationWeight: 10.0
-            });
-
-            test.ok(typeof id === 'number', 'agent ID is a number');
-
-            recast.crowdUpdate(1.0);
-
-            // removeCrowdAgent
-            // crowdUpdate
-            // crowdGetActiveAgents
-        }));
-    });
-};

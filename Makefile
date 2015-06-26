@@ -7,15 +7,15 @@ NODELINT = $(CWD)/node_modules/nodelint/nodelint
 
 BUILDDIR = lib
 
-CC = $(EMSCRIPTEN_ROOT)/emcc
+CC = emcc
 # FASTCOMPILER = EMCC_FAST_COMPILER=0
 
 # PATH TO EMCC
-LLVM = /Users/allyouneedisgnu/Workspace/emscripten-fastcomp/build/Release/bin
-CC = /Users/allyouneedisgnu/Workspace/emscripten/emcc
+#LLVM = ~/Workspace/emscripten-fastcomp/build/Release/bin
+#CC = ~/Workspace/emscripten/emcc
 # FASTCOMPILER = EMCC_FAST_COMPILER=0
 
-CFLAGS = -O2 -s OUTLINING_LIMIT=2000 --closure 1 -g -s WARN_ON_UNDEFINED_SYMBOLS=0 -s VERBOSE=0 -s NO_EXIT_RUNTIME=1 -s LINKABLE=1 -s ALLOW_MEMORY_GROWTH=1 -s DISABLE_EXCEPTION_CATCHING=1 -s ASSERTIONS=0 --bind
+CFLAGS = -O2 --closure 1 -g -s WARN_ON_UNDEFINED_SYMBOLS=0 -s VERBOSE=0 -s NO_EXIT_RUNTIME=1 -s LINKABLE=1 -s ALLOW_MEMORY_GROWTH=1 -s DISABLE_EXCEPTION_CATCHING=1 -s ASSERTIONS=0 --bind
 DEFINES = -D NOT_GCC -D EMSCRIPTEN -D USES_UNIX_DIR
 INCLUDES = -I recastnavigation/Recast/Include \
 				 -I recastnavigation/Detour/Include \
@@ -24,6 +24,7 @@ INCLUDES = -I recastnavigation/Recast/Include \
 				 -I recastnavigation/DebugUtils/Include \
 				 -I recastnavigation/DetourTileCache/Include \
 				 -I src/zlib \
+				 -I src/boost \
 				 -I src/JavascriptInterface
 FILES = recastnavigation/DebugUtils/Source/DebugDraw.cpp \
 			recastnavigation/DebugUtils/Source/DetourDebugDraw.cpp \
@@ -72,10 +73,10 @@ PREJS = --pre-js src/pre.module.js
 POSTJS = --post-js src/post.module.js
 LIBRARYJS = --js-library src/library_recast.js
 
-all: ensure clean test build
+all: clean test build
 
-ensure:
-	test -s "$(CC)" || { echo "Emscripten compiler, defined to be here: $(CC), does not exist! Exiting..."; exit 1; }
+update-source:
+	git submodule init; git submodule update; cd recastnavigation; git reset --hard origin/master; patch -p1 < ../src/recastnavigation.patch
 
 build: $(wildcard  lib/*.js)
 	mkdir -p $(BUILDDIR)
