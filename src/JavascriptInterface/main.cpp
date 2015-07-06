@@ -1115,8 +1115,9 @@ void _queryPolygons(float posX, float posY, float posZ,
 }
 
 void findPath(float startPosX, float startPosY, float startPosZ,
-                float endPosX, float endPosY, float endPosZ, int maxPath,
-                int callback)
+              float endPosX, float endPosY, float endPosZ, int maxPath,
+              unsigned short filterIncludeFlags, unsigned short filterExcludeFlags,
+              int callback)
 {
     if (! m_navQuery) {
         emscripten_log("NavMeshQuery is not ready");
@@ -1129,7 +1130,7 @@ void findPath(float startPosX, float startPosY, float startPosZ,
     float startPos[3] = { startPosX, startPosY, startPosZ };
     float endPos[3] = { endPosX, endPosY, endPosZ };
 
-    const float ext[3] = {2,4,2};
+    const float ext[3] = {0.5, 1, 0.5};
 
     dtStatus status;
 
@@ -1137,8 +1138,8 @@ void findPath(float startPosX, float startPosY, float startPosZ,
     int pathCount;
 
     dtQueryFilter filter;
-    filter.setIncludeFlags(3);
-    filter.setExcludeFlags(0);
+    filter.setIncludeFlags(filterIncludeFlags);
+    filter.setExcludeFlags(filterExcludeFlags);
 
     // Change costs.
     filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f);
@@ -1264,7 +1265,7 @@ struct agentUserData {
 };
 
 void updateCrowdAgentParameters(const int idx, float posX, float posY, float posZ, float radius, float height,
-                                                                float maxAcceleration, float maxSpeed, unsigned char updateFlags, float separationWeight)
+                                float maxAcceleration, float maxSpeed, unsigned char updateFlags, float separationWeight)
 {
     dtCrowdAgentParams ap;
     memset(&ap, 0, sizeof(ap));
@@ -1295,7 +1296,7 @@ void updateCrowdAgentParameters(const int idx, float posX, float posY, float pos
 }
 
 int addCrowdAgent(float posX, float posY, float posZ, float radius, float height,
-                                    float maxAcceleration, float maxSpeed, unsigned char updateFlags, float separationWeight)
+                  float maxAcceleration, float maxSpeed, unsigned char updateFlags, float separationWeight)
 {
     dtCrowdAgentParams ap;
     memset(&ap, 0, sizeof(ap));
@@ -1323,21 +1324,9 @@ int addCrowdAgent(float posX, float posY, float posZ, float radius, float height
 
     int idx = m_crowd->addAgent(pos, &ap);
 
-    // agentUserData data;
-    // memset(&data, 0, sizeof(data));
-    // data.idx = 99;
-    // ap.userData = (void *) &data;
-
     ap.userData = (void *)idx; /* FIXME: doesnt fucking work ://// */
     /* So we do this ?? */
     updateCrowdAgentParameters(idx, posX, posY, posZ, radius, height, maxAcceleration, maxSpeed, updateFlags, separationWeight);
-
-    // char buff[512];
-    // const dtCrowdAgent* ag = m_crowd->getAgent(idx);
-    // const float* p = ag->npos;
-    // const float r = ag->params.radius;
-    // sprintf(buff, "debug('new agent', { idx:%d });", idx);
-    // emscripten_run_script(buff);
 
     return idx;
 }

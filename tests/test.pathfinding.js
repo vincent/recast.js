@@ -50,8 +50,8 @@ exports['load an .obj file'] = function(test) {
                     /**
                      * Find the shortest possible path from pt1 to pt2
                      */
-                    recast.findPath(pt1x, pt1y, pt1z, pt2x, pt2y, pt2z, 1000, recast.cb(function(path){
-                        test.ok(path && typeof path.length !== 'undefined', 'found path has ' + path.length + ' segments');
+                    recast.findPath(pt1x, pt1y, pt1z, pt2x, pt2y, pt2z, 1000, recast.FLAG_WALK, recast.FLAG_DISABLED, recast.cb(function(path){
+                        test.ok(path && typeof path.length !== 'undefined' && path.length > 0, 'found path has ' + path.length + ' segments');
 
                         test.done();
                     }));

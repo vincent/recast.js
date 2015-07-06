@@ -28,8 +28,11 @@ renderer.domElement.addEventListener('click', function (e) {
                 if (e.shiftKey) {
                     addOffMeshLink(x, y, z);
 
-                } else {
+                } else if (e.altKey) {
                     addObstacle(x, y, z);
+
+                } else {
+                    findPath(x, y, z);
                 }
             }));
     });
@@ -115,6 +118,21 @@ function raycast (e, callback) {
     }
 }
 
+var line, lastPos = { x: -25.8850, y: -1.64166, z: -5.41350 };
+function findPath (x, y, z) {
+    recast.findPath(lastPos.x, lastPos.y, lastPos.z, x, y, z, 1000, recast.FLAG_WALK | recast.FLAG_SWIM, recast.FLAG_DISABLED, recast.cb(function(path){
+
+        lastPos.x = x;
+        lastPos.y = y;
+        lastPos.z = z;
+
+        if (line) scene.remove(line);
+
+        line = createPathSpline(path, 1);
+        scene.add(line);
+    }));
+}
+
 function addObstacle (x, y, z) {
     var radius = 3;
     var obstacleMesh = new THREE.Mesh(
@@ -165,9 +183,10 @@ var splineMaterial = new THREE.LineBasicMaterial({
   vertexColors: THREE.VertexColors
 });
 
-function createSpline(start, end, elevation) {
+function createSpline (start, end, elevation) {
 
     var geometry = new THREE.Geometry();
+
     geometry.vertices.push(start);
     geometry.vertices.push(new THREE.Vector3(
         (start.x + end.x)  / 2,
@@ -175,6 +194,18 @@ function createSpline(start, end, elevation) {
         (start.z + end.z)  / 2
     ));
     geometry.vertices.push(end);
+
+    return new THREE.Line(geometry, splineMaterial);
+}
+
+function createPathSpline (positions, elevation) {
+
+    var geometry = new THREE.Geometry();
+
+    for (var i = 0; i < positions.length; i++) {
+        positions[i].y += elevation;
+        geometry.vertices.push(positions[i]);
+    }
 
     return new THREE.Line(geometry, splineMaterial);
 }
