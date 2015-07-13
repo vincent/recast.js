@@ -13,11 +13,10 @@ Assuming you've got an .obj file describing your scene geometry, you can get a R
 ```js
 var recast = new Recast();
 recast.OBJLoader( 'path/to/geometry.obj', function () {
-  // recast is ready
 
   // get a random navigable point A
   recast.getRandomPoint( function (x, y, z) {
-    
+
     // find the shortest route from origin to point A
     // we asume 0,0,0 is a navigable point
     recast.findPath( 0, 0, 0,   x, y, z,   function ( route ) {
@@ -30,6 +29,45 @@ recast.OBJLoader( 'path/to/geometry.obj', function () {
 })
 ```
 
+# Speed considerations
+
+Computing the navigation mesh from your level can be quite cpu-intensive.
+When this happens, a solution is to store the computed navmesh for later use.
+
+## Saving
+
+```js
+var recast = new Recast();
+recast.OBJLoader('nav_test.obj', function(){
+
+  recast.buildTiled(); // only tiled mesh is supported right now
+
+  recast.saveTileMesh('./navmesh.bin', recast.cb(function (error, blob) {
+
+    var buffer = new Buffer(blob.length);
+    for (var i = 0; i < blob.length; i++) {
+        buffer.writeUInt8(blob[i], i);
+    }
+
+    fs.writeFile('./navmesh.bin', buffer, function (err) {
+        // done
+    });
+  }));
+});
+```
+
+## Loading
+
+```js
+var recast = new Recast();
+recast.OBJLoader('nav_test.obj', function(){
+
+    recast.loadTileMesh('./navmesh.bin', recast.cb(function(){
+      // recast is now ready to use
+    }));
+});
+```
+
 # API
 
 `new Recast()` Create a new instance
@@ -37,9 +75,13 @@ recast.OBJLoader( 'path/to/geometry.obj', function () {
 ## General
 * [recast.settings](API#recast.settings) - Apply new navigation mesh settings
 * [recast.OBJLoader](API#recast.OBJLoader) - Load an `.obj` file
-* [recast.OBJDataLoader](API#recast.OBJLoader) - Load an `OBJ` content
+* [recast.OBJDataLoader](API#recast.OBJLoader) - Load an `.obj` content
 * [recast.buildSolo](API#recast.buildSolo) - Build a single-object navigation mesh
 * [recast.buildTiled](API#recast.buildTiled) - Build a tiled navigation mesh
+* [recast.saveTileMesh](API#recast.saveTileMesh) - Store a tiled navigation mesh
+* [recast.loadTileMesh](API#recast.loadTileMesh) - Load a tiled navigation mesh
+* [recast.saveTileCache](API#recast.saveTileCache) - Store a tiled navigation tilecache
+* [recast.loadTileCache](API#recast.loadTileCache) - Load a tiled navigation tilecache
 
 ## Basic navmesh operations
 * [recast.getRandomPoint](API#recast.getRandomPoint) - Get a random navigable position
@@ -84,7 +126,7 @@ recast.OBJLoader( 'path/to/geometry.obj', function () {
 Some tips to help you getting rid of well-known traps
 
 * test your geometry in [Recast](https://github.com/memononen/recastnavigation) - it is easily runnable on Windows, MacOS and Linux
-* adjust settings wisely. Again, test them in Recast if you are not sure.
+* adjust settings wisely. Test them in Recast if you are not sure.
 
 
 

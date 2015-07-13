@@ -14,8 +14,11 @@ What can I do with it ?
 
 * load any mesh in .obj format
 * compute and extract its navigation mesh with options
-* find a random point garanteed to be navigable
+* save this navigation mesh
+* load this blob without recompute it
+* find a random point guaranteed to be navigable
 * find the nearest path from one point to another
+* place obstacles with a radius
 * add agents on the navigation mesh
 * make them move with their own speed
 
