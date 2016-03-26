@@ -239,6 +239,14 @@ var workerMain = function(event) {
 
   switch(message.type) {
 
+    case 'ping':
+      postMessage({
+        vent: true,
+        type: message.type,
+        callback: message.callback
+      });
+      break;
+
     case 'set_cellSize':
     case 'set_cellHeight':
     case 'set_agentHeight':
@@ -265,14 +273,29 @@ var workerMain = function(event) {
 
     case 'build':
       recast.build();
+      postMessage({
+        vent: true,
+        type: message.type,
+        callback: message.callback
+      });
       break;
 
     case 'buildSolo':
       recast.buildSolo();
+      postMessage({
+        vent: true,
+        type: message.type,
+        callback: message.callback
+      });
       break;
 
     case 'buildTiled':
       recast.buildTiled();
+      postMessage({
+        vent: true,
+        type: message.type,
+        callback: message.callback
+      });
       break;
 
     case 'initCrowd':
