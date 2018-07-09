@@ -10,19 +10,19 @@ npm install recastjs --save
 
 ### In a browser
 
-To use it in a browser, by adding a &lt;script&gt; tag or other means
+To use it in a browser, add a &lt;script&gt; tag, or use a UMD compatible module loader.
 
 ```markup
 <script src="../node_modules/recastjs/lib/recast.js"></script>
 ```
 
-get a recast instance in the same thread
+then get a recast instance in the same thread
 
 ```javascript
 var recast = window.recast;
 ```
 
-create a recast worker instance in a browser \(include `/lib/recast.withworker.js`\)
+or create a recast worker instance \(include `/lib/recast.withworker.js`\)
 
 ```javascript
 var recastWorker = new recast('../lib/recast.js', callback);
@@ -36,7 +36,7 @@ get a recast instance in the same thread
 var recast = require('recastjs');
 ```
 
-or create a recast worker instance in a `nodejs` environment
+or create a recast worker instance
 
 ```javascript
 var Recast = require('recast.withworker');

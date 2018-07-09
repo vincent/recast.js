@@ -11,7 +11,7 @@ description: >-
 ```javascript
 recast.OBJLoader('path/to/geometry.obj', function() {
 
-    // build the navmesh (buildSolo or buildTiled)
+  // build the navmesh (buildSolo or buildTiled)
   recast.buildTiled();
     
   // get a random navigable point A
