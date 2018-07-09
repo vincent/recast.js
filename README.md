@@ -1,23 +1,28 @@
-# Initial page
+# What is this all about
 
-## Getting Super Powers
+In a game context, Recast.js is meant to be used with a file describing a scene geometry. Using the [recastnavigation](https://github.com/recastnavigation/recastnavigation) library, it will deduce a [navigation mesh](https://en.wikipedia.org/wiki/Navigation_mesh) - a set of polygons on which your characters can move.
 
-Becoming a super hero is a fairly straight forward process:
+Once this navigation mesh is computed, it is possible to use built-in pathfinding operations like "find the shortest path between point A and point B", taking into account various variables like obstacles, slopes, and off-mesh connections.
 
-```
-$ give me super-powers
-```
+If you decide to use it to animate your scene characters - aka "agents", it also provides a complete crowd system capable of managing all your agents movements using per-agent settings \(speed, radius, ...\)
 
-{% hint style="info" %}
- Super-powers are granted randomly so please submit an issue if you're not happy with yours.
-{% endhint %}
+## What can you do with it
 
-Once you're strong enough, save the world:
+* load any mesh in .obj format
+* compute and extract its navigation mesh with options
+* save this navigation mesh
+* load this blob without recompute it
+* find a random point guaranteed to be navigable
+* find the nearest path from one point to another
+* place obstacles with a radius
+* add agents on the navigation mesh
+* make them move with their own speed
 
-```
-// Ain't no code for that yet, sorry
-echo 'You got to trust me on this, I saved the world'
-```
+## Is it for WebGL, Three.js or Babylon.js ?
+
+It is designed to work along a WebGL software but it's completely library agnostic. It only manages a mesh and its properties.
+
+Included tests and demos use [Three.js](https://github.com/mrdoob/three.js), though.
 
 
 

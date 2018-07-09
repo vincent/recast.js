@@ -1,7 +1,6 @@
 # Table of contents
 
-* [Initial page](README.md)
-* [What is this all about](what-is-this-all-about.md)
+* [What is this all about](README.md)
 * [Getting started](getting-started/README.md)
   * [Navigation mesh settings](getting-started/navigation-mesh-settings.md)
   * [Create a navmesh](getting-started/create-a-navmesh.md)

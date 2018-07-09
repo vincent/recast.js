@@ -9,12 +9,6 @@ description: >-
 ## TL ; DR
 
 ```javascript
-// browser
-var recast = window.recast;
-
-// nodejs
-// var recast = require('path/to/require');
-
 recast.OBJLoader('path/to/geometry.obj', function() {
 
     // build the navmesh (buildSolo or buildTiled)
@@ -54,11 +48,11 @@ recast.OBJDataLoader(OBJ_RAW_DATA_AS_STRING, function(){
 
 ## Choosing a data structure
 
-Depending on your usage of Recast.js, you will choose an appropriate data structure.
+Depending on your usage of Recast.js, you will choose the appropriate data structure.
 
 ### Solo
 
-The "Solo" constructor create a single, immutable object to represent your navigation mesh. 
+The "Solo" constructor creates a single, immutable object to represent your navigation mesh. 
 
 ```javascript
 recast.buildSolo()
@@ -74,7 +68,7 @@ Disable some features like temporary obstacles
 
 ### Tiled
 
-The "Tiled" constructor create a complex object to represent your navigation mesh, on which you can add or remove "Temporary obstacles" that will alter navigation behaviors. 
+The "Tiled" constructor creates a complex object to represent your navigation mesh, on which you can add or remove "Temporary obstacles" that will alter navigation behaviors. 
 
 ```javascript
 recast.buildTiled()

@@ -18,17 +18,17 @@ To use it in a browser, by adding a &lt;script&gt; tag or other means
 
 get a recast instance in the same thread
 
-```text
+```javascript
 var recast = window.recast;
 ```
 
 create a recast worker instance in a browser \(include `/lib/recast.withworker.js`\)
 
-```text
+```javascript
 var recastWorker = new recast('../lib/recast.js', callback);
 ```
 
-### In nodejs
+### In Node.js
 
 get a recast instance in the same thread
 
@@ -38,7 +38,7 @@ var recast = require('recastjs');
 
 or create a recast worker instance in a `nodejs` environment
 
-```text
+```javascript
 var Recast = require('recast.withworker');
 var recastWorker = new Recast('recast');
 ```

@@ -12,7 +12,7 @@ description: >-
 
 In a Node environment, you can save a navigation mesh as follows
 
-```text
+```javascript
 // load the level object
 recast.OBJLoader('level_mesh.obj', function(){
 
@@ -39,8 +39,8 @@ recast.OBJLoader('level_mesh.obj', function(){
 
 In a browser, or Node environment
 
-```text
- recast.loadTileMesh('./navmesh.dist.bin', recast.cb(function(){
+```javascript
+ recast.loadTileMesh('./navmesh.bin', recast.cb(function(){
     // the navigation mesh is ready
  }));
 ```
