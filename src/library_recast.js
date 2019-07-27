@@ -28,7 +28,7 @@
     },
 
     invoke_file_callback: function (callback_id, filename) {
-      Module.__RECAST_CALLBACKS[callback_id](null, FS.readFile(Module.Pointer_stringify(filename)));
+      Module.__RECAST_CALLBACKS[callback_id](null, FS.readFile(Module.UTF8ToString(filename)));
     },
 
     invoke_update_callback: function (callback_id) {
@@ -36,11 +36,11 @@
     },
 
     invoke_generic_callback_string: function (callback_id, data) {
-      Module.__RECAST_CALLBACKS[callback_id](JSON.parse(Module.Pointer_stringify(data)));
+      Module.__RECAST_CALLBACKS[callback_id](JSON.parse(Module.UTF8ToString(data)));
     },
 
     gl_create_object: function (objectName) {
-      objectName = Module.Pointer_stringify(objectName);
+      objectName = Module.UTF8ToString(objectName);
       Module.__RECAST_GLOBAL_CURRENT = objectName;
 
       Module.__RECAST_OBJECTS[objectName] = {
