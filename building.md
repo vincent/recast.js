@@ -15,7 +15,7 @@ Compiling Recast.js needs the following tools to be installed
 Recast.js needs a patched version of [recastnavigation](https://github.com/recastnavigation/recastnavigation). To import or update it use
 
 ```bash
-npm run update
+make update-source
 ```
 
 Then compile Recast.js
