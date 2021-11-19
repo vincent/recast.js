@@ -5,28 +5,54 @@ var fs       = require('fs');
 var recast   = require('../lib/recast');
 var argv     = require('minimist')(process.argv.slice(2));
 
-var settings = argv.settings.split(',').map(function(s){
-    return s.split('=');
-});
+argv.input    = argv.input    || argv.i || argv._[0];
+argv.output   = argv.output   || argv.o || argv._[1];
+argv.settings = argv.settings || argv.s || argv._[2];
 
-console.log(settings);
+var options = {
+    cellSize        :  0.3,   // voxelization cell size
+    cellHeight      :  0.2,   // voxelization cell height
+    agentHeight     :  2.0,   // agent capsule  height
+    agentRadius     :  0.4,   // agent capsule  radius
+    agentMaxClimb   :  0.9,   // how high steps agents can climb, in voxels
+    agentMaxSlope   : 30.0,   // maximum slope angle, in degrees
+    regionMinSize   :  8.0,   // minimum isolated region size that is still kept
+    regionMergeSize : 20.0,   // how large regions can be still merged
+    edgeMaxLen      : 12.0,   // maximum edge length, in voxels
+    edgeMaxError    :  1.3,   // how loosely the simplification is done   
+}
 
-argv.input  = argv.input  || argv.i || argv._[0];
-argv.output = argv.output || argv.o || argv._[1];
+if (argv.settings) {
+    argv.settings.split(',').forEach(function(s){
+        const kv = s.split('=');
+        let key = kv[0];
+        let value = parseFloat(kv[1]);
+        if (options[key] === undefined) {
+            console.warn(`Unknown setting "${key}" found, will be ignored`);
+            return
+        }
+        if (isNaN(value)) {
+            console.error(`Setting "${key}" has invalid value "${kv[1]}"`);
+            process.exit(1);
+        } else {
+            options[key] = value;
+        }
+    });
+}
 
 if (! (argv.input && argv.output)) {
     console.error('Usage: make-tilecache --input <level.obj> --output <level.tilecache>');
     process.exit(1);
 }
 
-// settings(recast);
+recast.settings(options);
 
 recast.OBJLoader(argv.input, function(){
 
     recast.buildTiled();
     recast.saveTileCache('./tilecache.bin', recast.cb(function (error, serialized) {
 
-        var buffer = new Buffer(serialized.length);
+        var buffer = Buffer.alloc(serialized.length);
         for (var i = 0; i < serialized.length; i++) {
             buffer.writeUInt8(serialized[i], i);
         }
