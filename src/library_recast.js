@@ -27,6 +27,7 @@
       Module.__RECAST_CALLBACKS[callback_id](x, y, z);
     },
 
+    invoke_file_callback__deps: ['$FS'],
     invoke_file_callback: function (callback_id, filename) {
       Module.__RECAST_CALLBACKS[callback_id](null, FS.readFile(Module.UTF8ToString(filename)));
     },
@@ -37,6 +38,23 @@
 
     invoke_generic_callback_string: function (callback_id, data) {
       Module.__RECAST_CALLBACKS[callback_id](JSON.parse(Module.UTF8ToString(data)));
+    },
+
+    invoke_path_callback__sig: 'viii',
+    invoke_path_callback: function (callback_id, dataPtr, count) {
+      const path = [];
+      for (let i = 0; i < count; i++) {
+        const base = (dataPtr >> 2) + i * 3;
+        path.push({ x: HEAPF32[base], y: HEAPF32[base + 1], z: HEAPF32[base + 2] });
+      }
+      Module.__RECAST_CALLBACKS[callback_id](path);
+    },
+
+    invoke_build_callback__sig: 'vi',
+    invoke_build_callback: function (navmeshTypePtr) {
+      const type = Module.UTF8ToString(navmeshTypePtr);
+      Module.navmeshType = type;
+      Module.vent.emit('built', type);
     },
 
     gl_create_object: function (objectName) {
@@ -50,6 +68,7 @@
     },
 
     gl_add_to_object: function () {
+      if (!Module.glContext) return;
       var buffer = Module.glContext.createBuffer();
       var data = new Float32Array(Module.__RECAST_GLOBAL_DATA);
       buffer.itemSize = 3;

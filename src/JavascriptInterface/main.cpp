@@ -10,6 +10,7 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 #include <Recast.h>
 #include <InputGeom.h>
@@ -40,14 +41,11 @@ using namespace emscripten;
 
 void emscripten_log(const char* string, bool escape = true)
 {
-    char buff[1024];
-    sprintf(buff, (escape ? "console.log('%s');" : "console.log(%s);"), string);
-    emscripten_run_script(buff);
-    // free(buff);
+    printf("%s\n", string);
 }
 void emscripten_debugger()
 {
-    emscripten_run_script("debugger");
+    EM_ASM({ debugger; });
 }
 
 /// These are just sample areas to use consistent values across the samples.
@@ -92,6 +90,8 @@ extern "C" {
     extern void invoke_vector_callback(int callback_id, const float x,  const float y, const float z);
     extern void invoke_update_callback(int callback_id);
     extern void invoke_generic_callback_string(int callback_id, const char* data);
+    extern void invoke_path_callback(int callback_id, const float* data, int count);
+    extern void invoke_build_callback(const char* navmeshType);
     extern void gl_create_object(const char* objectName);
     extern void gl_draw_object(const char* objectName);
 }
@@ -664,8 +664,7 @@ void dumpConfig()
     sprintf(buff, "%s m_detailSampleDist=%f ", buff, m_detailSampleDist);
     sprintf(buff, "%s m_detailSampleMaxError=%f ", buff, m_detailSampleMaxError);
 
-    sprintf(buff, "console.log('%s');", buff);
-    emscripten_run_script(buff);
+    printf("%s\n", buff);
 }
 void debugCreateNavMesh(unsigned char flags) {
     gl_create_object("NavMesh");
@@ -1123,9 +1122,6 @@ void findPath(float startPosX, float startPosY, float startPosZ,
         return;
     }
 
-    emscripten_run_script("__tmp_recastjs_data = [];");
-    char buff[512];
-
     float startPos[3] = { startPosX, startPosY, startPosZ };
     float endPos[3] = { endPosX, endPosY, endPosZ };
 
@@ -1179,29 +1175,30 @@ void findPath(float startPosX, float startPosY, float startPosZ,
 
         if (dtStatusFailed(status)) {
             printf("Cannot find a straight path: %u\n", status);
+            invoke_path_callback(callback, nullptr, 0);
 
         } else {
             printf("Found a %u steps path \n", straightPathCount);
 
+            // Collect non-zero waypoints into a contiguous buffer
+            std::vector<float> validPath;
+            validPath.reserve(straightPathCount * 3);
             for (int i = 0; i < straightPathCount; ++i) {
                 const float* v = &straightPath[i*3];
-
-                // why ?
                 if (!(fabs(v[0]) < 0.0000001f && fabs(v[1]) < 0.0000001f && fabs(v[2]) < 0.0000001f)) {
-                    sprintf(buff, "__tmp_recastjs_data.push({x:%f, y:%f, z:%f});", v[0], v[1], v[2]);
-                    emscripten_run_script(buff);
-                } else {
-                    sprintf(buff, "ignore %f, %f, %f", v[0], v[1], v[2]);
-                    emscripten_log(buff);
+                    validPath.push_back(v[0]);
+                    validPath.push_back(v[1]);
+                    validPath.push_back(v[2]);
                 }
             }
+            invoke_path_callback(callback,
+                validPath.empty() ? nullptr : validPath.data(),
+                (int)validPath.size() / 3);
         }
+        return;
     }
 
-    sprintf(buff, "Module.__RECAST_CALLBACKS[%u](__tmp_recastjs_data);", callback);
-    emscripten_run_script(buff);
-
-    // free(buff);
+    invoke_path_callback(callback, nullptr, 0);
 }
 
 void set_cellSize(float val){               m_cellSize = val;               }
@@ -1707,7 +1704,7 @@ bool buildTiled()
     // sprintf(buff, "navmeshTileMemUsage = %u B  m_cacheCompressedSize = %u B  %u tiles over %ux%u", navmeshMemUsage, m_cacheCompressedSize, nav->getMaxTiles(), th, tw);
     // emscripten_log(buff);
 
-    emscripten_run_script("recast.navmeshType = 'tiled'; recast.vent.emit('built', recast.navmeshType);");
+    invoke_build_callback("tiled");
 
     return true;
 }
@@ -2105,7 +2102,7 @@ bool buildSolo()
         return false;
     }
 
-    emscripten_run_script("recast.navmeshType = 'solo'; recast.vent.emit('built', recast.navmeshType);");
+    invoke_build_callback("solo");
 
     return true;
 }

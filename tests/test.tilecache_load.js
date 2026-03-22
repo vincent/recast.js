@@ -1,42 +1,27 @@
-/*!
- * recast.js
- * https://github.com/vincent/recast.js
- *
- * Copyright 2014 Vincent Lark
- * Released under the MIT license
- */
-/*jshint onevar: false, indent:4 */
-/*global exports: true, require: true */
-'use strict';
+import { describe, it, expect } from 'vitest';
+import { createRequire } from 'module';
+import path from 'path';
+import settings from './settings.js';
 
-var recast   = require('../lib/recast');
-var settings = require('./settings');
+const require = createRequire(import.meta.url);
+const Recast = require('../lib/recast.js');
+const testsDir = new URL('.', import.meta.url).pathname;
 
-exports['load a tiled cache'] = function(test) {
-
-    test.expect(2);
-
+describe('tilecache load', () => {
+  it('loads a tiled cache and queries it', async () => {
+    const recast = await Recast();
     settings(recast);
 
-    recast.loadTileCache('./tilecache.dist.bin', recast.cb(function(){
+    await recast.loadTileCacheAsync(path.join(testsDir, 'tilecache.dist.bin'));
 
-        /**
-         * Find a random navigable point on this mesh
-         */
-        recast.getRandomPoint(recast.cb(function(pt1x, pt1y, pt1z){
+    const [pt1x, pt1y, pt1z] = await recast.getRandomPointAsync();
+    expect(typeof pt1x).toBe('number');
+    expect(typeof pt1y).toBe('number');
+    expect(typeof pt1z).toBe('number');
 
-            test.ok(typeof pt1x === 'number' && typeof pt1y === 'number' && typeof pt1z === 'number', 'find a random point');
-
-            /**
-             * Find the nearest navigable point from pt1x,pt1y,pt1z with a maximum extend of 10,10,10
-             */
-            recast.findNearestPoint(pt1x, pt1y, pt1z, 10, 10, 10, recast.cb(function(pt2x, pt2y, pt2z){
-
-                test.ok(typeof pt2x === 'number' && typeof pt2y === 'number' && typeof pt2z === 'number', 'find the nearest point');
-
-                test.done();
-            }));
-        }));
-    }));
-};
-
+    const [pt2x, pt2y, pt2z] = await recast.findNearestPointAsync(pt1x, pt1y, pt1z, 10, 10, 10);
+    expect(typeof pt2x).toBe('number');
+    expect(typeof pt2y).toBe('number');
+    expect(typeof pt2z).toBe('number');
+  });
+});

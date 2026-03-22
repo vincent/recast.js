@@ -24,6 +24,13 @@ extern "C" {
     extern void gl_add_to_object();
 }
 
+// EM_JS helper: initialise __RECAST_GLOBAL_DATA with mode and flat float array
+EM_JS(void, js_set_debug_data, (const float* dataPtr, int count, int mode), {
+    const arr = count > 0 ? Array.from(HEAPF32.subarray(dataPtr >> 2, (dataPtr >> 2) + count)) : [];
+    arr.mode = mode;
+    Module.__RECAST_GLOBAL_DATA = arr;
+});
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BuildContext::BuildContext() :
@@ -50,9 +57,7 @@ void BuildContext::doLog(const rcLogCategory category, const char* msg, const in
 	if (m_messageCount >= MAX_MESSAGES)
 		return;
 
-	char buff[512];
-	sprintf(buff, "console.log('%s');", msg);
-	emscripten_run_script(buff);
+	printf("%s\n", msg);
 }
 
 void BuildContext::doResetTimers()
@@ -95,89 +100,66 @@ void DebugDrawGL::depthMask(bool state)
 
 void DebugDrawGL::texture(bool state)
 {
-	// if (state)
-	// {
-	// 	glEnable(GL_TEXTURE_2D);
-	// 	g_tex.bind();
-	// }
-	// else
-	// {
-	// 	glDisable(GL_TEXTURE_2D);
-	// }
+	// stub
 }
 
 void DebugDrawGL::begin(duDebugDrawPrimitives prim, float size)
 {
+	m_vertexBuffer.clear();
 	switch (prim)
 	{
-		case DU_DRAW_POINTS:
-			// emscripten_run_script("console.log(\"DebugDrawGL::begin POINTS\");");
-			emscripten_run_script("Module.__RECAST_GLOBAL_DATA = []; Module.__RECAST_GLOBAL_DATA.mode = 1;");
-			break;
-		case DU_DRAW_LINES:
-			// emscripten_run_script("console.log(\"DebugDrawGL::begin LINES\");");
-			emscripten_run_script("Module.__RECAST_GLOBAL_DATA = []; Module.__RECAST_GLOBAL_DATA.mode = 2;");
-			break;
-		case DU_DRAW_TRIS:
-			// emscripten_run_script("console.log(\"DebugDrawGL::begin TRIANGLES\");");
-			emscripten_run_script("Module.__RECAST_GLOBAL_DATA = []; Module.__RECAST_GLOBAL_DATA.mode = 3;");
-			break;
-		case DU_DRAW_QUADS:
-			// emscripten_run_script("console.log(\"DebugDrawGL::begin STATIC_DRAW\");");
-			emscripten_run_script("Module.__RECAST_GLOBAL_DATA = []; Module.__RECAST_GLOBAL_DATA.mode = 4;");
-			break;
-	};
+		case DU_DRAW_POINTS: m_mode = 1; break;
+		case DU_DRAW_LINES:  m_mode = 2; break;
+		case DU_DRAW_TRIS:   m_mode = 3; break;
+		case DU_DRAW_QUADS:  m_mode = 4; break;
+		default:             m_mode = 0; break;
+	}
 }
 
 void DebugDrawGL::vertex(const float* pos, unsigned int color)
 {
-	char buff[1024];
-	if ( !isnan(pos[0]) && !isnan(pos[1]) && !isnan(pos[2]) ) {
-		sprintf(buff, "Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f);", pos[0], pos[1], pos[2]);
-		emscripten_run_script(buff);
+	if (!isnan(pos[0]) && !isnan(pos[1]) && !isnan(pos[2])) {
+		m_vertexBuffer.push_back(pos[0]);
+		m_vertexBuffer.push_back(pos[1]);
+		m_vertexBuffer.push_back(pos[2]);
 	}
 }
 
 void DebugDrawGL::vertex(const float x, const float y, const float z, unsigned int color)
 {
-	char buff[1024];
-	if ( !isnan(x) && !isnan(y) && !isnan(z) ) {
-		sprintf(buff, "Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f);", x, y, z);
-		emscripten_run_script(buff);
-		// sprintf(buff, "console.log(' %s ');", buff);
-		// emscripten_run_script(buff);
+	if (!isnan(x) && !isnan(y) && !isnan(z)) {
+		m_vertexBuffer.push_back(x);
+		m_vertexBuffer.push_back(y);
+		m_vertexBuffer.push_back(z);
 	}
 }
 
 void DebugDrawGL::vertex(const float* pos, unsigned int color, const float* uv)
 {
-	// glTexCoord2fv(uv);
-
-	char buff[1024];
-	if ( !isnan(pos[0]) && !isnan(pos[1]) && !isnan(pos[2]) ) {
-		sprintf(buff, "Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f);", pos[0], pos[1], pos[2]);
-		emscripten_run_script(buff);
-		// sprintf(buff, "console.log(' %s ');", buff);
-		// emscripten_run_script(buff);
+	if (!isnan(pos[0]) && !isnan(pos[1]) && !isnan(pos[2])) {
+		m_vertexBuffer.push_back(pos[0]);
+		m_vertexBuffer.push_back(pos[1]);
+		m_vertexBuffer.push_back(pos[2]);
 	}
 }
 
 void DebugDrawGL::vertex(const float x, const float y, const float z, unsigned int color, const float u, const float v)
 {
-	// glTexCoord2f(u,v);
-
-	char buff[1024];
-	if ( !isnan(x) && !isnan(y) && !isnan(z) ) {
-		sprintf(buff, "Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f); Module.__RECAST_GLOBAL_DATA.push(%f);", x, y, z);
-		emscripten_run_script(buff);
-		// sprintf(buff, "console.log(' %s ');", buff);
-		// emscripten_run_script(buff);
+	if (!isnan(x) && !isnan(y) && !isnan(z)) {
+		m_vertexBuffer.push_back(x);
+		m_vertexBuffer.push_back(y);
+		m_vertexBuffer.push_back(z);
 	}
 }
 
 void DebugDrawGL::end()
 {
-	// Instead of drawing, we register the object vertices to the current object (see gl_create_object)
+	// Transfer the accumulated vertex buffer to JS and register with the current GL object
+	js_set_debug_data(
+		m_vertexBuffer.empty() ? nullptr : m_vertexBuffer.data(),
+		(int)m_vertexBuffer.size(),
+		m_mode
+	);
 	gl_add_to_object();
 }
 
@@ -235,5 +217,3 @@ bool FileIO::read(void* ptr, const size_t size)
 	fread(ptr, size, 1, m_fp);
 	return true;
 }
-
-

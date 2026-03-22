@@ -1,30 +1,24 @@
-/*!
- * recast.js
- * https://github.com/vincent/recast.js
- *
- * Copyright 2014 Vincent Lark
- * Released under the MIT license
- */
-/*jshint onevar: false, indent:4 */
-/*global exports: true, require: true */
-'use strict';
+import { describe, it, beforeAll } from 'vitest';
+import { createRequire } from 'module';
+import path from 'path';
+import settings from './settings.js';
 
-var recast   = require('../lib/recast');
-var settings = require('./settings');
+const require = createRequire(import.meta.url);
+const Recast = require('../lib/recast.js');
+const testsDir = new URL('.', import.meta.url).pathname;
 
-exports['load an .obj file'] = function(test) {
+describe('load terrain', () => {
+  let recast;
 
+  beforeAll(async () => {
+    recast = await Recast();
     settings(recast);
+  });
 
-    /**
-     * Load an .OBJ file
-     */
-    recast.OBJLoader('nav_test.obj', function(){
-
-        recast.buildTiled();
-
-        test.done();
+  it('loads an .obj file and builds tiled navmesh', () => new Promise((resolve) => {
+    recast.OBJLoader(path.join(testsDir, 'nav_test.obj'), function() {
+      recast.buildTiled();
+      resolve();
     });
-};
-
-
+  }));
+});

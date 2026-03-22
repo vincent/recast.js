@@ -1,11 +1,19 @@
 {
   "name": "recastjs",
-  "version": "0.1.16",
+  "version": "0.2.0",
   "description": "A wrapper for the RecastDetour navigation library for node and the browser",
-  "main": "./lib/recast",
+  "main": "./lib/recast.js",
+  "exports": {
+    ".": {
+      "import": "./lib/recast.mjs",
+      "require": "./lib/recast.js"
+    }
+  },
   "scripts": {
     "build": "make build",
-    "test": "cd tests && find . -name 'test.*.js' -exec ../node_modules/.bin/nodeunit --reporter=verbose {} \\; && echo all test passed"
+    "build:debug": "make build-debug",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "repository": {
     "type": "git",
@@ -25,7 +33,8 @@
   },
   "homepage": "https://github.com/vincent/recast.js",
   "devDependencies": {
-    "nodeunit": "^0.11.3",
+    "vitest": "^2.0.0",
+    "esbuild": "^0.25.0",
     "three": "^0.183.2"
   },
   "dependencies": {

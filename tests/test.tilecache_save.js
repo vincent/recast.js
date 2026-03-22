@@ -1,43 +1,28 @@
-/*!
- * recast.js
- * https://github.com/vincent/recast.js
- *
- * Copyright 2014 Vincent Lark
- * Released under the MIT license
- */
-/*jshint onevar: false, indent:4 */
-/*global exports: true, require: true, Buffer: true */
-'use strict';
+import { describe, it } from 'vitest';
+import { createRequire } from 'module';
+import path from 'path';
+import fs from 'fs';
+import settings from './settings.js';
 
-var fs       = require('fs');
-var recast   = require('../lib/recast');
-var settings = require('./settings');
+const require = createRequire(import.meta.url);
+const Recast = require('../lib/recast.js');
+const testsDir = new URL('.', import.meta.url).pathname;
 
-exports['save a tiled cache'] = function(test) {
-
+describe('tilecache save', () => {
+  it('saves a tiled cache', async () => {
+    const recast = await Recast();
     settings(recast);
 
-    recast.OBJLoader('nav_test.obj', function(){
-
+    await new Promise((resolve) => {
+      recast.OBJLoader(path.join(testsDir, 'nav_test.obj'), function() {
         recast.buildTiled();
-
-        recast.saveTileCache('./tilecache.bin', recast.cb(function (error, serialized) {
-
-            if (fs.writeFile) {
-
-                var buffer = new Buffer(serialized.length);
-
-                for (var i = 0; i < serialized.length; i++) {
-                    buffer.writeUInt8(serialized[i], i);
-                }
-
-                fs.writeFile('./tilecache.bin', buffer, function (err) {
-                    if (err) throw err;
-                    test.done();
-                });
-
-            } else test.done();
-        }));
+        resolve();
+      });
     });
-};
 
+    const [error, serialized] = await recast.saveTileCacheAsync('./tilecache.bin');
+
+    const buffer = Buffer.from(serialized);
+    await fs.promises.writeFile(path.join(testsDir, 'tilecache.bin'), buffer);
+  });
+});

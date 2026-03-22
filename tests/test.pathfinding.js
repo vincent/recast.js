@@ -1,65 +1,54 @@
-/*!
- * recast.js
- * https://github.com/vincent/recast.js
- *
- * Copyright 2014 Vincent Lark
- * Released under the MIT license
- */
-/*jshint onevar: false, indent:4 */
-/*global exports: true, require: true */
-'use strict';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { createRequire } from 'module';
+import path from 'path';
+import settings from './settings.js';
 
-var recast   = require('../lib/recast');
-var settings = require('./settings');
+const require = createRequire(import.meta.url);
+const Recast = require('../lib/recast.js');
+const testsDir = new URL('.', import.meta.url).pathname;
 
-exports['load an .obj file'] = function(test) {
+describe('pathfinding', () => {
+  let recast;
 
-    test.expect(5);
-
+  beforeAll(async () => {
+    recast = await Recast();
     settings(recast);
-
-    /**
-     * Load an .OBJ file
-     */
-    recast.OBJLoader('nav_test.obj', function(){
-
+    await new Promise((resolve) => {
+      recast.OBJLoader(path.join(testsDir, 'nav_test.obj'), function() {
         recast.buildTiled();
-
-        /**
-         * Find a random navigable point on this mesh
-         */
-        recast.getRandomPoint(recast.cb(function(pt1x, pt1y, pt1z){
-            test.ok(typeof pt1x === 'number' && typeof pt1y === 'number' && typeof pt1z === 'number', 'find a random point');
-
-            var extend = 3;
-
-            /**
-             * Find the nearest navigable point from 0,0,0 with a maximum extend
-             */
-            recast.findNearestPoint(0, 0, 0, extend, extend, extend, recast.cb(function(pt2x, pt2y, pt2z){
-                test.ok(typeof pt2x === 'number' && typeof pt2y === 'number' && typeof pt2z === 'number', 'find the nearest point');
-
-                /**
-                 * Find the nearest navigable polygon from 0,0,0 with a maximum extend
-                 */
-                recast.findNearestPoly(0, 0, 0, extend, extend, extend, recast.cb(function(polygon){
-                    test.ok(polygon.vertices, 'origin poly has some vertices');
-
-                    test.ok(polygon.vertices && typeof polygon.vertices.length !== 'undefined', 'origin poly has ' + polygon.vertices.length + ' polygon.vertices');
-
-                    /**
-                     * Find the shortest possible path from pt1 to pt2
-                     */
-                    recast.findPath(pt1x, pt1y, pt1z, pt2x, pt2y, pt2z, 1000, recast.cb(function(path){
-                        test.ok(path && typeof path.length !== 'undefined', 'found path has ' + path.length + ' segments');
-
-                        test.done();
-                    }));
-                }));
-            }));
-
-        }));
+        resolve();
+      });
     });
-};
+  });
 
+  it('finds a random point', async () => {
+    const [x, y, z] = await recast.getRandomPointAsync();
+    expect(typeof x).toBe('number');
+    expect(typeof y).toBe('number');
+    expect(typeof z).toBe('number');
+  });
 
+  it('finds the nearest point', async () => {
+    const extend = 3;
+    const [x, y, z] = await recast.findNearestPointAsync(0, 0, 0, extend, extend, extend);
+    expect(typeof x).toBe('number');
+    expect(typeof y).toBe('number');
+    expect(typeof z).toBe('number');
+  });
+
+  it('finds the nearest poly', async () => {
+    const extend = 3;
+    const polygon = await recast.findNearestPolyAsync(0, 0, 0, extend, extend, extend);
+    expect(polygon.vertices).toBeTruthy();
+    expect(typeof polygon.vertices.length).not.toBe('undefined');
+  });
+
+  it('finds a path between two points', async () => {
+    const extend = 3;
+    const [pt1x, pt1y, pt1z] = await recast.getRandomPointAsync();
+    const [pt2x, pt2y, pt2z] = await recast.findNearestPointAsync(0, 0, 0, extend, extend, extend);
+    const path = await recast.findPathAsync(pt1x, pt1y, pt1z, pt2x, pt2y, pt2z, 1000);
+    expect(path).toBeTruthy();
+    expect(typeof path.length).not.toBe('undefined');
+  });
+});
