@@ -1,73 +1,344 @@
 <html>
-  <head>
-    <title>Recast.js Test Suite</title>
-    <script src="../node_modules/nodeunit/examples/browser/nodeunit.js"></script>
-    <script src="../vendor/jquery-1.11.3.min.js"></script>
-    <script src="../vendor/three.js"></script>
-    <script src="../vendor/ConvexGeometry.js"></script>
-    <script src="../vendor/OrbitControls.js"></script>
-    <script src="../vendor/OBJLoader.js"></script>
-    <script src="../vendor/stats.js"></script>
-    <script src="../lib/recast.js"></script>
-    <link rel="stylesheet" href="../node_modules/nodeunit/share/nodeunit.css"/>
-    <style>
-      body { margin:0; padding:0 }
-      #wrapper { position: absolute; top: 0; }
-      #text { position: absolute; top: 0; }
-    </style>
-    <script>
-      var recast = this.recast;
-      this.require = function () { return recast; };
-      this.exports = {};
-    </script>
-  </head>
-  <body>
-    <div id="wrapper"></div>
 
-    <div id="text">
-      <p>
-      Example of a crowd managed by recastjs, using a tilecache<br><br>
-      Each agents is given a new random destination from time to time<br><br>
-      Click on the mesh to add obstacles<br><br>
-      </p>
+<head>
+	<title>Recast.js Test Suite</title>
+	<script src="../vendor/three.js"></script>
+	<script src="../vendor/ConvexGeometry.js"></script>
+	<script src="../vendor/OrbitControls.js"></script>
+	<script src="../vendor/OBJLoader.js"></script>
+	<script src="../vendor/stats.js"></script>
+	<script src="../lib/recast.debug.js"></script>
+	<style>
+		body {
+			margin: 0;
+			padding: 0
+		}
 
-      <a href="test.webgl.html?agents=10">10 agents</a>
-      <a href="test.webgl.html?agents=50">50 agents</a>
-      <a href="test.webgl.html?agents=100">100 agents</a>
-      <a href="test.webgl.html?agents=200">200 agents</a>
-      <a href="test.webgl.html?agents=500">500 agents</a>
-      <a href="test.webgl.html?agents=1000">1000 agents</a>
-      <br><br>
+		#wrapper {
+			position: absolute;
+			top: 0;
+		}
+
+		#text {
+			position: absolute;
+			top: 0;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="wrapper"></div>
+
+	<div id="text">
+		<p>
+			Example of a crowd managed by recastjs, using a tilecache<br><br>
+			Each agents is given a new random destination from time to time<br><br>
+			Click on the mesh to add obstacles<br><br>
+		</p>
+
+		<a href="?agents=10">10 agents</a>
+		<a href="?agents=50">50 agents</a>
+		<a href="?agents=100">100 agents</a>
+		<a href="?agents=200">200 agents</a>
+		<a href="?agents=500">500 agents</a>
+		<a href="?agents=1000">1000 agents</a>
+		<br><br>
 
 
-      <button onclick="if (! navigationMesh) { location.search += '&navigationmesh=1' } else { navigationMesh.parent ? scene.remove(navigationMesh) : scene.add(navigationMesh); }">
-        Toggle navigation mesh
-      </button>
+		<button
+			onclick="if (! navigationMesh) { location.search += '&navigationmesh=1' } else { navigationMesh.parent ? scene.remove(navigationMesh) : scene.add(navigationMesh); }">
+			Toggle navigation mesh
+		</button>
 
-      <button id="sequence" onclick="sequence()" style="display:none">
-        Reboot sequence
-      </button>
+		<button id="sequence" onclick="sequence()" style="display:none">
+			Reboot sequence
+		</button>
 
-      <!--
-      <br><br>
-      <form autocomplete="off">
-        <input name="toggle" type="radio" onchange="terrain.parent ? scene.remove(terrain) : scene.add(terrain)" checked/> Terrain<br>
-        <input name="toggle" type="radio" onchange="debugDraw['NavMesh'] = ! debugDraw['NavMesh'];"/> NavMesh<br>
-        <input name="toggle" type="radio" onchange="debugDraw['NavMeshPortals'] = ! debugDraw['NavMeshPortals'];"/> NavMeshPortals<br>
-        <input name="toggle" type="radio" onchange="debugDraw['RegionConnections'] = ! debugDraw['RegionConnections'];"/> RegionConnections<br>
-        <input name="toggle" type="radio" onchange="debugDraw['RawContours'] = ! debugDraw['RawContours'];"/> RawContours<br>
-        <input name="toggle" type="radio" onchange="debugDraw['Contours'] = ! debugDraw['Contours'];"/> Contours<br>
-        <input name="toggle" type="radio" onchange="debugDraw['HeightfieldSolid'] = ! debugDraw['HeightfieldSolid'];"/> HeightfieldSolid<br>
-        <input name="toggle" type="radio" onchange="debugDraw['HeightfieldWalkable'] = ! debugDraw['HeightfieldWalkable'];"/> HeightfieldWalkable<br>
-        <input name="toggle" type="radio" onchange="debugDraw['DrawContours'] = ! debugDraw['DrawContours'];"/> Draw contours<br>
-      </form>
-      -->
-    </div>
+	</div>
 
-    <script src="recast.test.webgl.js"></script>
-    <script>
-    nodeunit.run({'recast.tests': exports});
-    </script>
+	<script>
+		'use strict';
 
-  </body>
+		var renderer = new THREE.WebGLRenderer({ antialias: true });
+		renderer.setSize(document.body.clientWidth, document.body.clientWidth * 3 / 4);
+		document.getElementById('wrapper').appendChild(renderer.domElement);
+		renderer.setClearColor(0xFFFFFF, 1.0);
+		renderer.clear();
+
+		var mouse = new THREE.Vector2();
+		var raycaster = new THREE.Raycaster();
+
+		var width = renderer.domElement.width;
+		var height = renderer.domElement.height;
+		var camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
+		camera.position.y = 70;
+		camera.position.z = 100;
+		camera.lookAt(new THREE.Vector3());
+
+		var controls = new THREE.OrbitControls(camera, renderer.domElement);
+		controls.addEventListener('change', function () {
+			render();
+		});
+
+		var agentsParam = location.search.match(/agents=(\d+)/);
+		var MAX_AGENTS = (agentsParam && agentsParam.length == 2) ? agentsParam[1] : 10;
+		var MAX_HOPS = 10;
+
+		var agentsObjects = [];
+		var scene = new THREE.Scene();
+
+		var agentGeometry = new THREE.CylinderGeometry(0.2, 0.5, 2);
+
+		for (var i = 0; i < MAX_AGENTS; i++) {
+			var agent = new THREE.Object3D();
+			var agentBody = new THREE.Mesh(
+				agentGeometry,
+				new THREE.MeshBasicMaterial({
+					color: '#0000FF'
+				})
+			);
+			agentBody.position.y = 1;
+			agent.add(agentBody);
+
+			agent.arrowHelper = new THREE.ArrowHelper(
+				new THREE.Vector3(1, 0, 1),
+				new THREE.Vector3(0, 0, 0),
+				1.5,
+				0xffff00);
+			agent.add(agent.arrowHelper);
+
+			agentsObjects.push(agent);
+			scene.add(agent);
+		}
+
+		var light = new THREE.SpotLight();
+		light.position.set(170, 330, -160);
+		scene.add(light);
+
+		var sequence;
+
+		////////////////////////////////
+
+		var terrain, agents = [];
+
+		function render() {
+			renderer.render(scene, camera);
+		}
+
+		function raycast(e, callback) {
+			var rect = e.currentTarget.getBoundingClientRect();
+			var x = e.clientX - rect.left;
+			var y = e.clientY - rect.top;
+
+			mouse.x = (x / e.currentTarget.width) * 2 - 1;
+			mouse.y = - (y / e.currentTarget.height) * 2 + 1;
+
+			// update the picking ray with the camera and mouse position
+			raycaster.setFromCamera(mouse, camera);
+
+			// calculate objects intersecting the picking ray
+			var intersects = raycaster.intersectObjects(terrain.children, true);
+
+			if (intersects.length) {
+				var point = intersects[0].point;
+				callback(point);
+			}
+		}
+
+		function addObstacle(recast, x, y, z) {
+			var radius = 3;
+			var obstacleMesh = new THREE.Mesh(
+				new THREE.CylinderGeometry(radius, radius, 2),
+				new THREE.MeshBasicMaterial({
+					color: 0xff0000,
+					shading: THREE.FlatShading,
+					side: THREE.DoubleSide,
+					transparent: true,
+					opacity: 0.6,
+					overdraw: true
+				})
+			);
+			obstacleMesh.position.set(x, y, z);
+			scene.add(obstacleMesh);
+			recast.addTempObstacle(x, y, z, radius);
+		}
+
+		var omlpair = {};
+		function addOffMeshLink(recast, x, y, z) {
+
+			var point = { x: x, y: y, z: z };
+
+			if (!omlpair.from) {
+				omlpair.from = point;
+
+			} else if (!omlpair.to) {
+				omlpair.to = point;
+				recast.addOffMeshConnection(
+					omlpair.from.x, omlpair.from.y, omlpair.from.z,
+					omlpair.to.x, omlpair.to.y, omlpair.to.z,
+					3, 1);
+
+				var start = new THREE.Vector3(omlpair.from.x, omlpair.from.y, omlpair.from.z);
+				var end = new THREE.Vector3(omlpair.to.x, omlpair.to.y, omlpair.to.z);
+
+				scene.add(createSpline(start, end, 3));
+
+				omlpair = {};
+			}
+		}
+
+		var splineMaterial = new THREE.LineBasicMaterial({
+			color: 0x00ff00,
+			transparent: true,
+			opacity: 0.6,
+			linewidth: 5,
+			vertexColors: THREE.VertexColors
+		});
+
+		function createSpline(start, end, elevation) {
+
+			var geometry = new THREE.Geometry();
+			geometry.vertices.push(start);
+			geometry.vertices.push(new THREE.Vector3(
+				(start.x + end.x) / 2,
+				((start.y + end.y) / 2) + elevation,
+				(start.z + end.z) / 2
+			));
+			geometry.vertices.push(end);
+
+			return new THREE.Line(geometry, splineMaterial);
+		}
+
+		(async () => {
+			const recast = await Recast();
+
+			recast.set_cellSize(0.3);
+			recast.set_cellHeight(0.2);
+			recast.set_agentHeight(0.8);
+			recast.set_agentRadius(0.2);
+			recast.set_agentMaxClimb(4.0);
+			recast.set_agentMaxSlope(30.0);
+
+			// Wire up click handler now that recast is ready
+			renderer.domElement.addEventListener('click', function (e) {
+				raycast(e, function (point) {
+					recast.findNearestPoint(point.x, point.y, point.z, 2, 2, 2,
+						recast.cb(function (x, y, z) {
+							if (e.shiftKey) {
+								addOffMeshLink(recast, x, y, z);
+							} else if (e.ctrlKey) {
+								addObstacle(recast, x, y, z);
+							} else {
+								for (var i = 0; i < agentsObjects.length; i++) {
+									recast.crowdRequestMoveTarget(i, x, y, z);
+								}
+							}
+						}));
+				});
+			});
+
+			var stats = new Stats();
+			stats.domElement.style.position = 'absolute';
+			stats.domElement.style.right = '0px';
+			stats.domElement.style.bottom = '0px';
+			document.body.appendChild(stats.domElement);
+			stats.setMode(0);
+			stats.begin();
+
+			// Load the visual terrain mesh
+			var loader = new THREE.OBJLoader();
+			loader.load('nav_test.obj', function (object) {
+				terrain = object;
+				object.traverse(function (child) {
+					if (child instanceof THREE.Mesh) {
+						child.material.side = THREE.DoubleSide;
+					}
+				});
+				scene.add(object);
+			});
+
+			// Load the navmesh and start the simulation
+			recast.OBJLoader('nav_test.obj', function () {
+
+				recast.loadTileCache('./tilecache.dist.bin', recast.cb(function () {
+
+					recast.initCrowd(1000, 1.0);
+
+					recast.vent.on('update', function (agents) {
+						for (var i = 0; i < agents.length; i++) {
+							var agent = agents[i];
+
+							var angle = Math.atan2(- agent.velocity.z, agent.velocity.x);
+							if (Math.abs(agentsObjects[agent.idx].rotation.y - angle) > 0) {
+								agentsObjects[agent.idx].rotation.y = angle;
+							}
+
+							agentsObjects[agent.idx].position.set(
+								agent.position.x,
+								agent.position.y,
+								agent.position.z
+							);
+						}
+					});
+
+					// Add agents
+					for (var i = 0; i < agentsObjects.length; i++) {
+						agents.push(recast.addAgent({
+							position: {
+								x: -25.8850,
+								y: -1.64166,
+								z: -5.41350
+							},
+							radius: 0.8,
+							height: 0.5,
+							maxAcceleration: 1.0,
+							maxSpeed: 2.0,
+							updateFlags: 0,
+							separationWeight: 20.0
+						}));
+					}
+
+					var animate = function animate(time) {
+						setTimeout(function () {
+							recast.crowdUpdate(0.1);
+							recast.crowdGetActiveAgents();
+						}, 0);
+
+						window.requestAnimationFrame(animate);
+						render();
+						if (stats) stats.update();
+					};
+
+					animate(new Date().getTime());
+
+					sequence = function () {
+						document.getElementById('sequence').style.display = 'none';
+						goAway();
+					};
+
+					var routes = 0;
+					var goAway = function () {
+						for (var i = 0; i < agentsObjects.length; i++) {
+							(function (i) {
+								recast.getRandomPoint(recast.cb(function (pt2x, pt2y, pt2z) {
+									recast.crowdRequestMoveTarget(i, pt2x, pt2y, pt2z);
+									if (++routes < MAX_HOPS) {
+										setTimeout(goAway, 10000 * Math.random());
+									} else {
+										document.getElementById('sequence').style.display = 'block';
+									}
+								}));
+							})(i);
+						}
+					};
+
+					sequence();
+				}));
+			});
+		})();
+
+	</script>
+
+</body>
+
 </html>
