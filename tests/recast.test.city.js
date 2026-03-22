@@ -15,7 +15,7 @@ renderer.domElement.style.position = 'absolute';
 renderer.domElement.style.bottom = 0;
 renderer.domElement.style.right = 0;
 document.body.appendChild(renderer.domElement);
-renderer.setClearColorHex(0xFFFFFF, 1.0);
+renderer.setClearColor(THREE.ColorKeywords.white, 1.0);
 renderer.clear();
 
 var width = renderer.domElement.width;
@@ -92,6 +92,7 @@ var createSpline = function(start, end, elevation) {
 
 var terrain, agents = [];
 var debugDraw = {};
+const { Color } = require('three/src/Three.Core.js');
 var recast = require('../lib/recast');
 
 recast.setGLContext(renderer.context);

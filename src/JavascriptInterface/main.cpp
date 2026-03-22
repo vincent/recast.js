@@ -2541,71 +2541,72 @@ void _loadTileCache(std::string path, int callback_id)
 
 
 EMSCRIPTEN_BINDINGS(my_module) {
-    function("dumpConfig", &dumpConfig);
+    emscripten::function("dumpConfig", &dumpConfig);
 
-    function("initWithFile", &initWithFile);
-    function("initWithFileContent", &initWithFileContent);
+    emscripten::function("initWithFile", &initWithFile);
+    emscripten::function("initWithFileContent", &initWithFileContent);
 
-    function("_saveTileMesh", &_saveTileMesh);
-    function("_loadTileMesh", &_loadTileMesh);
+    emscripten::function("_saveTileMesh", &_saveTileMesh);
+    emscripten::function("_loadTileMesh", &_loadTileMesh);
 
-    function("_saveTileCache", &_saveTileCache);
-    function("_loadTileCache", &_loadTileCache);
+    emscripten::function("_saveTileCache", &_saveTileCache);
+    emscripten::function("_loadTileCache", &_loadTileCache);
 
-    function("build", &build);
-    function("buildSolo",  &buildSolo);
-    function("buildTiled", &buildTiled);
+    emscripten::function("build", &build);
+    emscripten::function("buildSolo",  &buildSolo);
+    emscripten::function("buildTiled", &buildTiled);
 
-    function("getNavMeshVertices", &getNavMeshVertices);
-    function("getNavHeightfieldRegions", &getNavHeightfieldRegions);
+    emscripten::function("getNavMeshVertices", &getNavMeshVertices);
+    emscripten::function("getNavHeightfieldRegions", &getNavHeightfieldRegions);
 
-    function("findNearestPoly", &findNearestPoly);
-    function("findNearestPoint", &findNearestPoint);
-    function("findPath", &findPath);
-    function("setPolyFlags", &setPolyFlags);
-    function("setPolyFlagsByRef", &setPolyFlagsByRef);
+    emscripten::function("findNearestPoly", &findNearestPoly);
+    emscripten::function("findNearestPoint", &findNearestPoint);
+    emscripten::function("findPath", &findPath);
+    emscripten::function("setPolyFlags", &setPolyFlags);
+    emscripten::function("setPolyFlagsByRef", &setPolyFlagsByRef);
 
-    function("addOffMeshConnection", &addOffMeshConnection);
+    emscripten::function("addOffMeshConnection", &addOffMeshConnection);
 
-    function("getRandomPoint", &getRandomPoint);
-    function("_queryPolygons", &_queryPolygons);
+    emscripten::function("getRandomPoint", &getRandomPoint);
+    emscripten::function("_queryPolygons", &_queryPolygons);
 
-    function("initCrowd", &initCrowd);
-    function("addCrowdAgent", &addCrowdAgent);
-    function("updateCrowdAgentParameters", &updateCrowdAgentParameters);
-    function("removeCrowdAgent", &removeCrowdAgent);
-    function("crowdRequestMoveTarget", &crowdRequestMoveTarget);
-    function("crowdUpdate", &crowdUpdate);
-    function("_crowdGetActiveAgents", &_crowdGetActiveAgents);
-    function("requestMoveVelocity", &requestMoveVelocity);
+    emscripten::function("initCrowd", &initCrowd);
+    emscripten::function("addCrowdAgent", &addCrowdAgent);
+    emscripten::function("updateCrowdAgentParameters", &updateCrowdAgentParameters);
+    emscripten::function("removeCrowdAgent", &removeCrowdAgent);
+    emscripten::function("crowdRequestMoveTarget", &crowdRequestMoveTarget);
+    emscripten::function("crowdUpdate", &crowdUpdate);
+    emscripten::function("_crowdGetActiveAgents", &_crowdGetActiveAgents);
+    emscripten::function("requestMoveVelocity", &requestMoveVelocity);
 
-    function("set_cellSize", &set_cellSize);
-    function("set_cellHeight", &set_cellHeight);
-    function("set_agentHeight", &set_agentHeight);
-    function("set_agentRadius", &set_agentRadius);
-    function("set_agentMaxClimb", &set_agentMaxClimb);
-    function("set_agentMaxSlope", &set_agentMaxSlope);
-    function("set_regionMinSize", &set_regionMinSize);
-    function("set_regionMergeSize", &set_regionMergeSize);
-    function("set_edgeMaxLen", &set_edgeMaxLen);
-    function("set_edgeMaxError", &set_edgeMaxError);
-    function("set_vertsPerPoly", &set_vertsPerPoly);
-    function("set_detailSampleDist", &set_detailSampleDist);
-    function("set_detailSampleMaxError", &set_detailSampleMaxError);
+    emscripten::function("set_cellSize", &set_cellSize);
+    emscripten::function("set_cellHeight", &set_cellHeight);
+    emscripten::function("set_agentHeight", &set_agentHeight);
+    emscripten::function("set_agentRadius", &set_agentRadius);
+    emscripten::function("set_agentMaxClimb", &set_agentMaxClimb);
+    emscripten::function("set_agentMaxSlope", &set_agentMaxSlope);
+    emscripten::function("set_regionMinSize", &set_regionMinSize);
+    emscripten::function("set_regionMergeSize", &set_regionMergeSize);
+    emscripten::function("set_edgeMaxLen", &set_edgeMaxLen);
+    emscripten::function("set_edgeMaxError", &set_edgeMaxError);
+    emscripten::function("set_vertsPerPoly", &set_vertsPerPoly);
+    emscripten::function("set_detailSampleDist", &set_detailSampleDist);
+    emscripten::function("set_detailSampleMaxError", &set_detailSampleMaxError);
+    emscripten::function("set_monotonePartitioning", &set_monotonePartitioning);
 
-    function("addTempObstacle", &addTempObstacle);
-    function("removeTempObstacle", &removeTempObstacle);
-    function("clearAllTempObstacles", &clearAllTempObstacles);
-    function("getAllTempObstacles", &getAllTempObstacles);
+    emscripten::function("addTempObstacle", &addTempObstacle);
+    emscripten::function("removeTempObstacle", &removeTempObstacle);
+    emscripten::function("clearAllTempObstacles", &clearAllTempObstacles);
+    emscripten::function("getAllTempObstacles", &getAllTempObstacles);
 
-    function("debugCreateNavMesh", &debugCreateNavMesh);
-    function("debugCreateNavMeshPortals", &debugCreateNavMeshPortals);
-    function("debugCreateRegionConnections", &debugCreateRegionConnections);
-    function("debugCreateRawContours", &debugCreateRawContours);
-    function("debugCreateContours", &debugCreateContours);
-    function("debugCreateHeightfieldSolid", &debugCreateHeightfieldSolid);
-    function("debugCreateHeightfieldWalkable", &debugCreateHeightfieldWalkable);
-    function("debugOffMeshConnections", &debugOffMeshConnections);
+    emscripten::function("debugCreateNavMesh", &debugCreateNavMesh);
+    emscripten::function("debugCreateNavMeshPortals", &debugCreateNavMeshPortals);
+    emscripten::function("debugCreateRegionConnections", &debugCreateRegionConnections);
+    emscripten::function("debugCreateRawContours", &debugCreateRawContours);
+    emscripten::function("debugCreateContours", &debugCreateContours);
+    emscripten::function("debugCreateHeightfieldSolid", &debugCreateHeightfieldSolid);
+    emscripten::function("debugCreateHeightfieldWalkable", &debugCreateHeightfieldWalkable);
+    emscripten::function("debugOffMeshConnections", &debugOffMeshConnections);
 
 }
 

@@ -11,6 +11,8 @@
 
 var recast   = require('../lib/recast');
 
+console.log(recast)
+
 // Check our library is here
 exports['recast is present'] = function(test) {
     test.ok(recast, 'recast should be an object');

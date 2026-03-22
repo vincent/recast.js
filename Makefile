@@ -15,7 +15,7 @@ CC = emcc
 #CC = ~/Workspace/emscripten/emcc
 # FASTCOMPILER = EMCC_FAST_COMPILER=0
 
-CFLAGS = -O2 --closure 1 -g -s WARN_ON_UNDEFINED_SYMBOLS=0 -s VERBOSE=0 -s NO_EXIT_RUNTIME=1 -s LINKABLE=1 -s ALLOW_MEMORY_GROWTH=1 -s DISABLE_EXCEPTION_CATCHING=1 -s ASSERTIONS=0 --bind -s WASM=0 -s "EXTRA_EXPORTED_RUNTIME_METHODS=['UTF8ToString']"
+CFLAGS = -O2 --closure 1 -g -s WARN_ON_UNDEFINED_SYMBOLS=0 -s VERBOSE=0 -s NO_EXIT_RUNTIME=1 -s LINKABLE=1 -s ALLOW_MEMORY_GROWTH=1 -s DISABLE_EXCEPTION_CATCHING=1 -s USE_SDL=2 -s ASSERTIONS=0 --bind -s WASM=0 -s "EXPORTED_RUNTIME_METHODS=['UTF8ToString']"
 DEFINES = -D NOT_GCC -D EMSCRIPTEN -D USES_UNIX_DIR
 INCLUDES = -I recastnavigation/Recast/Include \
 				 -I recastnavigation/Detour/Include \
@@ -73,14 +73,14 @@ PREJS = --pre-js src/pre.module.js
 POSTJS = --post-js src/post.module.js
 LIBRARYJS = --js-library src/library_recast.js
 
-all: clean test build
+all: clean build test
 
 update-source:
 	git submodule init; git submodule update; cd recastnavigation; patch -p1 < ../src/recastnavigation.patch
 
 build: $(wildcard  lib/*.js)
 	mkdir -p $(BUILDDIR)
-	$(FASTCOMPILER) $(PRE_FLAGS) $(CC) $(FLAGS) $(DEFINES) $(INCLUDES) $(CFLAGS) $(FILES) $(LIBRARYJS) -s EXPORTED_FUNCTIONS='[]' $(PREJS) $(POSTJS) -o $(BUILDDIR)/recast.js $(PRELOAD) --memory-init-file 0
+	$(FASTCOMPILER) $(PRE_FLAGS) $(CC) $(FLAGS) $(DEFINES) $(INCLUDES) $(CFLAGS) $(FILES) $(LIBRARYJS) -s EXPORTED_FUNCTIONS='[]' $(PREJS) $(POSTJS) -o $(BUILDDIR)/recast.js $(PRELOAD)
 
 test:
 	$(NODEUNIT) tests
