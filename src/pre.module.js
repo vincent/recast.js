@@ -474,6 +474,14 @@ var workerMain = function(event) {
       });
       break;
 
+    case 'rebuildAllTiles':
+      recast.rebuildAllTiles();
+      postMessage({
+        vent: true,
+        type: message.type,
+      });
+      break;
+
     default:
       throw new Error(message.type + ' is not a known Recast method');
   }

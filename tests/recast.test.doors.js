@@ -9,6 +9,9 @@
 /*global exports, require, THREE, TWEEN, Stats */
 'use strict';
 
+(async () => {
+const recast = await Recast();
+
 var renderer = new THREE.WebGLRenderer({antialias: true});
 renderer.setSize(document.body.clientWidth * 0.6, document.body.clientHeight * 0.8);
 renderer.domElement.style.position = 'absolute';
@@ -35,7 +38,7 @@ var agent = new THREE.Object3D();
 var agentBody = new THREE.Mesh(
     new THREE.CylinderGeometry(0.2, 0.5, 2),
     new THREE.MeshBasicMaterial({
-      color: '#FF0000'
+    color: '#FF0000'
     })
 );
 agentBody.position.y = 1;
@@ -58,7 +61,6 @@ scene.add(light);
 
 var terrain, navigationMesh, doors = {};
 var debugDraw = {};
-var recast = require('../lib/recast');
 
 recast.setGLContext(renderer.context);
 
@@ -146,7 +148,6 @@ exports['handle doors'] = function(test) {
         agentMaxSlope: 30.0
     });
 
-
     var stats = new Stats();
     stats.setMode(1); // 0: fps, 1: ms
     stats.domElement.style.position = 'absolute';
@@ -156,7 +157,6 @@ exports['handle doors'] = function(test) {
     stats.setMode(0);
     stats.begin();
 
-   
     var loader = new THREE.OBJLoader();
     loader.load('doors.obj', function(object){
         terrain = object;
@@ -317,3 +317,4 @@ exports['handle doors'] = function(test) {
         });
     });
 };
+})();

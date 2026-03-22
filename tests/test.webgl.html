@@ -41,7 +41,6 @@
 		<a href="?agents=100">100 agents</a>
 		<a href="?agents=200">200 agents</a>
 		<a href="?agents=500">500 agents</a>
-		<a href="?agents=1000">1000 agents</a>
 		<br><br>
 
 
@@ -182,6 +181,7 @@
 				var end = new THREE.Vector3(omlpair.to.x, omlpair.to.y, omlpair.to.z);
 
 				scene.add(createSpline(start, end, 3));
+				recast.rebuildAllTiles();
 
 				omlpair = {};
 			}

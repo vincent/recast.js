@@ -1065,6 +1065,21 @@ void addOffMeshConnection(float startX, float startY, float startZ,
     m_geom->addOffMeshConnection(spos, epos, radius, bidir ? 1 : 0, area, flags);
 }
 
+void rebuildAllTiles()
+{
+    if (!m_tileCache || !m_navMesh) return;
+
+    for (int i = 0; i < m_tileCache->getTileCount(); ++i)
+    {
+        const dtCompressedTile* tile = m_tileCache->getTile(i);
+        if (!tile || !tile->header || !tile->data) continue;
+        dtCompressedTileRef ref = m_tileCache->getTileRef(tile);
+        if (ref) {
+            m_tileCache->buildNavMeshTile(ref, m_navMesh);
+        }
+    }
+}
+
 void _queryPolygons(float posX, float posY, float posZ,
                     float extX, float extY, float extZ,
                     const int maxPolys, int callback)
@@ -2457,6 +2472,7 @@ void _loadTileCache(std::string path, int callback_id)
     m_talloc = new LinearAllocator(32000);
     m_tcomp = new FastLZCompressor;
     m_tmproc = new MeshProcess;
+    m_tmproc->init(m_geom);
 
     status = m_tileCache->init(&header.cacheParams, m_talloc, m_tcomp, m_tmproc);
     if (dtStatusFailed(status))
@@ -2563,6 +2579,7 @@ EMSCRIPTEN_BINDINGS(my_module) {
     emscripten::function("setPolyFlagsByRef", &setPolyFlagsByRef);
 
     emscripten::function("addOffMeshConnection", &addOffMeshConnection);
+    emscripten::function("rebuildAllTiles", &rebuildAllTiles);
 
     emscripten::function("getRandomPoint", &getRandomPoint);
     emscripten::function("_queryPolygons", &_queryPolygons);
