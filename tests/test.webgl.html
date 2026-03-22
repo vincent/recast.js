@@ -2,12 +2,15 @@
 
 <head>
 	<title>Recast.js Test Suite</title>
-	<script src="../vendor/three.js"></script>
-	<script src="../vendor/ConvexGeometry.js"></script>
-	<script src="../vendor/OrbitControls.js"></script>
-	<script src="../vendor/OBJLoader.js"></script>
-	<script src="../vendor/stats.js"></script>
 	<script src="../lib/recast.debug.js"></script>
+	<script type="importmap">
+	{
+		"imports": {
+			"three": "../node_modules/three/build/three.module.js",
+			"three/addons/": "../node_modules/three/examples/jsm/"
+		}
+	}
+	</script>
 	<style>
 		body {
 			margin: 0;
@@ -55,14 +58,23 @@
 
 	</div>
 
-	<script>
+	<script type="module">
 		'use strict';
+
+		import * as THREE from 'three';
+		import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+		import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+		import Stats from 'three/addons/libs/stats.module.js';
 
 		var renderer = new THREE.WebGLRenderer({ antialias: true });
 		renderer.setSize(document.body.clientWidth, document.body.clientWidth * 3 / 4);
 		document.getElementById('wrapper').appendChild(renderer.domElement);
 		renderer.setClearColor(0xFFFFFF, 1.0);
 		renderer.clear();
+
+		// Enable shadow mapping
+		renderer.shadowMap.enabled = true;
+		renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 		var mouse = new THREE.Vector2();
 		var raycaster = new THREE.Raycaster();
@@ -74,7 +86,7 @@
 		camera.position.z = 100;
 		camera.lookAt(new THREE.Vector3());
 
-		var controls = new THREE.OrbitControls(camera, renderer.domElement);
+		var controls = new OrbitControls(camera, renderer.domElement);
 		controls.addEventListener('change', function () {
 			render();
 		});
@@ -85,6 +97,8 @@
 
 		var agentsObjects = [];
 		var scene = new THREE.Scene();
+		window.scene = scene;
+		window.navigationMesh = null;
 
 		var agentGeometry = new THREE.CylinderGeometry(0.2, 0.5, 2);
 
@@ -110,13 +124,10 @@
 			scene.add(agent);
 		}
 
-		var light = new THREE.SpotLight();
-		light.position.set(170, 330, -160);
+		const light = new THREE.PointLight(0xffffff, 200.0)
+		light.position.y = 20;
+		light.position.x = 20;
 		scene.add(light);
-
-		var sequence;
-
-		////////////////////////////////
 
 		var terrain, agents = [];
 
@@ -132,10 +143,8 @@
 			mouse.x = (x / e.currentTarget.width) * 2 - 1;
 			mouse.y = - (y / e.currentTarget.height) * 2 + 1;
 
-			// update the picking ray with the camera and mouse position
 			raycaster.setFromCamera(mouse, camera);
 
-			// calculate objects intersecting the picking ray
 			var intersects = raycaster.intersectObjects(terrain.children, true);
 
 			if (intersects.length) {
@@ -150,11 +159,10 @@
 				new THREE.CylinderGeometry(radius, radius, 2),
 				new THREE.MeshBasicMaterial({
 					color: 0xff0000,
-					shading: THREE.FlatShading,
+					flatShading: true,
 					side: THREE.DoubleSide,
 					transparent: true,
-					opacity: 0.6,
-					overdraw: true
+					opacity: 0.6
 				})
 			);
 			obstacleMesh.position.set(x, y, z);
@@ -191,21 +199,20 @@
 			color: 0x00ff00,
 			transparent: true,
 			opacity: 0.6,
-			linewidth: 5,
-			vertexColors: THREE.VertexColors
+			vertexColors: true
 		});
 
 		function createSpline(start, end, elevation) {
-
-			var geometry = new THREE.Geometry();
-			geometry.vertices.push(start);
-			geometry.vertices.push(new THREE.Vector3(
-				(start.x + end.x) / 2,
-				((start.y + end.y) / 2) + elevation,
-				(start.z + end.z) / 2
-			));
-			geometry.vertices.push(end);
-
+			const points = [
+				start,
+				new THREE.Vector3(
+					(start.x + end.x) / 2,
+					((start.y + end.y) / 2) + elevation,
+					(start.z + end.z) / 2
+				),
+				end
+			];
+			var geometry = new THREE.BufferGeometry().setFromPoints(points);
 			return new THREE.Line(geometry, splineMaterial);
 		}
 
@@ -238,19 +245,18 @@
 			});
 
 			var stats = new Stats();
-			stats.domElement.style.position = 'absolute';
-			stats.domElement.style.right = '0px';
-			stats.domElement.style.bottom = '0px';
-			document.body.appendChild(stats.domElement);
-			stats.setMode(0);
-			stats.begin();
+			stats.dom.style.position = 'absolute';
+			stats.dom.style.right = '0';
+			stats.dom.style.top = '0';
+			// document.body.appendChild(stats.dom);
 
 			// Load the visual terrain mesh
-			var loader = new THREE.OBJLoader();
+			var loader = new OBJLoader();
 			loader.load('nav_test.obj', function (object) {
 				terrain = object;
 				object.traverse(function (child) {
 					if (child instanceof THREE.Mesh) {
+						child.geometry.computeVertexNormals();
 						child.material.side = THREE.DoubleSide;
 					}
 				});
@@ -306,12 +312,12 @@
 
 						window.requestAnimationFrame(animate);
 						render();
-						if (stats) stats.update();
+						stats.update();
 					};
 
 					animate(new Date().getTime());
 
-					sequence = function () {
+					window.sequence = function () {
 						document.getElementById('sequence').style.display = 'none';
 						goAway();
 					};
@@ -332,7 +338,7 @@
 						}
 					};
 
-					sequence();
+					window.sequence();
 				}));
 			});
 		})();

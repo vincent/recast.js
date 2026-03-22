@@ -5,9 +5,18 @@
  * Copyright 2014 Vincent Lark
  * Released under the MIT license
  */
-/*jshint onevar: false, indent:4 */
-/*global exports: true, require: true, THREE: true, Stats: true */
 'use strict';
+
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
+import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js';
+import Stats from 'three/addons/libs/stats.module.js';
+
+(async () => {
+
+const recast = await Recast();
 
 var renderer = new THREE.WebGLRenderer({antialias: true});
 renderer.setSize(document.body.clientWidth * 0.6, document.body.clientHeight * 0.8);
@@ -15,7 +24,7 @@ renderer.domElement.style.position = 'absolute';
 renderer.domElement.style.bottom = 0;
 renderer.domElement.style.right = 0;
 document.body.appendChild(renderer.domElement);
-renderer.setClearColor(THREE.ColorKeywords.white, 1.0);
+renderer.setClearColor(0xffffff, 1.0);
 renderer.clear();
 
 var width = renderer.domElement.width;
@@ -24,7 +33,7 @@ var camera = new THREE.PerspectiveCamera( 45, width / height, 1, 100000);
 camera.position.y = 50;
 camera.position.z = 50;
 
-var controls = new THREE.OrbitControls(camera, renderer.domElement);
+var controls = new OrbitControls(camera, renderer.domElement);
 controls.addEventListener('change', function(){
     render();
 });
@@ -35,6 +44,8 @@ var MAX_HOPS = 10;
 
 var agentsObjects = [];
 var scene = new THREE.Scene();
+window.scene = scene;
+window.navigationMesh = null;
 
 var agentGeometry = new THREE.CylinderGeometry(0.02, 0.05, 0.2);
 
@@ -60,29 +71,30 @@ for (var i = 0; i < MAX_AGENTS; i++) {
     scene.add(agent);
 }
 
-var light = new THREE.SpotLight();
+var light = new THREE.SpotLight(0xffffff, 100);
 light.position.set( 170, 330, -160 );
 scene.add(light);
+scene.add(new THREE.AmbientLight(0xffffff, 1.0));
 
-var navigationMesh, sequence;
+var navigationMesh;
 
 var createSpline = function(start, end, elevation) {
+    const points = [
+        start,
+        new THREE.Vector3(
+            (start.x + end.x)  / 2,
+            ((start.y + end.y) / 2) + elevation,
+            (start.z + end.z)  / 2
+        ),
+        end
+    ];
 
-    var geometry = new THREE.Geometry();
-    geometry.vertices.push(start);
-    geometry.vertices.push(new THREE.Vector3(
-        (start.x + end.x)  / 2,
-        ((start.y + end.y) / 2) + elevation,
-        (start.z + end.z)  / 2
-    ));
-    geometry.vertices.push(end);
-
+    var geometry = new THREE.BufferGeometry().setFromPoints(points);
     var material = new THREE.LineBasicMaterial({
       color: 0x00ff00,
       transparent: true,
       opacity: 0.6,
-      linewidth: 5,
-      vertexColors: THREE.VertexColors
+      vertexColors: true
     });
 
     return new THREE.Line(geometry, material);
@@ -91,232 +103,158 @@ var createSpline = function(start, end, elevation) {
 ////////////////////////////////
 
 var terrain, agents = [];
-var debugDraw = {};
-const { Color } = require('three/src/Three.Core.js');
-var recast = require('../lib/recast');
-
-recast.setGLContext(renderer.context);
 
 function render () {
     renderer.render(scene, camera);
-
-    if (debugDraw.NavMesh)              { recast.drawObject('NavMesh');             }
-    if (debugDraw.NavMeshPortals)       { recast.drawObject('NavMeshPortals');      }
-    if (debugDraw.RegionConnections)    { recast.drawObject('RegionConnections');   }
-    if (debugDraw.RawContours)          { recast.drawObject('RawContours');         }
-    if (debugDraw.Contours)             { recast.drawObject('Contours');            }
-    if (debugDraw.HeightfieldSolid)     { recast.drawObject('HeightfieldSolid');    }
-    if (debugDraw.HeightfieldWalkable)  { recast.drawObject('HeightfieldWalkable'); }
 }
 
-// Check our library is here
-exports['recast is present'] = function(test) {
-    test.ok(recast, 'recast should be an object');
-    test.done();
-};
+var stats = new Stats();
+stats.dom.style.position = 'absolute';
+stats.dom.style.right = '0px';
+stats.dom.style.bottom = '0px';
+document.body.appendChild( stats.dom );
 
-// Check our methods are here
-exports['our methods are present'] = function(test) {
-    test.ok(recast.set_cellSize, 'set_cellSize');
-    test.ok(recast.set_cellHeight, 'set_cellHeight');
-    test.ok(recast.set_agentHeight, 'set_agentHeight');
-    test.ok(recast.set_agentRadius, 'set_agentRadius');
-    test.ok(recast.set_agentMaxClimb, 'set_agentMaxClimb');
-    test.ok(recast.set_agentMaxSlope, 'set_agentMaxSlope');
+// Load visual mesh with OBJ + MTL
+const objLoader = new OBJLoader();
+const mtlLoader = new MTLLoader();
+try {
+    const materials = await mtlLoader.loadAsync('Paris/Paris2010.mtl');
+    materials.preload();
+    objLoader.setMaterials(materials);
+} catch (e) {
+    // MTL not required
+}
+objLoader.load('Paris/Paris2010_0.obj', function(object){
+    terrain = object;
+    object.traverse(function(child) {
+        if (child instanceof THREE.Mesh) {
+            child.geometry.computeVertexNormals();
+            child.material.side = THREE.DoubleSide;
+        }
+    } );
+    scene.add(object);
+});
 
-    test.ok(recast.build, 'build');
-    test.ok(recast.initCrowd, 'initCrowd');
-    test.ok(recast.initWithFileContent, 'initWithFileContent');
-    test.ok(recast.findNearestPoint, 'findNearestPoint');
-    test.ok(recast.findPath, 'findPath');
-    test.ok(recast.getRandomPoint, 'getRandomPoint');
+render();
 
-    test.ok(recast.addCrowdAgent, 'addCrowdAgent');
-    test.ok(recast.updateCrowdAgentParameters, 'updateCrowdAgentParameters');
-    test.ok(recast.requestMoveVelocity, 'requestMoveVelocity');
-    test.ok(recast.removeCrowdAgent, 'removeCrowdAgent');
-    test.ok(recast.crowdRequestMoveTarget, 'crowdRequestMoveTarget');
-    test.ok(recast.crowdUpdate, 'crowdUpdate');
-    test.ok(recast.crowdGetActiveAgents, 'crowdGetActiveAgents');
-    test.done();
-};
+/**
+ * Load an .OBJ file
+ */
+recast.OBJLoader('Paris/Paris2010_0.obj', function(){
 
-// Check file loading
-exports['handle an agent'] = function(test) {
-    test.expect(11);
-
-    recast.set_cellSize(0.01);
-    recast.set_cellHeight(0.05);
-    recast.set_agentHeight(1.8);
-    recast.set_agentRadius(0.004);
-    recast.set_agentMaxClimb(2.0);
-    recast.set_agentMaxSlope(30.0);
-
-    /*
-    recast.settings({
-        cellSize: 2.0,
-        cellHeight: 1.5,
-        agentHeight: 2.0,
-        agentRadius: 0.2,
-        agentMaxClimb: 4.0,
-        agentMaxSlope: 30.0
-    });
-    */
-
-
-    var stats = new Stats();
-    stats.setMode(1); // 0: fps, 1: ms
-    stats.domElement.style.position = 'absolute';
-    stats.domElement.style.right = '0px';
-    stats.domElement.style.bottom = '0px';
-    document.body.appendChild( stats.domElement );
-    stats.setMode(0);
-    stats.begin();
-
-
-    var loader = new THREE.OBJMTLLoader();
-    loader.load('Paris/Paris2010_0.obj', 'Paris/Paris2010.mtl', function(object){
-        terrain = object;
-        object.traverse(function(child) {
-            if (child instanceof THREE.Mesh) {
-                child.material.side = THREE.DoubleSide;
-            }
-        } );
-        scene.add(object);
-    });
-
-    render();
-    return;
+    recast.build();
+    recast.initCrowd(1000, 1.0);
 
     /**
-     * Load an .OBJ file
+     * Get navmesh geometry and draw it
      */
-    recast.OBJLoader('Paris/Paris2010_0.obj', function(){
+    if (location.search.match(/navigationmesh=1/)) {
+        recast.getNavMeshVertices(recast.cb(function (vertices) {
 
-        recast.build();
-        recast.initCrowd(1000, 1.0);
+            navigationMesh = new THREE.Object3D();
+            window.navigationMesh = navigationMesh;
 
-        /**
-         * Get navmesh geometry and draw it
-         */
-        if (location.search.match(/navigationmesh=1/)) {
-            recast.getNavMeshVertices(recast.cb(function (vertices) {
+            var material = new THREE.MeshBasicMaterial({
+                color: 0x000055,
+                flatShading: true,
+                side: THREE.DoubleSide,
+                wireframe: false,
+                transparent: true,
+                opacity: 0.3
+            });
 
-                navigationMesh = new THREE.Object3D();
-                // var materials = [ new THREE.MeshNormalMaterial() ];
-                var materials = [ new THREE.MeshBasicMaterial({
-                    color: 0x000055,
-                    shading: THREE.FlatShading,
-                    side: THREE.DoubleSide,
-                    wireframe: false,
-                    transparent: true,
-                    opacity: 0.3,
-                    overdraw: true
-                }) ];
+            for (var i = 0; i < vertices.length; i++) {
+                if (!vertices[i+2]) { break; }
 
-                for (var i = 0; i < vertices.length; i++) {
-                    if (!vertices[i+2]) { break; }
+                var geometry = new ConvexGeometry([
+                    new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ),
+                    new THREE.Vector3( vertices[i+1].x, vertices[i+1].y, vertices[i+1].z ),
+                    new THREE.Vector3( vertices[i+2].x, vertices[i+2].y, vertices[i+2].z )
+                ]);
 
-                    var geometry = new THREE.ConvexGeometry([
-                        new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ),
-                        new THREE.Vector3( vertices[i+1].x, vertices[i+1].y, vertices[i+1].z ),
-                        new THREE.Vector3( vertices[i+2].x, vertices[i+2].y, vertices[i+2].z )
-                    ]);
+                navigationMesh.add(new THREE.Mesh(geometry, material));
 
-                    var child = THREE.SceneUtils.createMultiMaterialObject(geometry, materials);
-                    navigationMesh.add(child);
-
-                    i += 2;
-                }
-
-                // scene.add(navigationMesh);
-
-                // renderer.render(scene, camera);
-            }));
-        }
-
-        recast.vent.on('update', function (agents) {
-            for (var i = 0; i < agents.length; i++) {
-                var agent = agents[i];
-
-                var angle = Math.atan2(- agent.velocity.z, agent.velocity.x);
-                if (Math.abs(agentsObjects[agent.idx].rotation.y - angle) > 0) {
-                    agentsObjects[agent.idx].rotation.y = angle;
-                }
-
-                agentsObjects[agent.idx].position.set(
-                    agent.position.x,
-                    agent.position.y,
-                    agent.position.z
-                );
-
-                var color = agent.neighbors * 128;
-                agentsObjects[agent.idx].children[0].material.color.set(color, color, color);
+                i += 2;
             }
-        });
+        }));
+    }
 
-        recast.build();
-        recast.initCrowd(1000, 1.0);
+    recast.vent.on('update', function (agentsList) {
+        for (var i = 0; i < agentsList.length; i++) {
+            var ag = agentsList[i];
 
-        /**
-         * Add some agents
-         */
-        for (var i = 0; i < agentsObjects.length; i++) {
-            agents.push(recast.addAgent({
-                position: {
-                    x: 0,
-                    y: 0,
-                    z: -2.20
-                },
-                radius: 0.004,
-                height: 0.5,
-                maxAcceleration: 1.0,
-                maxSpeed: 2.0,
-                updateFlags: 0, // && recast.CROWD_OBSTACLE_AVOIDANCE, // & recast.CROWD_ANTICIPATE_TURNS & recast.CROWD_OPTIMIZE_TOPO & recast.CROWD_SEPARATION,
-                separationWeight: 20.0
-            }));
-        }
-
-        var routes;
-
-        var last = new Date().getTime();
-        var animate = function animate (time) {
-            window.requestAnimationFrame(animate);
-
-            recast.crowdUpdate(0.1);
-            recast.crowdGetActiveAgents();
-
-            last = time;
-            render();
-
-            if (stats) stats.update();
-        };
-
-        animate(new Date().getTime());
-
-        sequence = function() {
-            document.getElementById('sequence').style.display = 'none';
-            routes = 0;
-            goAway();
-        };
-
-        var goAway = function(){
-            for (var i = 0; i < agentsObjects.length; i++) {
-                (function (i) {
-                    recast.getRandomPoint(recast.cb(function(pt2x, pt2y, pt2z){
-                        recast.crowdRequestMoveTarget(i, pt2x, pt2y, pt2z);
-                        if (++routes < MAX_HOPS) {
-                            test.ok(true, 'route ' + routes + ': to ' + Math.round(pt2x, 2) + ',' + Math.round(pt2y, 2)+ ',' + Math.round(pt2z, 2));
-                            setTimeout(goAway, 8000 * Math.random());
-                        } else {
-                            document.getElementById('sequence').style.display = 'block';
-                            // test.done();
-                        }
-                    }));
-                })(i);
+            var angle = Math.atan2(- ag.velocity.z, ag.velocity.x);
+            if (Math.abs(agentsObjects[ag.idx].rotation.y - angle) > 0) {
+                agentsObjects[ag.idx].rotation.y = angle;
             }
-        };
 
-        sequence();
+            agentsObjects[ag.idx].position.set(
+                ag.position.x,
+                ag.position.y,
+                ag.position.z
+            );
+
+            var color = ag.neighbors * 128;
+            agentsObjects[ag.idx].children[0].material.color.set(color, color, color);
+        }
     });
-};
+
+    /**
+     * Add some agents
+     */
+    for (var i = 0; i < agentsObjects.length; i++) {
+        agents.push(recast.addAgent({
+            position: {
+                x: 0,
+                y: 0,
+                z: -2.20
+            },
+            radius: 0.004,
+            height: 0.5,
+            maxAcceleration: 1.0,
+            maxSpeed: 2.0,
+            updateFlags: 0,
+            separationWeight: 20.0
+        }));
+    }
+
+    var routes;
+
+    var animate = function animate (time) {
+        window.requestAnimationFrame(animate);
+
+        recast.crowdUpdate(0.1);
+        recast.crowdGetActiveAgents();
+
+        render();
+
+        stats.update();
+    };
+
+    animate(new Date().getTime());
+
+    window.sequence = function() {
+        document.getElementById('sequence').style.display = 'none';
+        routes = 0;
+        goAway();
+    };
+
+    var goAway = function(){
+        for (var i = 0; i < agentsObjects.length; i++) {
+            (function (agentIdx) {
+                recast.getRandomPoint(recast.cb(function(pt2x, pt2y, pt2z){
+                    recast.crowdRequestMoveTarget(agentIdx, pt2x, pt2y, pt2z);
+                    if (++routes < MAX_HOPS) {
+                        setTimeout(goAway, 8000 * Math.random());
+                    } else {
+                        document.getElementById('sequence').style.display = 'block';
+                    }
+                }));
+            })(i);
+        }
+    };
+
+    window.sequence();
+});
+
+})();

@@ -5,9 +5,14 @@
  * Copyright 2014 Vincent Lark
  * Released under the MIT license
  */
-/*jshint onevar: false, indent:4 */
-/*global exports, require, THREE, TWEEN, Stats */
 'use strict';
+
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
+import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js';
+import Stats from 'three/addons/libs/stats.module.js';
 
 (async () => {
 const recast = await Recast();
@@ -18,7 +23,7 @@ renderer.domElement.style.position = 'absolute';
 renderer.domElement.style.bottom = 0;
 renderer.domElement.style.right = 0;
 document.body.appendChild(renderer.domElement);
-renderer.setClearColor(THREE.ColorKeywords.white, 1.0);
+renderer.setClearColor(0xffffff, 1.0);
 renderer.clear();
 
 var width = renderer.domElement.width;
@@ -27,12 +32,14 @@ var camera = new THREE.PerspectiveCamera( 45, width / height, 1, 10000);
 camera.position.y = 50;
 camera.position.z = 50;
 
-var controls = new THREE.OrbitControls(camera, renderer.domElement);
+var controls = new OrbitControls(camera, renderer.domElement);
 controls.addEventListener('change', function(){
     render();
 });
 
 var scene = new THREE.Scene();
+window.scene = scene;
+window.navigationMesh = null;
 
 var agent = new THREE.Object3D();
 var agentBody = new THREE.Mesh(
@@ -53,51 +60,39 @@ agent.add(agent.arrowHelper);
 
 scene.add(agent);
 
-var light = new THREE.SpotLight();
-light.position.set( 170, 330, -60 );
+const light = new THREE.PointLight(0xffffff, 200.0)
+light.position.y = 20;
+light.position.x = 20;
 scene.add(light);
 
 ////////////////////////////////
 
 var terrain, navigationMesh, doors = {};
-var debugDraw = {};
-
-recast.setGLContext(renderer.context);
 
 function render () {
     renderer.render(scene, camera);
-
-    if (debugDraw.NavMesh)              { recast.drawObject('NavMesh');             }                        
-    if (debugDraw.NavMeshPortals)       { recast.drawObject('NavMeshPortals');      }          
-    if (debugDraw.RegionConnections)    { recast.drawObject('RegionConnections');   }    
-    if (debugDraw.RawContours)          { recast.drawObject('RawContours');         }                
-    if (debugDraw.Contours)             { recast.drawObject('Contours');            }                      
-    if (debugDraw.HeightfieldSolid)     { recast.drawObject('HeightfieldSolid');    }      
-    if (debugDraw.HeightfieldWalkable)  { recast.drawObject('HeightfieldWalkable'); }
 }
 
 function addMeshFromVertices (vertices, parent, plain) {
-    var materials = [ new THREE.MeshBasicMaterial({
+    var material = new THREE.MeshBasicMaterial({
         color: 0xFF0000,
-        shading: THREE.FlatShading,
+        flatShading: true,
         side: THREE.DoubleSide,
         wireframe: ! plain,
         transparent: true,
-        opacity: 0.3,
-        overdraw: true
-    }) ];
+        opacity: 0.3
+    });
 
     for (var i = 0; i < vertices.length; i++) {
         if (!vertices[i+2]) { break; }
 
-        var geometry = new THREE.ConvexGeometry([
-            new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ), 
+        var geometry = new ConvexGeometry([
+            new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ),
             new THREE.Vector3( vertices[i+1].x, vertices[i+1].y, vertices[i+1].z ),
             new THREE.Vector3( vertices[i+2].x, vertices[i+2].y, vertices[i+2].z )
         ]);
 
-        var child = THREE.SceneUtils.createMultiMaterialObject(geometry, materials);
-        parent.add(child);
+        parent.add(new THREE.Mesh(geometry, material));
 
         i += 2;
     }
@@ -114,31 +109,24 @@ recast.settings({
 
 
 var stats = new Stats();
-stats.setMode(1); // 0: fps, 1: ms
-stats.domElement.style.position = 'absolute';
-stats.domElement.style.right = '0px';
-stats.domElement.style.bottom = '0px';
-document.body.appendChild( stats.domElement );
-stats.setMode(0);
-stats.begin();
+stats.dom.style.position = 'absolute';
+stats.dom.style.right = '0px';
+stats.dom.style.bottom = '0px';
+// document.body.appendChild( stats.dom );
 
-
-var loader = new THREE.OBJLoader();
-loader.load('doors.obj', async function(object){
+var objLoader = new OBJLoader();
+objLoader.load('doors.obj', async function(object){
     terrain = object;
 
-    // object.traverse(function (child) {
-    //     if (child instanceof THREE.Mesh) {
-    //         child.material.side = THREE.DoubleSide;
-    //         child.material.shading = THREE.FlatShading;
-    //         child.material.side = THREE.DoubleSide;
-    //         child.material.transparent = false;
-    //     }
-    // });
-
-    const loader = new THREE.MTLLoader();
-    const materials = await loader.loadAsync('doors.mtl');
+    const mtlLoader = new MTLLoader();
+    const materials = await mtlLoader.loadAsync('doors.mtl');
     objLoader.setMaterials( materials );
+    object.traverse(function(child) {
+        if (child instanceof THREE.Mesh) {
+            child.geometry.computeVertexNormals();
+            child.material.side = THREE.DoubleSide;
+        }
+    });
     scene.add(object);
 
     /**
@@ -152,6 +140,7 @@ loader.load('doors.obj', async function(object){
         if (location.search.match(/navigationmesh=1/)) {
             recast.getNavMeshVertices(recast.cb(function (vertices) {
                 navigationMesh = new THREE.Object3D();
+                window.navigationMesh = navigationMesh;
                 addMeshFromVertices(vertices, navigationMesh);
             }));
         }
@@ -165,54 +154,34 @@ loader.load('doors.obj', async function(object){
             door3: { name: 'door3', refs: [ 84  ], flags: [ 16 ] }
         });
 
-        // for (var door in recast.zones) {
-        //     door = recast.zones[door];
-        //     var doorGeometry = new THREE.BoxGeometry(doorSize.x, 6, doorSize.z);
-        //     for (var i = 0; i < doorGeometry.vertices.length; i++) {
-        //         // doorGeometry.vertices[i].x += 2.5;
-        //         doorGeometry.vertices[i].y += 3;
-        //     }
-        //     doors[child.name].doorObject = new THREE.Mesh(
-        //         doorGeometry,
-        //         new THREE.MeshBasicMaterial({
-        //             color: 0x050505,
-        //             side: THREE.DoubleSide,
-        //             overdraw: true
-        //         })
-        //     );
-        //     doors[child.name].doorObject.position = geometry.boundingSphere.center;
-        //     scene.add(doors[child.name].doorObject);
-        // }
-
         recast.vent.on('update', function (agents) {
             if (agents[0]) agent.position.set(
-                agents[0].position.x, 
-                agents[0].position.y, 
+                agents[0].position.x,
+                agents[0].position.y,
                 agents[0].position.z
             );
         });
 
-        var hop = 0,
-            hops = [
+        var hop = 0, hops = [
             {
                 x: 87.5,
                 y: 0,
-                z: 10.8 // -15
+                z: 10.8
             },
             {
                 x: 1.6,
                 y: 0,
-                z: -12.9 // -15
+                z: -12.9
             },
             {
                 x: 43.9,
                 y: 0,
-                z: 9.6 // -15
+                z: 9.6
             },
             {
                 x: 80.1,
                 y: 0,
-                z: -11 // -15
+                z: -11
             }
         ];
 
@@ -222,7 +191,7 @@ loader.load('doors.obj', async function(object){
             height: 0.5,
             maxAcceleration: 1.0,
             maxSpeed: 2.0,
-            updateFlags: 0, // && recast.CROWD_OBSTACLE_AVOIDANCE, // & recast.CROWD_ANTICIPATE_TURNS & recast.CROWD_OPTIMIZE_TOPO & recast.CROWD_SEPARATION,
+            updateFlags: 0,
             separationWeight: 20.0
         });
 
@@ -230,14 +199,14 @@ loader.load('doors.obj', async function(object){
         var animate = function animate (time) {
             window.requestAnimationFrame(animate);
 
-            TWEEN.update();
+            if (window.TWEEN) window.TWEEN.update();
             recast.crowdUpdate(0.1);
             recast.crowdGetActiveAgents();
 
             last = time;
             render();
 
-            if (stats) stats.update();
+            stats.update();
         };
 
         var move = function (index) {
@@ -245,19 +214,9 @@ loader.load('doors.obj', async function(object){
             recast.crowdRequestMoveTarget(0, hop.x, hop.y, hop.z);
         };
 
-        var toggleDoor = function (doorName) {
+        window.toggleDoor = function (doorName) {
             recast.zones[doorName].toggleFlags(recast.FLAG_DISABLED);
-            // var door = recast.zones[doorName];
-            // // door.doorObject.rotation.y = door.closed ? 0 : 2;
-            // new TWEEN.Tween(door.doorObject.rotation)
-            //     .to({
-            //         y: door.closed ? 0 : 2
-            //     }, 500)
-            //     .start();
-
-            // door.closed = ! door.closed;                    
         };
-        window.toggleDoor = toggleDoor;
 
         move();
         setInterval(move, 5 * 1000);
