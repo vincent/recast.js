@@ -4,8 +4,7 @@ export default defineConfig({
   test: {
     testTimeout: 120000,
     hookTimeout: 60000,
-    include: ['tests/test.*.js'],
-    exclude: ['tests/test.init.js'],
+    include: ['tests/unit/test.*.js'],
     // Run test files sequentially to avoid shared state / WASM memory issues
     pool: 'threads',
     includeTaskLocation: true,

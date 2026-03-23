@@ -14,6 +14,7 @@
   },
   "scripts": {
     "build": "make build",
+    "build:esm": "make build-esm",
     "build:debug": "make build-debug",
     "test": "vitest run",
     "test:watch": "vitest"

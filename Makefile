@@ -91,7 +91,7 @@ PREJS     = --pre-js src/pre.module.js
 POSTJS    = --post-js src/post.module.js
 LIBRARYJS = --js-library src/library_recast.js
 
-all: clean build test
+all: clean build build-esm test
 
 update-source:
 	git submodule init; git submodule update; cd recastnavigation; patch -p1 < ../src/recastnavigation.patch
@@ -99,6 +99,10 @@ update-source:
 build:
 	mkdir -p $(BUILDDIR)
 	$(CC) $(FLAGS) $(DEFINES) $(INCLUDES) $(CFLAGS_RELEASE) $(FILES) $(LIBRARYJS) -s EXPORTED_FUNCTIONS='[]' $(PREJS) $(POSTJS) -o $(BUILDDIR)/recast.js $(PRELOAD)
+
+build-esm:
+	mkdir -p $(BUILDDIR)
+	$(CC) $(FLAGS) $(DEFINES) $(INCLUDES) $(CFLAGS_RELEASE) $(FILES) $(LIBRARYJS) -s EXPORTED_FUNCTIONS='[]' $(PREJS) $(POSTJS) -s EXPORT_ES6=1 -o $(BUILDDIR)/recast.mjs $(PRELOAD)
 
 build-debug:
 	mkdir -p $(BUILDDIR)
@@ -110,4 +114,4 @@ test:
 clean:
 	rm -rf $(BUILDDIR)
 
-.PHONY: test build build-debug all
+.PHONY: test build build-esm build-debug all
