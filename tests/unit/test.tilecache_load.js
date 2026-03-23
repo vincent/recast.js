@@ -15,14 +15,15 @@ describe('tilecache load', () => {
 
     await recast.loadTileCacheAsync(path.join(testsDir, '../fixtures/tilecache.dist.bin'));
 
-    const [pt1x, pt1y, pt1z] = await recast.getRandomPointAsync();
-    expect(typeof pt1x).toBe('number');
-    expect(typeof pt1y).toBe('number');
-    expect(typeof pt1z).toBe('number');
+    const pt1 = await recast.getRandomPointAsync();
+    expect(typeof pt1.x).toBe('number');
+    expect(typeof pt1.y).toBe('number');
+    expect(typeof pt1.z).toBe('number');
 
-    const [pt2x, pt2y, pt2z] = await recast.findNearestPointAsync(pt1x, pt1y, pt1z, 10, 10, 10);
-    expect(typeof pt2x).toBe('number');
-    expect(typeof pt2y).toBe('number');
-    expect(typeof pt2z).toBe('number');
+    const ext = { x: 10, y: 10, z: 10 };
+    const pt2 = await recast.findNearestPointAsync(pt1, ext);
+    expect(typeof pt2.x).toBe('number');
+    expect(typeof pt2.y).toBe('number');
+    expect(typeof pt2.z).toBe('number');
   });
 });

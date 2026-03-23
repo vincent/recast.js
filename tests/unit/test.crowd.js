@@ -25,14 +25,14 @@ describe('crowd', () => {
   });
 
   it('manages the crowd', async () => {
-    const [pt1x, pt1y, pt1z] = await recast.getRandomPointAsync();
+    const pt1 = await recast.getRandomPointAsync();
 
-    expect(typeof pt1x).toBe('number');
-    expect(typeof pt1y).toBe('number');
-    expect(typeof pt1z).toBe('number');
+    expect(typeof pt1.x).toBe('number');
+    expect(typeof pt1.y).toBe('number');
+    expect(typeof pt1.z).toBe('number');
 
     const id = recast.addAgent({
-      position: { x: pt1x, y: pt1y, z: pt1z },
+      position: pt1,
       radius: 0.5,
       height: 0.8,
       maxAcceleration: 1.0,
@@ -44,7 +44,7 @@ describe('crowd', () => {
     expect(typeof id).toBe('number');
 
     await new Promise((resolve) => {
-      recast.vent.once('update', function(agents) {
+      recast.events.once('update', function(agents) {
         expect(agents).toBeTruthy();
         expect(agents.length).toBe(1);
         resolve();

@@ -28,7 +28,7 @@ EventEmitter.prototype._addListener = function(type, listener, once) {
   return this;
 };
 
-EventEmitter.prototype.listeners = function() {
+EventEmitter.prototype.eventNames = function() {
   return Object.keys(this._listeners);
 };
 
@@ -40,7 +40,17 @@ EventEmitter.prototype.once = function(type, listener) {
   return this._addListener(type, listener, true);
 };
 
-EventEmitter.prototype.remove = function(type) {
+EventEmitter.prototype.off = function(type, listener) {
+  if (!this._listeners[type]) return this;
+  const list = this._listeners[type];
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (list[i].fn === listener) { list.splice(i, 1); break; }
+  }
+  if (list.length === 0) delete this._listeners[type];
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
   if (type) {
     delete this._listeners[type];
     return this;
@@ -114,9 +124,10 @@ recast.__RECAST_CALLBACKS.size = 0;
 
 recast.__RECAST_OBJECTS = {};
 
-recast.vent = new EventEmitter();
-recast.on   = recast.vent.on.bind(recast.vent);
-recast.emit = recast.vent.emit.bind(recast.vent);
+recast.events = new EventEmitter();
+recast.on   = recast.events.on.bind(recast.events);
+recast.off  = recast.events.off.bind(recast.events);
+recast.emit = recast.events.emit.bind(recast.events);
 
 /**
  * Fetch helper — replaces the old XMLHttpRequest _ajax helper.
@@ -371,21 +382,11 @@ var workerMain = function(event) {
       break;
 
     case 'updateCrowdAgentParameters':
-      recast.updateCrowdAgentParameters(message.data.agent,
-        message.data.options.position.x,
-        message.data.options.position.y,
-        message.data.options.position.z,
-        message.data.options.radius,
-        message.data.options.height,
-        message.data.options.maxAcceleration,
-        message.data.options.maxSpeed,
-        message.data.options.updateFlags,
-        message.data.options.separationWeight
-      );
+      recast.updateCrowdAgentParameters(message.data.agent, message.data.options);
       break;
 
-    case 'requestMoveVelocity':
-      recast.requestMoveVelocity(message.data.agent, message.data.velocity.x, message.data.velocity.y, message.data.velocity.z);
+    case 'crowdRequestMoveVelocity':
+      recast.crowdRequestMoveVelocity(message.data.agent, message.data.velocity.x, message.data.velocity.y, message.data.velocity.z);
       break;
 
     case 'removeCrowdAgent':
@@ -591,6 +592,29 @@ recast.addAgent = function(options) {
   );
 };
 
+recast.crowdRequestMoveVelocity = function(agentId, x, y, z) {
+  return recast.requestMoveVelocity(agentId, x, y, z);
+};
+
+// Install wrappers over C++ bindings after WASM/embind init.
+var _prevOnRuntimeInitialized = Module.onRuntimeInitialized;
+Module.onRuntimeInitialized = function() {
+  if (_prevOnRuntimeInitialized) _prevOnRuntimeInitialized();
+
+  var _rawUpdateParams = recast.updateCrowdAgentParameters;
+  recast.updateCrowdAgentParameters = function(agentId, options) {
+    _rawUpdateParams(agentId,
+      0, 0, 0,
+      options.radius           !== undefined ? options.radius           : 0,
+      options.height           !== undefined ? options.height           : 0,
+      options.maxAcceleration  !== undefined ? options.maxAcceleration  : 0,
+      options.maxSpeed         !== undefined ? options.maxSpeed         : 0,
+      options.updateFlags      !== undefined ? options.updateFlags      : 0,
+      options.separationWeight !== undefined ? options.separationWeight : 0
+    );
+  };
+};
+
 recast.findNearest = function(position, callback_id) {
   return recast.findNearestPoint(
     position.x,
@@ -657,31 +681,69 @@ recast.loadTileCache = function(path, callback_id) {
 
 //// Async wrappers ////
 
-recast.findPathAsync = function(sx, sy, sz, dx, dy, dz, max) {
+recast.OBJLoaderAsync = function(path) {
   return new Promise(function(resolve) {
-    recast.findPath(sx, sy, sz, dx, dy, dz, max, recast.cb(resolve));
+    recast.OBJLoader(path, function() { resolve(); });
+  });
+};
+
+recast.OBJDataLoaderAsync = function(data) {
+  return new Promise(function(resolve) {
+    recast.OBJDataLoader(data, function() { resolve(); });
+  });
+};
+
+recast.buildSoloAsync = function() {
+  return new Promise(function(resolve) {
+    recast.events.once('built', resolve);
+    recast.buildSolo();
+  });
+};
+
+recast.buildTiledAsync = function() {
+  return new Promise(function(resolve) {
+    recast.events.once('built', resolve);
+    recast.buildTiled();
+  });
+};
+
+recast.findPathAsync = function(start, end, max) {
+  return new Promise(function(resolve) {
+    recast.findPath(start.x, start.y, start.z, end.x, end.y, end.z, max || 100, recast.cb(resolve));
   });
 };
 
 recast.getRandomPointAsync = function() {
   return new Promise(function(resolve) {
-    recast.getRandomPoint(recast.cb(function() {
-      resolve(Array.prototype.slice.call(arguments));
+    recast.getRandomPoint(recast.cb(function(x, y, z) {
+      resolve({ x: x, y: y, z: z });
     }));
   });
 };
 
-recast.findNearestPointAsync = function(x, y, z, ex, ey, ez) {
+recast.findNearestPointAsync = function(position, extent) {
   return new Promise(function(resolve) {
-    recast.findNearestPoint(x, y, z, ex, ey, ez, recast.cb(function() {
-      resolve(Array.prototype.slice.call(arguments));
+    recast.findNearestPoint(position.x, position.y, position.z, extent.x, extent.y, extent.z, recast.cb(function(x, y, z) {
+      resolve({ x: x, y: y, z: z });
     }));
   });
 };
 
-recast.findNearestPolyAsync = function(x, y, z, ex, ey, ez) {
+recast.findNearestPolyAsync = function(position, extent) {
   return new Promise(function(resolve) {
-    recast.findNearestPoly(x, y, z, ex, ey, ez, recast.cb(resolve));
+    recast.findNearestPoly(position.x, position.y, position.z, extent.x, extent.y, extent.z, recast.cb(resolve));
+  });
+};
+
+recast.queryPolygonsAsync = function(posX, posY, posZ, extX, extY, extZ, maxPolys) {
+  return new Promise(function(resolve) {
+    recast.queryPolygons(posX, posY, posZ, extX, extY, extZ, maxPolys || 1000, recast.cb(resolve));
+  });
+};
+
+recast.getAllTempObstaclesAsync = function() {
+  return new Promise(function(resolve) {
+    recast.getAllTempObstacles(recast.cb(resolve));
   });
 };
 
@@ -732,8 +794,9 @@ function Zone(name, data) {
   this.refs  = data.refs;
   this.flags = 0;
 
-  for (let i = 0; i < data.flags.length; i++) {
-    this.setFlags(data.flags[i]);
+  const initialFlags = data.initialFlags || data.flags || [];
+  for (let i = 0; i < initialFlags.length; i++) {
+    this.setFlags(initialFlags[i]);
   }
 
   this.syncFlags();

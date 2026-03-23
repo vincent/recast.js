@@ -51,21 +51,28 @@ recast.settings({
   agentMaxSlope: 30,
 });
 
-recast.OBJLoader('scene.obj', () => {
-  recast.buildTiled();
-});
+await recast.OBJLoaderAsync('scene.obj');
+await recast.buildTiledAsync();
 ```
 
-All operations that return data have both a callback form and a `Promise`-based async variant:
+All query operations have a `Promise`-based async variant. Coordinates use `{ x, y, z }` objects:
 
 ```js
-// callback
-recast.findPath(sx, sy, sz, dx, dy, dz, maxPoints, recast.cb((path) => {
-  console.log(path);
-}));
+const start = await recast.getRandomPointAsync();
+const end   = await recast.findNearestPointAsync({ x: 0, y: 0, z: 0 }, { x: 3, y: 3, z: 3 });
+const path  = await recast.findPathAsync(start, end);
+console.log(path); // [{ x, y, z }, ...]
+```
 
-// async/await
-const path = await recast.findPathAsync(sx, sy, sz, dx, dy, dz, maxPoints);
+Events are emitted on `recast.events` (a standard EventEmitter):
+
+```js
+// listen for crowd updates
+recast.events.on('update', (agents) => { /* CrowdAgent[] */ });
+
+// or use the shorthand on the module
+recast.on('update', (agents) => { /* CrowdAgent[] */ });
+recast.off('update', handler);
 ```
 
 ## CLI

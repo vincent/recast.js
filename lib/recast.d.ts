@@ -6,6 +6,9 @@
  * // ESM
  * import Recast from 'recastjs';
  * const recast = await Recast();
+ * await recast.OBJLoaderAsync('./scene.obj');
+ * await recast.buildSoloAsync();
+ * const path = await recast.findPathAsync({ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 10 });
  *
  * // CommonJS
  * const Recast = require('recastjs');
@@ -21,34 +24,62 @@ export interface Vec3 {
   z: number;
 }
 
-/** A 3-element tuple `[x, y, z]` returned by point-query async helpers. */
-export type Point3 = [number, number, number];
-
 /** Navigation mesh configuration passed to {@link RecastModule.settings}. */
 export interface RecastSettings {
-  /** Voxel width and depth. Smaller = higher resolution. Default: 0.3 */
+  /** 
+   * Cell size in world units, should be >= 0.0001.
+   * Smaller = higher resolution.
+   * Default: 0.3
+   */
   cellSize: number;
-  /** Voxel height. Smaller = more vertical precision. Default: 0.2 */
+  /** 
+   * Cell height in world units, should be >= 0.0001.
+   * Smaller = more vertical precision.
+   * Default: 0.2 
+   */
   cellHeight: number;
-  /** Minimum floor-to-ceiling height for a walkable area. Default: 2.0 */
+  /** 
+   * Agent height in world units, should be >= 0.0. 
+   * Also the minimum floor-to-ceiling height for a walkable area.
+   * Default: 2.0 
+   */
   agentHeight: number;
-  /** Agent radius (determines clearance from walls). Default: 0.4 */
+  /**
+   * Agent radius (determines clearance from walls).
+   * Default: 0.4
+   */
   agentRadius: number;
-  /** Maximum step height an agent can climb. Default: 0.9 */
+  /**
+   * Maximum step height an agent can climb.
+   * Default: 0.9
+   */
   agentMaxClimb: number;
-  /** Maximum walkable slope in degrees. Default: 45 */
+  /**
+   * Maximum walkable slope in degrees.
+   * Default: 45
+   */
   agentMaxSlope: number;
 }
 
 /** Options for adding a crowd agent via {@link RecastModule.addAgent}. */
 export interface AgentOptions {
+  /** Agent position */
   position: Vec3;
+  /** Agent radius */
   radius: number;
+  /** Agent height */
   height: number;
+  /** Maximum allowed acceleration */
   maxAcceleration: number;
+  /** Maximum allowed speed. */
   maxSpeed: number;
   /** Bitmask of `CROWD_*` flags. Defaults to all flags enabled. */
   updateFlags?: number;
+  /** 
+   * How aggresive the agent manager should be at avoiding collisions with this agent. [Limit: >= 0].
+   * A higher value will result in agents trying to stay farther away from each other 
+   * at the cost of more difficult steering in tight spaces.
+   */
   separationWeight?: number;
 }
 
@@ -56,29 +87,40 @@ export interface AgentOptions {
 export interface CrowdAgent {
   /** Agent index in the crowd. */
   idx: number;
+  /** Agent position */
   position: Vec3;
+  /** Agent velocity */
   velocity: Vec3;
+  /** Agent radius */
   radius: number;
-  active: number;
+  /** 
+   * True if the agent is active, false if the agent is in an unused slot in the agent pool.
+   */
+  active: boolean;
+  /**
+   * The type of mesh polygon the agent is traversing.
+   */
   state: number;
+  /**
+   * Number of neighbouring agents.
+   */
   neighbors: number;
-  partial: number;
+  /**
+   * `true` if the agent could only find a partial path to the target.
+   */
+  partial: boolean;
+  /**
+   * Agent desired speed. 
+   */
   desiredSpeed: number;
-}
-
-/** A waypoint in a path returned by {@link RecastModule.findPathAsync}. */
-export interface PathPoint {
-  x: number;
-  y: number;
-  z: number;
 }
 
 /** Zone data passed to {@link RecastModule.setZones}. */
 export interface ZoneData {
   /** Polygon references belonging to this zone. */
   refs: number[];
-  /** Initial poly flags to apply (e.g. `FLAG_WALK`). */
-  flags: number[];
+  /** Flag bitmasks to OR together as the zone's initial traversal flags (e.g. `[FLAG_WALK]`). */
+  initialFlags: number[];
 }
 
 // ─── Zone class ──────────────────────────────────────────────────────────────
@@ -92,6 +134,7 @@ export declare class Zone {
 
   name: string;
   refs: number[];
+  /** Accumulated traversal flags bitmask. */
   flags: number;
 
   /** Returns `true` if `FLAG_WALK` is set. */
@@ -113,11 +156,13 @@ export declare class Zone {
 export interface RecastEventEmitter {
   on(type: string, listener: (...args: any[]) => void): this;
   once(type: string, listener: (...args: any[]) => void): this;
-  remove(type?: string): this;
+  off(type: string, listener: (...args: any[]) => void): this;
+  removeAllListeners(type?: string): this;
   emit(type: string, ...args: any[]): this;
   /** Emits on the next microtask tick. */
   deferEmit(type: string, ...args: any[]): this;
-  listeners(): string[];
+  /** Returns the list of registered event type names. */
+  eventNames(): string[];
 }
 
 // ─── Main module interface ────────────────────────────────────────────────────
@@ -154,96 +199,77 @@ export interface RecastModule {
    */
   OBJLoader(path: string, callback: (module: RecastModule) => void): void;
 
+  /** Async version of {@link RecastModule.OBJLoader}. */
+  OBJLoaderAsync(path: string): Promise<void>;
+
   /**
    * Load geometry from an OBJ string or buffer already in memory.
    */
   OBJDataLoader(data: string | ArrayBuffer, callback: (module: RecastModule) => void): void;
 
+  /** Async version of {@link RecastModule.OBJDataLoader}. */
+  OBJDataLoaderAsync(data: string | ArrayBuffer): Promise<void>;
+
   // ── Navmesh building ───────────────────────────────────────────────────────
 
   /**
    * Build a single-tile (solo) navmesh from the loaded geometry.
-   * Emits `built` on {@link RecastModule.vent} when done.
+   * Emits `built` on {@link RecastModule.events} when done.
    */
   buildSolo(): void;
 
+  /** Async version of {@link RecastModule.buildSolo}. Resolves with the navmesh type string. */
+  buildSoloAsync(): Promise<string>;
+
   /**
    * Build a tiled navmesh from the loaded geometry.
-   * Emits `built` on {@link RecastModule.vent} when done.
+   * Emits `built` on {@link RecastModule.events} when done.
    */
   buildTiled(): void;
+
+  /** Async version of {@link RecastModule.buildTiled}. Resolves with the navmesh type string. */
+  buildTiledAsync(): Promise<string>;
 
   // ── Pathfinding ────────────────────────────────────────────────────────────
 
   /**
-   * Find a path between two points.
-   * @param sx - Start X
-   * @param sy - Start Y
-   * @param sz - Start Z
-   * @param dx - Destination X
-   * @param dy - Destination Y
-   * @param dz - Destination Z
-   * @param max - Maximum number of waypoints
-   * @param callback_id - Callback handle from {@link RecastModule.cb}
-   */
-  findPath(sx: number, sy: number, sz: number, dx: number, dy: number, dz: number, max: number, callback_id: number): void;
-
-  /**
-   * Async version of {@link RecastModule.findPath}.
+   * Async pathfinding between two points.
    * Resolves with an array of waypoints along the path.
+   * @param max - Maximum number of waypoints (default: 100).
    */
-  findPathAsync(sx: number, sy: number, sz: number, dx: number, dy: number, dz: number, max: number): Promise<PathPoint[]>;
+  findPathAsync(start: Vec3, end: Vec3, max?: number): Promise<Vec3[]>;
 
   /**
    * Find the navmesh point nearest to the given position within an extent box.
-   * @param callback_id - Callback handle from {@link RecastModule.cb}; called with `(x, y, z)`.
+   * Resolves with the nearest point.
    */
-  findNearestPoint(x: number, y: number, z: number, extX: number, extY: number, extZ: number, callback_id: number): void;
-
-  /**
-   * Async version of {@link RecastModule.findNearestPoint}.
-   * Resolves with `[x, y, z]`.
-   */
-  findNearestPointAsync(x: number, y: number, z: number, extX: number, extY: number, extZ: number): Promise<Point3>;
+  findNearestPointAsync(position: Vec3, extent: Vec3): Promise<Vec3>;
 
   /**
    * Find the polygon reference nearest to the given position within an extent box.
-   * @param callback_id - Callback handle from {@link RecastModule.cb}; called with the poly ref.
-   */
-  findNearestPoly(x: number, y: number, z: number, extX: number, extY: number, extZ: number, callback_id: number): void;
-
-  /**
-   * Async version of {@link RecastModule.findNearestPoly}.
    * Resolves with the polygon reference number.
    */
-  findNearestPolyAsync(x: number, y: number, z: number, extX: number, extY: number, extZ: number): Promise<number>;
+  findNearestPolyAsync(position: Vec3, extent: Vec3): Promise<number>;
 
   /**
    * Get a random walkable point on the navmesh.
-   * @param callback_id - Callback handle from {@link RecastModule.cb}; called with `(x, y, z)`.
+   * Resolves with the point.
    */
-  getRandomPoint(callback_id: number): void;
+  getRandomPointAsync(): Promise<Vec3>;
 
   /**
-   * Async version of {@link RecastModule.getRandomPoint}.
-   * Resolves with `[x, y, z]`.
-   */
-  getRandomPointAsync(): Promise<Point3>;
-
-  /**
-   * Find all polygons within an AABB centred at the given position.
+   * Find all polygons within an bounding-box centred at the given position.
    * @param maxPolys - Maximum number of polygons to return (default: 1000).
-   * @param callback_id - Callback handle from {@link RecastModule.cb}.
    */
-  queryPolygons(posX: number, posY: number, posZ: number, extX: number, extY: number, extZ: number, maxPolys: number, callback_id: number): void;
+  queryPolygonsAsync(posX: number, posY: number, posZ: number, extX: number, extY: number, extZ: number, maxPolys?: number): Promise<number[]>;
 
   // ── Polygon flags ──────────────────────────────────────────────────────────
 
   /**
-   * Set traversal flags on all polygons within an AABB.
+   * Set traversal flags on all polygons within an bounding-box.
    * Use the `FLAG_*` constants for the `flags` bitmask.
    */
-  setPolyFlags(sx: number, sy: number, sz: number, dx: number, dy: number, dz: number, flags: number): void;
+  setPolyFlags(posX: number, posY: number, posZ: number, extX: number, extY: number, extZ: number, flags: number): void;
 
   /**
    * Set traversal flags on a specific polygon by its reference.
@@ -252,40 +278,16 @@ export interface RecastModule {
 
   // ── Persistence ────────────────────────────────────────────────────────────
 
-  /**
-   * Save the current tiled navmesh to `path` on disk (Node.js / Emscripten FS).
-   * @param callback_id - Callback handle from {@link RecastModule.cb}.
-   */
-  saveTileMesh(path: string, callback_id: number): void;
-
-  /** Async version of {@link RecastModule.saveTileMesh}. */
+  /** Save the current tiled navmesh to `path` on disk (Node.js / Emscripten FS). */
   saveTileMeshAsync(path: string): Promise<void>;
 
-  /**
-   * Load a previously saved navmesh from `path`.
-   * @param callback_id - Callback handle from {@link RecastModule.cb}.
-   */
-  loadTileMesh(path: string, callback_id: number): void;
-
-  /** Async version of {@link RecastModule.loadTileMesh}. */
+  /** Load a previously saved navmesh from `path`. */
   loadTileMeshAsync(path: string): Promise<void>;
 
-  /**
-   * Save the tile cache (dynamic obstacles + navmesh) to `path`.
-   * @param callback_id - Callback handle from {@link RecastModule.cb}.
-   */
-  saveTileCache(path: string, callback_id: number): void;
-
-  /** Async version of {@link RecastModule.saveTileCache}. */
+  /** Save the tile cache (dynamic obstacles + navmesh) to `path`. */
   saveTileCacheAsync(path: string): Promise<void>;
 
-  /**
-   * Load a previously saved tile cache from `path`.
-   * @param callback_id - Callback handle from {@link RecastModule.cb}.
-   */
-  loadTileCache(path: string, callback_id: number): void;
-
-  /** Async version of {@link RecastModule.loadTileCache}. */
+  /** Load a previously saved tile cache from `path`. */
   loadTileCacheAsync(path: string): Promise<void>;
 
   // ── Crowd simulation ───────────────────────────────────────────────────────
@@ -299,7 +301,7 @@ export interface RecastModule {
   initCrowd(maxAgents: number, maxAgentRadius: number): void;
 
   /**
-   * Add a crowd agent using an options object.
+   * Add a crowd agent.
    * Returns the agent index used to identify it in subsequent calls.
    * @example
    * const id = recast.addAgent({ position: { x: 0, y: 0, z: 0 }, radius: 0.5, height: 1.8, maxAcceleration: 8, maxSpeed: 3.5 });
@@ -307,15 +309,10 @@ export interface RecastModule {
   addAgent(options: AgentOptions): number;
 
   /**
-   * Add a crowd agent using individual parameters.
-   * Prefer {@link RecastModule.addAgent} for clarity.
+   * Update behavioural parameters of an existing crowd agent.
+   * Position is managed by the crowd simulation and cannot be set directly.
    */
-  addCrowdAgent(x: number, y: number, z: number, radius: number, height: number, maxAcceleration: number, maxSpeed: number, updateFlags: number, separationWeight: number): number;
-
-  /**
-   * Update parameters of an existing crowd agent.
-   */
-  updateCrowdAgentParameters(agentId: number, x: number, y: number, z: number, radius: number, height: number, maxAcceleration: number, maxSpeed: number, updateFlags: number, separationWeight: number): void;
+  updateCrowdAgentParameters(agentId: number, options: Partial<Omit<AgentOptions, 'position'>>): void;
 
   /**
    * Remove a crowd agent by its index.
@@ -330,17 +327,16 @@ export interface RecastModule {
   /**
    * Request an agent to move with a specific velocity vector.
    */
-  requestMoveVelocity(agentId: number, x: number, y: number, z: number): void;
+  crowdRequestMoveVelocity(agentId: number, x: number, y: number, z: number): void;
 
   /**
    * Advance the crowd simulation by `dt` seconds.
-   * Triggers an `update` event on {@link RecastModule.vent} with the active agent list.
+   * Triggers an `update` event on {@link RecastModule.events} with the active agent list.
    */
   crowdUpdate(dt: number): void;
 
   /**
-   * Retrieve all currently active agents.
-   * @param callback_id - Callback handle from {@link RecastModule.cb}; called with `CrowdAgent[]`.
+   * Retrieve all currently active agents via callback.
    */
   crowdGetActiveAgents(callback_id?: number): void;
 
@@ -362,19 +358,16 @@ export interface RecastModule {
    */
   removeAllTempObstacles(): void;
 
-  /**
-   * Retrieve all active temporary obstacles.
-   * @param callback_id - Callback handle from {@link RecastModule.cb}.
-   */
-  getAllTempObstacles(callback_id: number): void;
+  /** Async: resolves with all active obstacle references. */
+  getAllTempObstaclesAsync(): Promise<number[]>;
 
   // ── Off-mesh connections ───────────────────────────────────────────────────
 
   /**
    * Add a custom off-mesh connection (e.g. a jump or ladder link).
-   * @param bidir - 1 for bidirectional, 0 for one-way.
+   * @param bidir - `true` for bidirectional, `false` for one-way.
    */
-  addOffMeshConnection(startX: number, startY: number, startZ: number, endX: number, endY: number, endZ: number, radius: number, bidir: 0 | 1): void;
+  addOffMeshConnection(startX: number, startY: number, startZ: number, endX: number, endY: number, endZ: number, radius: number, bidir: boolean): void;
 
   // ── Zones ──────────────────────────────────────────────────────────────────
 
@@ -387,22 +380,12 @@ export interface RecastModule {
   /**
    * Create named zones with initial polygon references and flags.
    * @example
-   * recast.setZones({ water: { refs: [polyRef1, polyRef2], flags: [recast.FLAG_SWIM] } });
+   * recast.setZones({ water: { refs: [polyRef1, polyRef2], initialFlags: [recast.FLAG_SWIM] } });
    */
   setZones(zones: Record<string, ZoneData>): void;
 
   /** The Zone constructor — use to create zones manually. */
   Zone: typeof Zone;
-
-  // ── Callback registration ──────────────────────────────────────────────────
-
-  /**
-   * Register a one-shot callback and return its integer ID.
-   * Pass the returned ID as the `callback_id` argument of low-level methods.
-   * @example
-   * recast.getRandomPoint(recast.cb((x, y, z) => console.log(x, y, z)));
-   */
-  cb(fn: (...args: any[]) => void): number;
 
   // ── Events ────────────────────────────────────────────────────────────────
 
@@ -412,11 +395,13 @@ export interface RecastModule {
    * - `built` (type: string) — after `buildSolo()` or `buildTiled()` completes.
    * - `update` (agents: CrowdAgent[]) — after each `crowdUpdate()` call.
    */
-  vent: RecastEventEmitter;
+  events: RecastEventEmitter;
 
-  /** Shorthand for `recast.vent.on(type, listener)`. */
+  /** Shorthand for `recast.events.on(type, listener)`. */
   on(type: string, listener: (...args: any[]) => void): void;
-  /** Shorthand for `recast.vent.emit(type, ...args)`. */
+  /** Shorthand for `recast.events.off(type, listener)`. */
+  off(type: string, listener: (...args: any[]) => void): void;
+  /** Shorthand for `recast.events.emit(type, ...args)`. */
   emit(type: string, ...args: any[]): void;
 
   // ── GL rendering (browser only) ────────────────────────────────────────────
@@ -480,8 +465,9 @@ export interface RecastModule {
  * import Recast from 'recastjs';
  * const recast = await Recast();
  * recast.settings({ cellSize: 0.3, cellHeight: 0.2, agentHeight: 2, agentRadius: 0.4, agentMaxClimb: 0.9, agentMaxSlope: 45 });
- * await recast.OBJLoader('./scene.obj', () => {});
- * recast.buildSolo();
+ * await recast.OBJLoaderAsync('./scene.obj');
+ * await recast.buildSoloAsync();
+ * const path = await recast.findPathAsync({ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 10 });
  */
 declare function Recast(): Promise<RecastModule>;
 

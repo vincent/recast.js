@@ -13,7 +13,7 @@
   mergeInto(LibraryManager.library, {
 
     flush_active_agents_callback: function() {
-      Module.vent.emit('update', agentPoolBuffer);
+      Module.events.emit('update', agentPoolBuffer);
       if (typeof window === 'undefined' || typeof importScripts === 'function') {
         postMessage({
           type: 'update',
@@ -52,7 +52,7 @@
     recast_build_callback: function (navmeshTypePtr) {
       const type = Module.UTF8ToString(navmeshTypePtr);
       Module.navmeshType = type;
-      Module.vent.emit('built', type);
+      Module.events.emit('built', type);
     },
 
     gl_create_object: function (objectName) {
