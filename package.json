@@ -9,6 +9,9 @@
       "require": "./lib/recast.js"
     }
   },
+  "bin": {
+    "recast": "./bin/recast.js"
+  },
   "scripts": {
     "build": "make build",
     "build:debug": "make build-debug",
