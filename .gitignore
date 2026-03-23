@@ -1,6 +1,7 @@
 .DS_Store
 .idea
 .vscode
+CLAUDE.md
 
 npm-debug.log
 node_modules
