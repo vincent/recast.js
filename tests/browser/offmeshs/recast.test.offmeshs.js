@@ -113,7 +113,7 @@ stats.dom.style.bottom = '0px';
 document.body.appendChild( stats.dom );
 
 var loader = new OBJLoader();
-loader.load('nav_test.obj', function(object){
+loader.load('../../fixtures/nav_test.obj', function(object){
     terrain = object;
     object.traverse(function(child) {
         if (child instanceof THREE.Mesh) {
@@ -128,7 +128,7 @@ loader.load('nav_test.obj', function(object){
 /**
  * Load an .OBJ file
  */
-recast.OBJLoader('nav_test.obj', function(){
+recast.OBJLoader('../../fixtures/nav_test.obj', function(){
 
     recast.vent.on('update', function (agentsList) {
         for (var i = 0; i < agentsList.length; i++) {

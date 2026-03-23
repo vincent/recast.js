@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { createRequire } from 'module';
 import path from 'path';
-import settings from './settings.js';
+import settings from '../shared/settings.js';
 
 const require = createRequire(import.meta.url);
-const Recast = require('../lib/recast.js');
+const Recast = require('../../lib/recast.js');
 const testsDir = new URL('.', import.meta.url).pathname;
 
 describe('tilecache load', () => {
@@ -12,7 +12,7 @@ describe('tilecache load', () => {
     const recast = await Recast();
     settings(recast);
 
-    await recast.loadTileCacheAsync(path.join(testsDir, 'tilecache.dist.bin'));
+    await recast.loadTileCacheAsync(path.join(testsDir, '../fixtures/tilecache.dist.bin'));
 
     const [pt1x, pt1y, pt1z] = await recast.getRandomPointAsync();
     expect(typeof pt1x).toBe('number');

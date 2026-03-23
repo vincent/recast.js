@@ -158,7 +158,7 @@ exports['handle doors'] = function(test) {
     stats.begin();
 
     var loader = new THREE.OBJLoader();
-    loader.load('doors.obj', function(object){
+    loader.load('../../fixtures/doors.obj', function(object){
         terrain = object;
         object.traverse(function(child) {
             if (child instanceof THREE.Mesh) {
@@ -197,7 +197,7 @@ exports['handle doors'] = function(test) {
         /**
          * Load an .OBJ file
          */
-        recast.OBJLoader('doors.obj', function(){
+        recast.OBJLoader('../../fixtures/doors.obj', function(){
 
             /**
              * Get navmesh geometry and draw it

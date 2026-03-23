@@ -2,12 +2,12 @@
 
 <head>
 	<title>Recast.js Test Suite</title>
-	<script src="../lib/recast.debug.js"></script>
 	<script type="importmap">
 	{
 		"imports": {
-			"three": "../node_modules/three/build/three.module.js",
-			"three/addons/": "../node_modules/three/examples/jsm/"
+			"recast.mjs": "../../../lib/recast.mjs",
+			"three": "../../../node_modules/three/build/three.module.js",
+			"three/addons/": "../../../node_modules/three/examples/jsm/"
 		}
 	}
 	</script>
@@ -35,8 +35,10 @@
 	<div id="text">
 		<p>
 			Example of a crowd managed by recastjs, using a tilecache<br><br>
-			Each agents is given a new random destination from time to time<br><br>
-			Click on the mesh to add obstacles<br><br>
+			Each agents is given a new random destination<br><br>
+			Click on the mesh to instruct a new destination<br><br>
+			Ctrl Click on the mesh to add obstacles<br><br>
+			Shift Click (1 for start, 1 for end) on the mesh to add an off mesh link<br><br>
 		</p>
 
 		<a href="?agents=10">10 agents</a>
@@ -61,6 +63,7 @@
 	<script type="module">
 		'use strict';
 
+		import Recast from 'recast.mjs';
 		import * as THREE from 'three';
 		import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 		import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
@@ -252,7 +255,7 @@
 
 			// Load the visual terrain mesh
 			var loader = new OBJLoader();
-			loader.load('nav_test.obj', function (object) {
+			loader.load('../../fixtures/nav_test.obj', function (object) {
 				terrain = object;
 				object.traverse(function (child) {
 					if (child instanceof THREE.Mesh) {
@@ -264,9 +267,9 @@
 			});
 
 			// Load the navmesh and start the simulation
-			recast.OBJLoader('nav_test.obj', function () {
+			recast.OBJLoader('../../fixtures/nav_test.obj', function () {
 
-				recast.loadTileCache('./tilecache.dist.bin', recast.cb(function () {
+				recast.loadTileCache('../../fixtures/tilecache.dist.bin', recast.cb(function () {
 
 					recast.initCrowd(1000, 1.0);
 
