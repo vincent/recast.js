@@ -86,12 +86,12 @@ extern "C" {
                               const float radius, const int active,  const int state, const int neighbors,
                               const bool  partial,const float desiredSpeed);
     extern void flush_active_agents_callback();
-    extern void invoke_file_callback(int callback_id, const char* filename);
-    extern void invoke_vector_callback(int callback_id, const float x,  const float y, const float z);
-    extern void invoke_update_callback(int callback_id);
-    extern void invoke_generic_callback_string(int callback_id, const char* data);
-    extern void invoke_path_callback(int callback_id, const float* data, int count);
-    extern void invoke_build_callback(const char* navmeshType);
+    extern void recast_file_callback(int callback_id, const char* filename);
+    extern void recast_vector_callback(int callback_id, const float x,  const float y, const float z);
+    extern void recast_update_callback(int callback_id);
+    extern void recast_generic_callback_string(int callback_id, const char* data);
+    extern void recast_path_callback(int callback_id, const float* data, int count);
+    extern void recast_build_callback(const char* navmeshType);
     extern void gl_create_object(const char* objectName);
     extern void gl_draw_object(const char* objectName);
 }
@@ -767,7 +767,7 @@ void getNavMeshVertices(int callback){
 
     data += " ]";
 
-    invoke_generic_callback_string(callback, data.c_str());
+    recast_generic_callback_string(callback, data.c_str());
 }
 
 
@@ -844,7 +844,7 @@ void getNavHeightfieldRegions(int callback)
 
     // sprintf(buff, "[%s]", buff);
 
-    invoke_generic_callback_string(callback, data.c_str());
+    recast_generic_callback_string(callback, data.c_str());
 
     // free(buff);
 }
@@ -878,11 +878,11 @@ void getRandomPoint(int callback)
     if (dtStatusFailed(status)) {
         printf("Cannot find a random point: %u\n", status);
 
-       invoke_vector_callback(callback, NULL, NULL, NULL);
+       recast_vector_callback(callback, NULL, NULL, NULL);
 
     } else {
 
-        invoke_vector_callback(callback, randomPt[0], randomPt[1], randomPt[2]);
+        recast_vector_callback(callback, randomPt[0], randomPt[1], randomPt[2]);
     }
 
     // free(buff);
@@ -946,7 +946,7 @@ void findNearestPoly(float cx, float cy, float cz,
         sprintf(buffer, "Cannot find a polygon near [%f, %f, %f]", cx, cy, cz);
         emscripten_log(buffer);
 
-        invoke_generic_callback_string(callback, "null");
+        recast_generic_callback_string(callback, "null");
 
     } else {
 
@@ -959,7 +959,7 @@ void findNearestPoly(float cx, float cy, float cz,
 
         std::string data = recastjsPolyJSON(poly, tile, ref);
 
-        invoke_generic_callback_string(callback, data.c_str());
+        recast_generic_callback_string(callback, data.c_str());
     }
 }
 
@@ -992,11 +992,11 @@ void findNearestPoint(float cx, float cy, float cz,
     if (dtStatusFailed(status)) {
         sprintf(buffer, "Cannot find a point near [%f, %f, %f]", cx, cy, cz);
         emscripten_log(buffer);
-        invoke_vector_callback(callback, NULL, NULL, NULL);
+        recast_vector_callback(callback, NULL, NULL, NULL);
 
     } else {
 
-        invoke_vector_callback(callback, nearestPos[0], nearestPos[1], nearestPos[2]);
+        recast_vector_callback(callback, nearestPos[0], nearestPos[1], nearestPos[2]);
     }
 }
 
@@ -1121,11 +1121,11 @@ void _queryPolygons(float posX, float posY, float posZ,
 
         data += "]";
 
-        invoke_generic_callback_string(callback, data.c_str());
+        recast_generic_callback_string(callback, data.c_str());
         return;
     }
 
-    invoke_generic_callback_string(callback, "null");
+    recast_generic_callback_string(callback, "null");
 }
 
 void findPath(float startPosX, float startPosY, float startPosZ,
@@ -1190,7 +1190,7 @@ void findPath(float startPosX, float startPosY, float startPosZ,
 
         if (dtStatusFailed(status)) {
             printf("Cannot find a straight path: %u\n", status);
-            invoke_path_callback(callback, nullptr, 0);
+            recast_path_callback(callback, nullptr, 0);
 
         } else {
             printf("Found a %u steps path \n", straightPathCount);
@@ -1206,14 +1206,14 @@ void findPath(float startPosX, float startPosY, float startPosZ,
                     validPath.push_back(v[2]);
                 }
             }
-            invoke_path_callback(callback,
+            recast_path_callback(callback,
                 validPath.empty() ? nullptr : validPath.data(),
                 (int)validPath.size() / 3);
         }
         return;
     }
 
-    invoke_path_callback(callback, nullptr, 0);
+    recast_path_callback(callback, nullptr, 0);
 }
 
 void set_cellSize(float val){               m_cellSize = val;               }
@@ -1421,7 +1421,7 @@ bool _crowdGetActiveAgents(int callback_id)
 
     // we have a specific callback to call
     if (callback_id != -1) {
-       invoke_update_callback(callback_id);
+       recast_update_callback(callback_id);
 
     // or emit the update event
     } else {
@@ -1492,7 +1492,7 @@ void getAllTempObstacles(int callback_id)
 
     data += "]";
 
-    invoke_generic_callback_string(callback_id, data.c_str());
+    recast_generic_callback_string(callback_id, data.c_str());
 }
 
 void clearAllTempObstacles()
@@ -1719,7 +1719,7 @@ bool buildTiled()
     // sprintf(buff, "navmeshTileMemUsage = %u B  m_cacheCompressedSize = %u B  %u tiles over %ux%u", navmeshMemUsage, m_cacheCompressedSize, nav->getMaxTiles(), th, tw);
     // emscripten_log(buff);
 
-    invoke_build_callback("tiled");
+    recast_build_callback("tiled");
 
     return true;
 }
@@ -2117,7 +2117,7 @@ bool buildSolo()
         return false;
     }
 
-    invoke_build_callback("solo");
+    recast_build_callback("solo");
 
     return true;
 }
@@ -2198,7 +2198,7 @@ void _saveTileMesh(std::string path, int callback_id)
 
     fclose(fp);
 
-    invoke_file_callback(callback_id, path.c_str());
+    recast_file_callback(callback_id, path.c_str());
 }
 
 void _loadTileMesh(std::string path, int callback_id)
@@ -2327,7 +2327,7 @@ void _loadTileMesh(std::string path, int callback_id)
     }
 
     // emscripten_log("finished to load file");
-    invoke_generic_callback_string(callback_id, "{ \"status\":\"done\" }");
+    recast_generic_callback_string(callback_id, "{ \"status\":\"done\" }");
 }
 
 
@@ -2397,7 +2397,7 @@ void _saveTileCache(std::string path, int callback_id)
 
     fclose(fp);
 
-    invoke_file_callback(callback_id, path.c_str());
+    recast_file_callback(callback_id, path.c_str());
 }
 
 void _loadTileCache(std::string path, int callback_id)
@@ -2548,7 +2548,7 @@ void _loadTileCache(std::string path, int callback_id)
     }
 
     // emscripten_log("finished to load file");
-    invoke_generic_callback_string(callback_id, "{ \"status\":\"done\" }");
+    recast_generic_callback_string(callback_id, "{ \"status\":\"done\" }");
 }
 
 

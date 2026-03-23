@@ -23,25 +23,24 @@
       }
     },
 
-    invoke_vector_callback: function (callback_id, x, y, z) {
+    recast_vector_callback: function (callback_id, x, y, z) {
       Module.__RECAST_CALLBACKS[callback_id](x, y, z);
     },
 
-    invoke_file_callback__deps: ['$FS'],
-    invoke_file_callback: function (callback_id, filename) {
+    recast_file_callback__deps: ['$FS'],
+    recast_file_callback: function (callback_id, filename) {
       Module.__RECAST_CALLBACKS[callback_id](null, FS.readFile(Module.UTF8ToString(filename)));
     },
 
-    invoke_update_callback: function (callback_id) {
+    recast_update_callback: function (callback_id) {
       Module.__RECAST_CALLBACKS[callback_id](agentPoolBuffer);
     },
 
-    invoke_generic_callback_string: function (callback_id, data) {
+    recast_generic_callback_string: function (callback_id, data) {
       Module.__RECAST_CALLBACKS[callback_id](JSON.parse(Module.UTF8ToString(data)));
     },
 
-    invoke_path_callback__sig: 'viii',
-    invoke_path_callback: function (callback_id, dataPtr, count) {
+    recast_path_callback: function (callback_id, dataPtr, count) {
       const path = [];
       for (let i = 0; i < count; i++) {
         const base = (dataPtr >> 2) + i * 3;
@@ -50,8 +49,7 @@
       Module.__RECAST_CALLBACKS[callback_id](path);
     },
 
-    invoke_build_callback__sig: 'vi',
-    invoke_build_callback: function (navmeshTypePtr) {
+    recast_build_callback: function (navmeshTypePtr) {
       const type = Module.UTF8ToString(navmeshTypePtr);
       Module.navmeshType = type;
       Module.vent.emit('built', type);
