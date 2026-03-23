@@ -5,6 +5,7 @@ import fs from 'fs';
 import settings from '../shared/settings.js';
 
 const require = createRequire(import.meta.url);
+/** @type {() => Promise<import('../../lib/recast.js').RecastModule>} */
 const Recast = require('../../lib/recast.js');
 const testsDir = new URL('.', import.meta.url).pathname;
 
