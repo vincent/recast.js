@@ -1011,13 +1011,13 @@ void setPolyFlagsByRef(int ref, unsigned short flags)
     dtStatus status;
     status = m_navMesh->setPolyFlags((dtPolyRef)ref, flags);
 
-    if (dtStatusFailed(status)) {
-        sprintf(buff, "cannot set flag %u on %u", flags, ref);
-        emscripten_log(buff);
-    } else {
-        sprintf(buff, "found poly %u set flags %u ", ref, flags);
-        emscripten_log(buff);
-    }
+    // if (dtStatusFailed(status)) {
+    //     sprintf(buff, "cannot set flag %u on %u", flags, ref);
+    //     emscripten_log(buff);
+    // } else {
+    //     sprintf(buff, "found poly %u set flags %u ", ref, flags);
+    //     emscripten_log(buff);
+    // }
 }
 
 void setPolyFlags(float posX, float posY, float posZ, float extendX, float extendY, float extendZ, unsigned short flags)
@@ -1167,15 +1167,15 @@ void findPath(float startPosX, float startPosY, float startPosZ,
     dtPolyRef endRef = 0;
     m_navQuery->findNearestPoly(endPos, ext, &filter, &endRef, nearestEndPos);
 
-    printf("Use %u , %u as start / end polyRefs \n", startRef, endRef);
+    // printf("Use %u , %u as start / end polyRefs \n", startRef, endRef);
 
     status = m_navQuery->findPath(startRef, endRef, nearestStartPos, nearestEndPos, &filter, path, &pathCount, maxPath);
 
     if (dtStatusFailed(status)) {
-        printf("Cannot find a path: %u\n", status);
+        // printf("Cannot find a path: %u\n", status);
 
     } else {
-        printf("Found a %u polysteps path \n", pathCount);
+        // printf("Found a %u polysteps path \n", pathCount);
 
         float straightPath[maxPath*3];
         unsigned char straightPathFlags[maxPath];
@@ -1193,7 +1193,7 @@ void findPath(float startPosX, float startPosY, float startPosZ,
             recast_path_callback(callback, nullptr, 0);
 
         } else {
-            printf("Found a %u steps path \n", straightPathCount);
+            // printf("Found a %u steps path \n", straightPathCount);
 
             // Collect non-zero waypoints into a contiguous buffer
             std::vector<float> validPath;
@@ -1304,6 +1304,20 @@ void updateCrowdAgentParameters(const int idx, float posX, float posY, float pos
     float pos[3] = { posX, posY, posZ };
 
     m_crowd->updateAgentParameters(idx, &ap);
+}
+
+std::string getCrowdAgentParameters(const int idx)
+{
+    if (!m_crowd) return "null";
+    const dtCrowdAgent* ag = m_crowd->getAgent(idx);
+    if (!ag || !ag->active) return "null";
+    char buff[256];
+    sprintf(buff,
+        "{\"radius\":%f,\"height\":%f,\"maxAcceleration\":%f,\"maxSpeed\":%f,\"updateFlags\":%u,\"separationWeight\":%f}",
+        ag->params.radius, ag->params.height,
+        ag->params.maxAcceleration, ag->params.maxSpeed,
+        (unsigned int)ag->params.updateFlags, ag->params.separationWeight);
+    return std::string(buff);
 }
 
 int addCrowdAgent(float posX, float posY, float posZ, float radius, float height,
@@ -1437,22 +1451,24 @@ bool _crowdGetActiveAgents(int callback_id)
     return true;
 }
 
-void addTempObstacle(const float posX, const float posY, const float posZ, const float radius)
+int addTempObstacle(const float posX, const float posY, const float posZ, const float radius)
 {
     if (!m_tileCache) {
         emscripten_log("TileCache is not ready");
-        return;
+        return -1;
     }
     float p[3] = { posX, posY, posZ };
 
-    dtObstacleRef* ref;
-    int status = m_tileCache->addObstacle(p, radius, 2.0f, ref);
+    dtObstacleRef ref = 0;
+    dtStatus status = m_tileCache->addObstacle(p, radius, 2.0f, &ref);
 
     if (dtStatusFailed(status)) {
         char buff[64];
         sprintf(buff, "Cannot add an obstacle: %u", status);
         emscripten_log(buff);
+        return -1;
     }
+    return (int)ref;
 }
 
 void removeTempObstacle(const float spX, const float spY, const float spZ,
@@ -1479,15 +1495,16 @@ void getAllTempObstacles(int callback_id)
     char buff[512];
 
     int obstacleCount = m_tileCache->getObstacleCount();
+    bool first = true;
     for (int i = 0; i < obstacleCount; ++i)
     {
         const dtTileCacheObstacle* ob = m_tileCache->getObstacle(i);
         if (ob->state == DT_OBSTACLE_EMPTY) continue;
 
+        if (!first) data += ",";
         sprintf(buff, "{ \"position\": {\"x\":%f, \"y\":%f, \"z\":%f}, \"radius\":%f, \"height\":%f, \"state\":%u }", ob->pos[0], ob->pos[1], ob->pos[2], ob->radius, ob->height, ob->state);
-
         data += buff;
-        data += (i == obstacleCount - 1 ? "" : ",");
+        first = false;
     }
 
     data += "]";
@@ -1495,7 +1512,7 @@ void getAllTempObstacles(int callback_id)
     recast_generic_callback_string(callback_id, data.c_str());
 }
 
-void clearAllTempObstacles()
+void removeAllTempObstacles()
 {
     if (!m_tileCache) {
         emscripten_log("TileCache is not ready");
@@ -1540,8 +1557,8 @@ bool buildTiled()
     m_maxTiles = 1 << tileBits;
     m_maxPolysPerTile = 1 << polyBits;
 
-    sprintf(buff, "bmin=%f  bmax=%f  gw=%u  gh=%u  ts=%u  tw=%u  th=%u  m_maxTiles=%u  m_maxPolysPerTile=%u  offMeshCons=%u", *bmin, *bmax, gw, gh, ts, tw, th, m_maxTiles, m_maxPolysPerTile, m_geom->getOffMeshConnectionCount());
-    emscripten_log(buff);
+    // sprintf(buff, "bmin=%f  bmax=%f  gw=%u  gh=%u  ts=%u  tw=%u  th=%u  m_maxTiles=%u  m_maxPolysPerTile=%u  offMeshCons=%u", *bmin, *bmax, gw, gh, ts, tw, th, m_maxTiles, m_maxPolysPerTile, m_geom->getOffMeshConnectionCount());
+    // emscripten_log(buff);
 
     // Generation params.
     rcConfig cfg;
@@ -1677,8 +1694,8 @@ bool buildTiled()
         }
     }
 
-    sprintf(buff, "Build initial %u tiles", th*tw);
-    emscripten_log(buff);
+    // sprintf(buff, "Build initial %u tiles", th*tw);
+    // emscripten_log(buff);
 
     // Build initial meshes
     for (int y = 0; y < th; ++y) {
@@ -2587,6 +2604,7 @@ EMSCRIPTEN_BINDINGS(my_module) {
     emscripten::function("initCrowd", &initCrowd);
     emscripten::function("addCrowdAgent", &addCrowdAgent);
     emscripten::function("updateCrowdAgentParameters", &updateCrowdAgentParameters);
+    emscripten::function("getCrowdAgentParameters", &getCrowdAgentParameters);
     emscripten::function("removeCrowdAgent", &removeCrowdAgent);
     emscripten::function("crowdRequestMoveTarget", &crowdRequestMoveTarget);
     emscripten::function("crowdUpdate", &crowdUpdate);
@@ -2610,7 +2628,7 @@ EMSCRIPTEN_BINDINGS(my_module) {
 
     emscripten::function("addTempObstacle", &addTempObstacle);
     emscripten::function("removeTempObstacle", &removeTempObstacle);
-    emscripten::function("clearAllTempObstacles", &clearAllTempObstacles);
+    emscripten::function("removeAllTempObstacles", &removeAllTempObstacles);
     emscripten::function("getAllTempObstacles", &getAllTempObstacles);
 
     emscripten::function("debugCreateNavMesh", &debugCreateNavMesh);

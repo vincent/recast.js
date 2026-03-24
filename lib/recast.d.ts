@@ -24,6 +24,33 @@ export interface Vec3 {
   z: number;
 }
 
+/** A navigation mesh polygon as returned by {@link RecastModule.findNearestPolyAsync} and {@link RecastModule.queryPolygonsAsync}. */
+export interface NavPoly {
+  /** Polygon reference ID. */
+  ref: number;
+  /** Tile X coordinate. */
+  x: number;
+  /** Tile Y coordinate. */
+  y: number;
+  /** Tile layer. */
+  layer: number;
+  /** Traversal flags bitmask. */
+  flags: number;
+  /** Area type. */
+  area: number;
+  /** Polygon vertices. */
+  vertices: Vec3[];
+}
+
+/** A temporary cylindrical obstacle as returned by {@link RecastModule.getAllTempObstaclesAsync}. */
+export interface TempObstacle {
+  position: Vec3;
+  radius: number;
+  height: number;
+  /** Internal obstacle state (1 = processing, 2 = active). */
+  state: number;
+}
+
 /** Navigation mesh configuration passed to {@link RecastModule.settings}. */
 export interface RecastSettings {
   /** 
@@ -246,10 +273,10 @@ export interface RecastModule {
   findNearestPointAsync(position: Vec3, extent: Vec3): Promise<Vec3>;
 
   /**
-   * Find the polygon reference nearest to the given position within an extent box.
-   * Resolves with the polygon reference number.
+   * Find the polygon nearest to the given position within an extent box.
+   * Resolves with the polygon object, or `null` if none is found.
    */
-  findNearestPolyAsync(position: Vec3, extent: Vec3): Promise<number>;
+  findNearestPolyAsync(position: Vec3, extent: Vec3): Promise<NavPoly | null>;
 
   /**
    * Get a random walkable point on the navmesh.
@@ -258,10 +285,11 @@ export interface RecastModule {
   getRandomPointAsync(): Promise<Vec3>;
 
   /**
-   * Find all polygons within an bounding-box centred at the given position.
+   * Find all polygons within a bounding-box centred at the given position.
+   * Resolves with an array of polygon objects, or `null` on failure.
    * @param maxPolys - Maximum number of polygons to return (default: 1000).
    */
-  queryPolygonsAsync(posX: number, posY: number, posZ: number, extX: number, extY: number, extZ: number, maxPolys?: number): Promise<number[]>;
+  queryPolygonsAsync(posX: number, posY: number, posZ: number, extX: number, extY: number, extZ: number, maxPolys?: number): Promise<NavPoly[] | null>;
 
   // ── Polygon flags ──────────────────────────────────────────────────────────
 
@@ -309,10 +337,25 @@ export interface RecastModule {
   addAgent(options: AgentOptions): number;
 
   /**
-   * Update behavioural parameters of an existing crowd agent.
+   * Update behavioral parameters of an existing crowd agent.
+   * All fields are required — unspecified fields are reset to `0`.
+   * Use {@link RecastModule.mergeCrowdAgentParameters} to perform a partial update.
    * Position is managed by the crowd simulation and cannot be set directly.
    */
-  updateCrowdAgentParameters(agentId: number, options: Partial<Omit<AgentOptions, 'position'>>): void;
+  updateCrowdAgentParameters(agentId: number, options: Omit<AgentOptions, 'position'>): void;
+
+  /**
+   * Read the current behavioral parameters of a crowd agent as a JSON string.
+   * Returns `"null"` if the agent index is invalid or the agent is inactive.
+   */
+  getCrowdAgentParameters(agentId: number): string;
+
+  /**
+   * Update a subset of crowd agent parameters.
+   * Reads the agent's current parameters first and merges with the provided options,
+   * so unspecified fields retain their current values.
+   */
+  mergeCrowdAgentParameters(agentId: number, options: Partial<Omit<AgentOptions, 'position'>>): void;
 
   /**
    * Remove a crowd agent by its index.
@@ -344,7 +387,7 @@ export interface RecastModule {
 
   /**
    * Add a cylindrical obstacle to the tile cache.
-   * Returns an obstacle reference ID.
+   * Returns the obstacle reference ID, or `-1` on failure.
    */
   addTempObstacle(x: number, y: number, z: number, radius: number): number;
 
@@ -358,16 +401,16 @@ export interface RecastModule {
    */
   removeAllTempObstacles(): void;
 
-  /** Async: resolves with all active obstacle references. */
-  getAllTempObstaclesAsync(): Promise<number[]>;
+  /** Async: resolves with all active obstacles. */
+  getAllTempObstaclesAsync(): Promise<TempObstacle[]>;
 
   // ── Off-mesh connections ───────────────────────────────────────────────────
 
   /**
    * Add a custom off-mesh connection (e.g. a jump or ladder link).
-   * @param bidir - `true` for bidirectional, `false` for one-way.
+   * @param bidirectional - `true` for bidirectional, `false` for one-way.
    */
-  addOffMeshConnection(startX: number, startY: number, startZ: number, endX: number, endY: number, endZ: number, radius: number, bidir: boolean): void;
+  addOffMeshConnection(startX: number, startY: number, startZ: number, endX: number, endY: number, endZ: number, radius: number, bidirectional: boolean): void;
 
   // ── Zones ──────────────────────────────────────────────────────────────────
 

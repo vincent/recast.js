@@ -613,6 +613,18 @@ Module.onRuntimeInitialized = function() {
       options.separationWeight !== undefined ? options.separationWeight : 0
     );
   };
+
+  recast.mergeCrowdAgentParameters = function(agentId, options) {
+    var current = JSON.parse(recast.getCrowdAgentParameters(agentId)) || {};
+    recast.updateCrowdAgentParameters(agentId, {
+      radius:           options.radius           !== undefined ? options.radius           : current.radius           || 0,
+      height:           options.height           !== undefined ? options.height           : current.height           || 0,
+      maxAcceleration:  options.maxAcceleration  !== undefined ? options.maxAcceleration  : current.maxAcceleration  || 0,
+      maxSpeed:         options.maxSpeed         !== undefined ? options.maxSpeed         : current.maxSpeed         || 0,
+      updateFlags:      options.updateFlags      !== undefined ? options.updateFlags      : current.updateFlags      || 0,
+      separationWeight: options.separationWeight !== undefined ? options.separationWeight : current.separationWeight || 0,
+    });
+  };
 };
 
 recast.findNearest = function(position, callback_id) {
@@ -858,10 +870,10 @@ AgentPool.prototype.get = function(idx, position_x, position_y, position_z,
     ag.velocity.y   = velocity_y;
     ag.velocity.z   = velocity_z;
     ag.radius       = radius;
-    ag.active       = active;
+    ag.active       = !!active;
     ag.state        = state;
     ag.neighbors    = neighbors;
-    ag.partial      = partial;
+    ag.partial      = !!partial;
     ag.desiredSpeed = desiredSpeed;
     return ag;
   }

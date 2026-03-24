@@ -247,7 +247,7 @@ Retrieve all temporary obstacles. `callback` is called with 1 argument: an array
 
 ***
 
-<a name="recast.clearAllTempObstacles" href="API#recast.clearAllTempObstacles">#</a> recast.<b>clearAllTempObstacles</b>()
+<a name="recast.removeAllTempObstacles" href="API#recast.removeAllTempObstacles">#</a> recast.<b>removeAllTempObstacles</b>()
 
 Remove all temporary obstacles.
 

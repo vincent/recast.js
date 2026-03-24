@@ -108,7 +108,7 @@ recast.OBJLoader('nav_test.obj', function(){
 * [recast.addTempObstacle](API#recast.addTempObstacle) - Add a temporary obstacle
 * [recast.removeTempObstacle](API#recast.removeTempObstacle) - Remove a temporary obstacle
 * [recast.getAllTempObstacles](API#recast.getAllTempObstacles) - Retrieve all temporary obstacles
-* [recast.clearAllTempObstacles](API#recast.clearAllTempObstacles) - Remove all temporary obstacles
+* [recast.removeAllTempObstacles](API#recast.removeAllTempObstacles) - Remove all temporary obstacles
 
 ## Off-mesh connections
 * [recast.addOffMeshConnection](API#recast.addOffMeshConnection) - Add an off-mesh connection
