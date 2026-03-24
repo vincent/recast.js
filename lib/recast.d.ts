@@ -15,6 +15,29 @@
  * const recast = await Recast();
  */
 
+
+// ─── Factory function ─────────────────────────────────────────────────────────
+
+/**
+ * Async factory that initialises the WASM module and returns the recast API.
+ *
+ * @example
+ * import Recast from 'recastjs';
+ * const recast = await Recast();
+ * recast.settings({
+ *  cellSize: 0.3,
+ *  cellHeight: 0.2,
+ *  agentHeight: 2,
+ *  agentRadius: 0.4,
+ *  agentMaxClimb: 0.9,
+ *  agentMaxSlope: 45
+ * });
+ * await recast.OBJLoaderAsync('./scene.obj');
+ * await recast.buildSoloAsync();
+ * const path = await recast.findPathAsync({ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 10 });
+ */
+declare function Recast(): Promise<RecastModule>;
+
 // ─── Supporting types ────────────────────────────────────────────────────────
 
 /** A 3D point or vector as a plain object. */
@@ -201,7 +224,14 @@ export interface RecastModule {
   /**
    * Set all navmesh build parameters at once.
    * @example
-   * recast.settings({ cellSize: 0.3, cellHeight: 0.2, agentHeight: 2, agentRadius: 0.4, agentMaxClimb: 0.9, agentMaxSlope: 45 });
+   * recast.settings({
+   *  cellSize: 0.3,
+   *  cellHeight: 0.2,
+   *  agentHeight: 2,
+   *  agentRadius: 0.4,
+   *  agentMaxClimb: 0.9,
+   *  agentMaxSlope: 45,
+   * });
    */
   settings(options: RecastSettings): void;
 
@@ -332,7 +362,12 @@ export interface RecastModule {
    * Add a crowd agent.
    * Returns the agent index used to identify it in subsequent calls.
    * @example
-   * const id = recast.addAgent({ position: { x: 0, y: 0, z: 0 }, radius: 0.5, height: 1.8, maxAcceleration: 8, maxSpeed: 3.5 });
+   * const id = recast.addAgent({
+   *  position: { x: 0, y: 0, z: 0 },
+   *  radius: 0.5, height: 1.8,
+   *  maxAcceleration: 8,
+   *  maxSpeed: 3.5
+   * });
    */
   addAgent(options: AgentOptions): number;
 
@@ -423,7 +458,12 @@ export interface RecastModule {
   /**
    * Create named zones with initial polygon references and flags.
    * @example
-   * recast.setZones({ water: { refs: [polyRef1, polyRef2], initialFlags: [recast.FLAG_SWIM] } });
+   * recast.setZones({
+   *  water: { 
+   *    efs: [polyRef1, polyRef2],
+   *    initialFlags: [recast.FLAG_SWIM]
+   *  }
+   * });
    */
   setZones(zones: Record<string, ZoneData>): void;
 
@@ -498,20 +538,5 @@ export interface RecastModule {
   /** Poly flag: all flags set. */
   readonly FLAG_ALL: 0xffff;
 }
-
-// ─── Factory function ─────────────────────────────────────────────────────────
-
-/**
- * Async factory that initialises the WASM module and returns the recast API.
- *
- * @example
- * import Recast from 'recastjs';
- * const recast = await Recast();
- * recast.settings({ cellSize: 0.3, cellHeight: 0.2, agentHeight: 2, agentRadius: 0.4, agentMaxClimb: 0.9, agentMaxSlope: 45 });
- * await recast.OBJLoaderAsync('./scene.obj');
- * await recast.buildSoloAsync();
- * const path = await recast.findPathAsync({ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 10 });
- */
-declare function Recast(): Promise<RecastModule>;
 
 export default Recast;

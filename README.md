@@ -55,7 +55,7 @@ await recast.OBJLoaderAsync('scene.obj');
 await recast.buildTiledAsync();
 ```
 
-All query operations have a `Promise`-based async variant. Coordinates use `{ x, y, z }` objects:
+Most methods have a `Promise`-based async variant.
 
 ```js
 const start = await recast.getRandomPointAsync();
