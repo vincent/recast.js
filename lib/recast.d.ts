@@ -15,12 +15,10 @@
  * const recast = await Recast();
  */
 
-
-// ─── Factory function ─────────────────────────────────────────────────────────
-
 /**
  * Async factory that initialises the WASM module and returns the recast API.
  *
+ * @hidden
  * @example
  * import Recast from 'recastjs';
  * const recast = await Recast();
@@ -37,185 +35,6 @@
  * const path = await recast.findPathAsync({ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 10 });
  */
 declare function Recast(): Promise<RecastModule>;
-
-// ─── Supporting types ────────────────────────────────────────────────────────
-
-/** A 3D point or vector as a plain object. */
-export interface Vec3 {
-  x: number;
-  y: number;
-  z: number;
-}
-
-/** A navigation mesh polygon as returned by {@link RecastModule.findNearestPolyAsync} and {@link RecastModule.queryPolygonsAsync}. */
-export interface NavPoly {
-  /** Polygon reference ID. */
-  ref: number;
-  /** Tile X coordinate. */
-  x: number;
-  /** Tile Y coordinate. */
-  y: number;
-  /** Tile layer. */
-  layer: number;
-  /** Traversal flags bitmask. */
-  flags: number;
-  /** Area type. */
-  area: number;
-  /** Polygon vertices. */
-  vertices: Vec3[];
-}
-
-/** A temporary cylindrical obstacle as returned by {@link RecastModule.getAllTempObstaclesAsync}. */
-export interface TempObstacle {
-  position: Vec3;
-  radius: number;
-  height: number;
-  /** Internal obstacle state (1 = processing, 2 = active). */
-  state: number;
-}
-
-/** Navigation mesh configuration passed to {@link RecastModule.settings}. */
-export interface RecastSettings {
-  /** 
-   * Cell size in world units, should be >= 0.0001.
-   * Smaller = higher resolution.
-   * Default: 0.3
-   */
-  cellSize: number;
-  /** 
-   * Cell height in world units, should be >= 0.0001.
-   * Smaller = more vertical precision.
-   * Default: 0.2 
-   */
-  cellHeight: number;
-  /** 
-   * Agent height in world units, should be >= 0.0. 
-   * Also the minimum floor-to-ceiling height for a walkable area.
-   * Default: 2.0 
-   */
-  agentHeight: number;
-  /**
-   * Agent radius (determines clearance from walls).
-   * Default: 0.4
-   */
-  agentRadius: number;
-  /**
-   * Maximum step height an agent can climb.
-   * Default: 0.9
-   */
-  agentMaxClimb: number;
-  /**
-   * Maximum walkable slope in degrees.
-   * Default: 45
-   */
-  agentMaxSlope: number;
-}
-
-/** Options for adding a crowd agent via {@link RecastModule.addAgent}. */
-export interface AgentOptions {
-  /** Agent position */
-  position: Vec3;
-  /** Agent radius */
-  radius: number;
-  /** Agent height */
-  height: number;
-  /** Maximum allowed acceleration */
-  maxAcceleration: number;
-  /** Maximum allowed speed. */
-  maxSpeed: number;
-  /** Bitmask of `CROWD_*` flags. Defaults to all flags enabled. */
-  updateFlags?: number;
-  /** 
-   * How aggresive the agent manager should be at avoiding collisions with this agent. [Limit: >= 0].
-   * A higher value will result in agents trying to stay farther away from each other 
-   * at the cost of more difficult steering in tight spaces.
-   */
-  separationWeight?: number;
-}
-
-/** An active crowd agent returned by {@link RecastModule.crowdGetActiveAgents}. */
-export interface CrowdAgent {
-  /** Agent index in the crowd. */
-  idx: number;
-  /** Agent position */
-  position: Vec3;
-  /** Agent velocity */
-  velocity: Vec3;
-  /** Agent radius */
-  radius: number;
-  /** 
-   * True if the agent is active, false if the agent is in an unused slot in the agent pool.
-   */
-  active: boolean;
-  /**
-   * The type of mesh polygon the agent is traversing.
-   */
-  state: number;
-  /**
-   * Number of neighbouring agents.
-   */
-  neighbors: number;
-  /**
-   * `true` if the agent could only find a partial path to the target.
-   */
-  partial: boolean;
-  /**
-   * Agent desired speed. 
-   */
-  desiredSpeed: number;
-}
-
-/** Zone data passed to {@link RecastModule.setZones}. */
-export interface ZoneData {
-  /** Polygon references belonging to this zone. */
-  refs: number[];
-  /** Flag bitmasks to OR together as the zone's initial traversal flags (e.g. `[FLAG_WALK]`). */
-  initialFlags: number[];
-}
-
-// ─── Zone class ──────────────────────────────────────────────────────────────
-
-/**
- * A named group of polygons sharing the same traversal flags.
- * Instances are created internally by {@link RecastModule.setZones}.
- */
-export declare class Zone {
-  constructor(name: string, data: ZoneData);
-
-  name: string;
-  refs: number[];
-  /** Accumulated traversal flags bitmask. */
-  flags: number;
-
-  /** Returns `true` if `FLAG_WALK` is set. */
-  isWalkable(): boolean;
-  /** Returns `true` if all bits of `flags` are set. */
-  is(flags: number): boolean;
-  /** Sets one or more flag bits and syncs to the navmesh. */
-  setFlags(flags: number): this;
-  /** Clears one or more flag bits and syncs to the navmesh. */
-  clearFlags(flags: number): this;
-  /** Toggles one or more flag bits and syncs to the navmesh. */
-  toggleFlags(flags: number): this;
-  /** Pushes current flags to all referenced polygons. */
-  syncFlags(): this;
-}
-
-// ─── EventEmitter ────────────────────────────────────────────────────────────
-
-export interface RecastEventEmitter {
-  on(type: string, listener: (...args: any[]) => void): this;
-  once(type: string, listener: (...args: any[]) => void): this;
-  off(type: string, listener: (...args: any[]) => void): this;
-  removeAllListeners(type?: string): this;
-  emit(type: string, ...args: any[]): this;
-  /** Emits on the next microtask tick. */
-  deferEmit(type: string, ...args: any[]): this;
-  /** Returns the list of registered event type names. */
-  eventNames(): string[];
-}
-
-// ─── Main module interface ────────────────────────────────────────────────────
 
 export interface RecastModule {
 
@@ -537,6 +356,177 @@ export interface RecastModule {
   readonly FLAG_DISABLED: 0x10;
   /** Poly flag: all flags set. */
   readonly FLAG_ALL: 0xffff;
+}
+
+/** Navigation mesh configuration passed to {@link RecastModule.settings}. */
+export interface RecastSettings {
+  /** 
+   * Cell size in world units, should be >= 0.0001.
+   * Smaller = higher resolution.
+   * Default: 0.3
+   */
+  cellSize: number;
+  /** 
+   * Cell height in world units, should be >= 0.0001.
+   * Smaller = more vertical precision.
+   * Default: 0.2 
+   */
+  cellHeight: number;
+  /** 
+   * Agent height in world units, should be >= 0.0. 
+   * Also the minimum floor-to-ceiling height for a walkable area.
+   * Default: 2.0 
+   */
+  agentHeight: number;
+  /**
+   * Agent radius (determines clearance from walls).
+   * Default: 0.4
+   */
+  agentRadius: number;
+  /**
+   * Maximum step height an agent can climb.
+   * Default: 0.9
+   */
+  agentMaxClimb: number;
+  /**
+   * Maximum walkable slope in degrees.
+   * Default: 45
+   */
+  agentMaxSlope: number;
+}
+
+/** Options for adding a crowd agent via {@link RecastModule.addAgent}. */
+export interface AgentOptions {
+  /** Agent position */
+  position: Vec3;
+  /** Agent radius */
+  radius: number;
+  /** Agent height */
+  height: number;
+  /** Maximum allowed acceleration */
+  maxAcceleration: number;
+  /** Maximum allowed speed. */
+  maxSpeed: number;
+  /** Bitmask of `CROWD_*` flags. Defaults to all flags enabled. */
+  updateFlags?: number;
+  /** 
+   * How aggresive the agent manager should be at avoiding collisions with this agent. [Limit: >= 0].
+   * A higher value will result in agents trying to stay farther away from each other 
+   * at the cost of more difficult steering in tight spaces.
+   */
+  separationWeight?: number;
+}
+
+/** An active crowd agent returned by {@link RecastModule.crowdGetActiveAgents}. */
+export interface CrowdAgent {
+  /** Agent index in the crowd. */
+  idx: number;
+  /** Agent position */
+  position: Vec3;
+  /** Agent velocity */
+  velocity: Vec3;
+  /** Agent radius */
+  radius: number;
+  /** 
+   * True if the agent is active, false if the agent is in an unused slot in the agent pool.
+   */
+  active: boolean;
+  /**
+   * The type of mesh polygon the agent is traversing.
+   */
+  state: number;
+  /**
+   * Number of neighbouring agents.
+   */
+  neighbors: number;
+  /**
+   * `true` if the agent could only find a partial path to the target.
+   */
+  partial: boolean;
+  /**
+   * Agent desired speed. 
+   */
+  desiredSpeed: number;
+}
+
+export interface RecastEventEmitter {
+  on(type: string, listener: (...args: any[]) => void): this;
+  once(type: string, listener: (...args: any[]) => void): this;
+  off(type: string, listener: (...args: any[]) => void): this;
+  removeAllListeners(type?: string): this;
+  emit(type: string, ...args: any[]): this;
+  /** Emits on the next microtask tick. */
+  deferEmit(type: string, ...args: any[]): this;
+  /** Returns the list of registered event type names. */
+  eventNames(): string[];
+}
+
+/** A temporary cylindrical obstacle as returned by {@link RecastModule.getAllTempObstaclesAsync}. */
+export interface TempObstacle {
+  position: Vec3;
+  radius: number;
+  height: number;
+  /** Internal obstacle state (1 = processing, 2 = active). */
+  state: number;
+}
+
+/**
+ * A named group of polygons sharing the same traversal flags.
+ * Instances are created internally by {@link RecastModule.setZones}.
+ */
+export declare class Zone {
+  constructor(name: string, data: ZoneData);
+
+  name: string;
+  refs: number[];
+  /** Accumulated traversal flags bitmask. */
+  flags: number;
+
+  /** Returns `true` if `FLAG_WALK` is set. */
+  isWalkable(): boolean;
+  /** Returns `true` if all bits of `flags` are set. */
+  is(flags: number): boolean;
+  /** Sets one or more flag bits and syncs to the navmesh. */
+  setFlags(flags: number): this;
+  /** Clears one or more flag bits and syncs to the navmesh. */
+  clearFlags(flags: number): this;
+  /** Toggles one or more flag bits and syncs to the navmesh. */
+  toggleFlags(flags: number): this;
+  /** Pushes current flags to all referenced polygons. */
+  syncFlags(): this;
+}
+
+/** Zone data passed to {@link RecastModule.setZones}. */
+export interface ZoneData {
+  /** Polygon references belonging to this zone. */
+  refs: number[];
+  /** Flag bitmasks to OR together as the zone's initial traversal flags (e.g. `[FLAG_WALK]`). */
+  initialFlags: number[];
+}
+
+/** A navigation mesh polygon as returned by {@link RecastModule.findNearestPolyAsync} and {@link RecastModule.queryPolygonsAsync}. */
+export interface NavPoly {
+  /** Polygon reference ID. */
+  ref: number;
+  /** Tile X coordinate. */
+  x: number;
+  /** Tile Y coordinate. */
+  y: number;
+  /** Tile layer. */
+  layer: number;
+  /** Traversal flags bitmask. */
+  flags: number;
+  /** Area type. */
+  area: number;
+  /** Polygon vertices. */
+  vertices: Vec3[];
+}
+
+/** A 3D point or vector as a plain object. */
+export interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
 }
 
 export default Recast;

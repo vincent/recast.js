@@ -2,5 +2,6 @@
     "name": "Recast.js",
     "router": "structure",
     "readme": "src/README.md",
+    "sort": ["source-order", "alphabetical"],
     "out": "docs",
 }
