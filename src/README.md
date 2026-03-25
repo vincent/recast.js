@@ -6,7 +6,7 @@ Once this navigation mesh is computed, it is possible to use built-in pathfindin
 
 If you decide to use it to animate your scene characters aka "agents", it also provides a complete crowd system capable of managing all your agents movements using per-agent settings (speed, radius, ...).
 
-![A basic scene with some agents](src/screenshot.png "A basic scene with some agents")
+<iframe style="border:0;" src="../tests/browser/demo/index.html" width="100%" height="500px"></iframe>
 
 ## What can you do with it
 

@@ -1,5 +1,6 @@
 {
     "name": "Recast.js",
     "router": "structure",
+    "readme": "src/README.md",
     "out": "docs",
 }
