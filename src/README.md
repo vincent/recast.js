@@ -8,6 +8,8 @@ If you decide to use it to animate your scene characters aka "agents", it also p
 
 <iframe style="border:0;" src="../tests/browser/demo/index.html" width="100%" height="500px"></iframe>
 
+[play the demo](https://vincent.github.io/recast.js/tests/browser/webgl/test.webgl)
+
 ## What can you do with it
 
 * load any mesh in `.obj` format

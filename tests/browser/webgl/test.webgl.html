@@ -12,9 +12,10 @@
 	}
 	</script>
 	<style>
-		body {
+		body, a {
 			margin: 0;
-			padding: 0
+			padding: 0;
+			color: #fff;
 		}
 
 		#wrapper {
@@ -33,26 +34,24 @@
 	<div id="wrapper"></div>
 
 	<div id="text">
+		<h1>Example of a crowd managed by recastjs, using a tilecache</h1>
 		<p>
-			Example of a crowd managed by recastjs, using a tilecache<br><br>
 			Each agents is given a new random destination<br><br>
 			Click on the mesh to instruct a new destination<br><br>
-			Ctrl Click on the mesh to add obstacles<br><br>
-			Shift Click (1 for start, 1 for end) on the mesh to add an off mesh link<br><br>
+			Ctrl-click to add obstacles<br><br>
+			Shift-click (1 for start, 1 for end) to add an off mesh link<br><br>
 		</p>
 
-		<a href="?agents=10">10 agents</a>
-		<a href="?agents=50">50 agents</a>
-		<a href="?agents=100">100 agents</a>
-		<a href="?agents=200">200 agents</a>
-		<a href="?agents=500">500 agents</a>
+		<a href="?agents=10">10 agents</a> | <a href="?agents=50">50 agents</a> | <a href="?agents=100">100 agents</a> | <a href="?agents=200">200 agents</a> | <a href="?agents=500">500 agents</a>
 		<br><br>
 
 
+		<!-- 
 		<button
 			onclick="if (! navigationMesh) { location.search += '&navigationmesh=1' } else { navigationMesh.parent ? scene.remove(navigationMesh) : scene.add(navigationMesh); }">
 			Toggle navigation mesh
 		</button>
+		-->
 
 		<button id="sequence" onclick="sequence()" style="display:none">
 			Reboot sequence
@@ -69,46 +68,43 @@
 		import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 		import Stats from 'three/addons/libs/stats.module.js';
 
-		var renderer = new THREE.WebGLRenderer({ antialias: true });
+		const renderer = new THREE.WebGLRenderer({ antialias: true });
 		renderer.setSize(document.body.clientWidth, document.body.clientWidth * 3 / 4);
 		document.getElementById('wrapper').appendChild(renderer.domElement);
-		renderer.setClearColor(0xFFFFFF, 1.0);
+		renderer.setClearColor(0x111827, 1.0);
 		renderer.clear();
 
-		var mouse = new THREE.Vector2();
-		var raycaster = new THREE.Raycaster();
+		const mouse = new THREE.Vector2();
+		const raycaster = new THREE.Raycaster();
 
-		var width = renderer.domElement.width;
-		var height = renderer.domElement.height;
-		var camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
-		camera.position.y = 70;
+		const width = renderer.domElement.width;
+		const height = renderer.domElement.height;
+		const camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
+		camera.position.y = 40;
 		camera.position.z = 100;
 		camera.lookAt(new THREE.Vector3());
 
-		var controls = new OrbitControls(camera, renderer.domElement);
+		const controls = new OrbitControls(camera, renderer.domElement);
 		controls.addEventListener('change', function () {
 			render();
 		});
 
-		var agentsParam = location.search.match(/agents=(\d+)/);
-		var MAX_AGENTS = (agentsParam && agentsParam.length == 2) ? agentsParam[1] : 10;
-		var MAX_HOPS = 10;
+		const agentsParam = location.search.match(/agents=(\d+)/);
+		const MAX_AGENTS = (agentsParam && agentsParam.length == 2) ? agentsParam[1] : 10;
+		const MAX_HOPS = 10;
 
-		var agentsObjects = [];
-		var scene = new THREE.Scene();
+		const agentsObjects = [];
+		const scene = new THREE.Scene();
 		window.scene = scene;
 		window.navigationMesh = null;
+		window.instructed = false;
 
+		const agentMaterial = new THREE.MeshStandardMaterial({ color: 0x38bdff });
 		var agentGeometry = new THREE.CylinderGeometry(0.2, 0.5, 2);
 
 		for (var i = 0; i < MAX_AGENTS; i++) {
 			var agent = new THREE.Object3D();
-			var agentBody = new THREE.Mesh(
-				agentGeometry,
-				new THREE.MeshBasicMaterial({
-					color: '#0000FF'
-				})
-			);
+			var agentBody = new THREE.Mesh(agentGeometry, agentMaterial);
 			agentBody.position.y = 1;
 			agent.add(agentBody);
 
@@ -196,9 +192,6 @@
 
 		var splineMaterial = new THREE.LineBasicMaterial({
 			color: 0x00ff00,
-			transparent: true,
-			opacity: 0.6,
-			vertexColors: true
 		});
 
 		function createSpline(start, end, elevation) {
@@ -235,6 +228,7 @@
 							} else if (e.ctrlKey) {
 								addObstacle(recast, x, y, z);
 							} else {
+								window.instructed = true
 								for (var i = 0; i < agentsObjects.length; i++) {
 									recast.crowdRequestMoveTarget(i, x, y, z);
 								}
@@ -323,12 +317,13 @@
 
 					var routes = 0;
 					var goAway = function () {
+						window.instructed = false;
 						for (var i = 0; i < agentsObjects.length; i++) {
 							(function (i) {
 								recast.getRandomPoint(recast.cb(function (pt2x, pt2y, pt2z) {
 									recast.crowdRequestMoveTarget(i, pt2x, pt2y, pt2z);
 									if (++routes < MAX_HOPS) {
-										setTimeout(goAway, 10000 * Math.random());
+										if (!window.instructed) setTimeout(goAway, 10000 * Math.random());
 									} else {
 										document.getElementById('sequence').style.display = 'block';
 									}

@@ -8,6 +8,8 @@ If you decide to use it to animate your scene characters aka "agents", it also p
 
 ![A basic scene with some agents](src/screenshot.png "A basic scene with some agents")
 
+[play the demo](https://vincent.github.io/recast.js/tests/browser/webgl/test.webgl)
+
 ## What can you do with it
 
 * load any mesh in `.obj` format
