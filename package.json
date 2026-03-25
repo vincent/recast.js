@@ -18,6 +18,7 @@
     "build": "make build",
     "build:esm": "make build-esm",
     "build:debug": "make build-debug",
+    "docs": "make docs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

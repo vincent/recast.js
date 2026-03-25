@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Recast.js — Navigation Demo</title>
+	<script type="importmap">
+	{
+		"imports": {
+			"recast.mjs": "../../../lib/recast.mjs",
+			"three": "../../../node_modules/three/build/three.module.js",
+			"three/addons/": "../../../node_modules/three/examples/jsm/"
+		}
+	}
+	</script>
+	<style>
+		*, *::before, *::after { box-sizing: border-box; }
+		html, body { margin: 0; padding: 0; overflow: hidden; background: #111827; }
+		canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: block; }
+	</style>
+</head>
+<body>
+<script type="module">
+'use strict';
+
+import Recast from 'recast.mjs';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+const MAX_AGENTS = 20;
+
+// --- Renderer ---
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x111827, 1.0);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+// --- Camera ---
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+camera.position.set(0, 40, 80);
+camera.lookAt(new THREE.Vector3());
+
+// --- Raycaster ---
+var mouse = new THREE.Vector2();
+var raycaster = new THREE.Raycaster();
+var terrain;
+
+// --- Controls ---
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.4;
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+
+// --- Scene ---
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x111827, 0.008);
+
+const ambientLight = new THREE.AmbientLight(0x334155, 3.0);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
+dirLight.position.set(30, 60, 20);
+scene.add(dirLight);
+
+const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.8);
+rimLight.position.set(-40, 20, -30);
+scene.add(rimLight);
+
+// --- Agent meshes ---
+const agentGeometry = new THREE.CylinderGeometry(0.2, 0.5, 2);
+const agentMaterial = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.4, metalness: 0.3 });
+const agentsObjects = [];
+
+for (let i = 0; i < MAX_AGENTS; i++) {
+	const agent = new THREE.Object3D();
+
+	const body = new THREE.Mesh(agentGeometry, agentMaterial);
+	body.position.y = 1;
+	agent.add(body);
+
+	const arrow = new THREE.ArrowHelper(
+		new THREE.Vector3(1, 0, 0),
+		new THREE.Vector3(0, 1.8, 0),
+		1.2,
+		0xffffff,
+		0.4,
+		0.2
+	);
+	agent.add(arrow);
+
+	agentsObjects.push(agent);
+	scene.add(agent);
+}
+
+// --- Resize handler ---
+window.addEventListener('resize', () => {
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// --- Recast init ---
+(async () => {
+	const recast = await Recast();
+
+	recast.set_cellSize(0.2);
+	recast.set_cellHeight(0.2);
+	recast.set_agentHeight(0.8);
+	recast.set_agentRadius(0.3);
+	recast.set_agentMaxClimb(5.0);
+	recast.set_agentMaxSlope(40.0);
+
+	// Load visual terrain
+	const loader = new OBJLoader();
+	loader.load('/tests/fixtures/nav_test.obj', (object) => {
+		const terrainMat = new THREE.MeshStandardMaterial({
+			color: 0x374151,
+			roughness: 0.9,
+			metalness: 0.0,
+			side: THREE.DoubleSide
+		});
+		object.traverse((child) => {
+			if (child instanceof THREE.Mesh) {
+				child.geometry.computeVertexNormals();
+				child.material = terrainMat;
+			}
+		});
+		scene.add(object);
+		terrain = object;
+	});
+
+	// Load navmesh and start simulation
+	recast.OBJLoader('/tests/fixtures/nav_test.obj', () => {
+		recast.loadTileMesh('/tests/fixtures/nav_test.bin', recast.cb(() => {
+
+			recast.initCrowd(1000, 1.0);
+
+			// Sync agent positions from recast update events
+			recast.vent.on('update', (agents) => {
+				for (const agent of agents) {
+					const obj = agentsObjects[agent.idx];
+					obj.position.set(agent.position.x, agent.position.y, agent.position.z);
+					if (agent.velocity.x !== 0 || agent.velocity.z !== 0) {
+						obj.rotation.y = Math.atan2(-agent.velocity.z, agent.velocity.x);
+					}
+				}
+			});
+
+			// Wire up click handler
+			function raycast(e, callback) {
+				var rect = e.currentTarget.getBoundingClientRect();
+				var x = e.clientX - rect.left;
+				var y = e.clientY - rect.top;
+
+				mouse.x = (x / e.currentTarget.width) * 2 - 1;
+				mouse.y = - (y / e.currentTarget.height) * 2 + 1;
+
+				raycaster.setFromCamera(mouse, camera);
+
+				var intersects = raycaster.intersectObjects(terrain.children, true);
+
+				if (intersects.length) {
+					var point = intersects[0].point;
+					callback(point);
+				}
+			}
+			renderer.domElement.addEventListener('click', function (e) {
+				raycast(e, function (point) {
+					controls.autoRotate = false;
+					recast.findNearestPoint(point.x, point.y, point.z, 2, 2, 2,
+						recast.cb(function (x, y, z) {
+							for (var i = 0; i < agentsObjects.length; i++) {
+								recast.crowdRequestMoveTarget(i, x, y, z);
+							}
+						}));
+				});
+			});
+
+			// Spawn agents
+			for (let i = 0; i < MAX_AGENTS; i++) {
+				recast.addAgent({
+					position: { x: -25.885, y: -1.642, z: -5.414 },
+					radius: 0.8,
+					height: 0.5,
+					maxAcceleration: 1.0,
+					maxSpeed: 2.0,
+					updateFlags: 0,
+					separationWeight: 20.0
+				});
+			}
+
+			// Infinite wandering — each agent independently picks a new random destination
+			function wander(agentIdx) {
+				if (!controls.autoRotate) return;
+				recast.getRandomPoint(recast.cb((x, y, z) => {
+					recast.crowdRequestMoveTarget(agentIdx, x, y, z);
+					setTimeout(() => wander(agentIdx), 8000 + Math.random() * 6000);
+				}));
+			}
+
+			for (let i = 0; i < MAX_AGENTS; i++) {
+				setTimeout(() => wander(i), i * 200); // stagger starts slightly
+			}
+
+			// Render loop
+			function animate() {
+				window.requestAnimationFrame(animate);
+				setTimeout(() => {
+					recast.crowdUpdate(0.1);
+					recast.crowdGetActiveAgents();
+				}, 0);
+				controls.update();
+				renderer.render(scene, camera);
+			}
+
+			animate();
+		}));
+	});
+})();
+</script>
+</body>
+</html>

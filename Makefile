@@ -108,10 +108,13 @@ build-debug:
 	mkdir -p $(BUILDDIR)
 	$(CC) $(FLAGS) $(DEFINES) $(INCLUDES) $(CFLAGS_DEBUG) $(FILES) $(LIBRARYJS) -s EXPORTED_FUNCTIONS='[]' $(PREJS) $(POSTJS) -o $(BUILDDIR)/recast.debug.js $(PRELOAD)
 
+docs:
+	npx typedoc lib/recast.d.ts --plugin typedoc-github-theme
+
 test:
 	npx vitest run
 
 clean:
 	rm -rf $(BUILDDIR)
 
-.PHONY: test build build-esm build-debug all
+.PHONY: test build build-esm build-debug docs all

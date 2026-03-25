@@ -6,6 +6,8 @@ Once this navigation mesh is computed, it is possible to use built-in pathfindin
 
 If you decide to use it to animate your scene characters aka "agents", it also provides a complete crowd system capable of managing all your agents movements using per-agent settings (speed, radius, ...).
 
+<iframe style="border:0;" src="../tests/browser/demo/index.html" width="100%" height="500px"></iframe>
+
 ## What can you do with it
 
 * load any mesh in `.obj` format
@@ -105,9 +107,7 @@ It runs in Node.js, in the browser, and in Web Workers. Included tests and demos
 
 Browser demos are available in [tests/browser/](https://vincent.github.io/recast.js/tests/browser):
 
-* **city** — crowd simulation with multiple agents and Three.js visualization
+* **webgl** — WebGL rendering, crowd, obstacles and offmeshs links
 * **doors** — off-mesh connections for door traversal
-* **offmeshs** — custom jump links
-* **webgl** — direct WebGL debug rendering of the navmesh
-* **worker** — running recast inside a Web Worker
+* **worker** — running recast inside a Web Worker (work in progress)
 
