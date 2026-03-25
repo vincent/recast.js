@@ -89,9 +89,9 @@ EventEmitter.prototype.deferEmit = function(type) {
  * Bit operations
  */
 function bit_test(num, bit)   { return (num & bit) !== 0; }
-function bit_set(num, bit)    { return num |= bit; }
-function bit_clear(num, bit)  { return num &= ~bit; }
-function bit_toggle(num, bit) { return num ^= bit; }
+function bit_set(num, bit)    { return num | bit; }
+function bit_clear(num, bit)  { return num & ~bit; }
+function bit_toggle(num, bit) { return num ^ bit; }
 
 /**
  * String <=> ArrayBuffer (UTF-8 correct)

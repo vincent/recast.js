@@ -111,10 +111,13 @@ build-debug:
 docs:
 	npx typedoc lib/recast.d.ts --plugin typedoc-github-theme
 
+lint:
+	npm run lint
+
 test:
 	npx vitest run
 
 clean:
 	rm -rf $(BUILDDIR)
 
-.PHONY: test build build-esm build-debug docs all
+.PHONY: lint test build build-esm build-debug docs all

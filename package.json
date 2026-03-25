@@ -19,6 +19,7 @@
     "build:esm": "make build-esm",
     "build:debug": "make build-debug",
     "docs": "make docs",
+    "lint": "eslint src/ bin/ tests/unit/",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -40,7 +41,10 @@
   },
   "homepage": "https://github.com/vincent/recast.js",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "esbuild": "^0.27.4",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
     "three": "^0.183.2",
     "typedoc": "^0.28.18",
     "typedoc-github-theme": "^0.4.0",
