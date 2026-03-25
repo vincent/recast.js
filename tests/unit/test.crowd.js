@@ -51,7 +51,6 @@ describe('crowd', () => {
       });
 
       recast.crowdUpdate(1.0);
-      recast.crowdGetActiveAgents();
     });
   });
 });

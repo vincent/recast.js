@@ -2607,7 +2607,7 @@ EMSCRIPTEN_BINDINGS(my_module) {
     emscripten::function("getCrowdAgentParameters", &getCrowdAgentParameters);
     emscripten::function("removeCrowdAgent", &removeCrowdAgent);
     emscripten::function("crowdRequestMoveTarget", &crowdRequestMoveTarget);
-    emscripten::function("crowdUpdate", &crowdUpdate);
+    emscripten::function("_crowdUpdate", &crowdUpdate);
     emscripten::function("_crowdGetActiveAgents", &_crowdGetActiveAgents);
     emscripten::function("requestMoveVelocity", &requestMoveVelocity);
 

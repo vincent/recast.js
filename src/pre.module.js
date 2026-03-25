@@ -404,7 +404,7 @@ var workerMain = function(event) {
       break;
 
     case 'crowdUpdate':
-      recast.crowdUpdate(message.data);
+      recast._crowdUpdate(message.data);
       recast._crowdGetActiveAgents(!message.callback ? -1 : recast.cb(function() {
         postMessage({
           type: message.type,
@@ -639,6 +639,11 @@ recast.findNearest = function(position, callback_id) {
 
 recast.crowdGetActiveAgents = function(callback_id) {
   return recast._crowdGetActiveAgents(callback_id || -1);
+};
+
+recast.crowdUpdate = function (dt) {
+  recast._crowdUpdate(dt);
+  recast._crowdGetActiveAgents(-1);
 };
 
 recast.queryPolygons = function(posX, posY, posZ, extX, extY, extZ, maxPolys, callback_id) {

@@ -32,7 +32,6 @@ function step(r) {
       })));
     });
     r.crowdUpdate(0.1);
-    r.crowdGetActiveAgents();
   });
 }
 
