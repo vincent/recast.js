@@ -116,7 +116,7 @@ window.addEventListener('resize', () => {
 
 	// Load visual terrain
 	const loader = new OBJLoader();
-	loader.load('/tests/fixtures/nav_test.obj', (object) => {
+	loader.load('../../fixtures/nav_test.obj', (object) => {
 		const terrainMat = new THREE.MeshStandardMaterial({
 			color: 0x374151,
 			roughness: 0.9,
@@ -134,8 +134,8 @@ window.addEventListener('resize', () => {
 	});
 
 	// Load navmesh and start simulation
-	recast.OBJLoader('/tests/fixtures/nav_test.obj', () => {
-		recast.loadTileMesh('/tests/fixtures/nav_test.bin', recast.cb(() => {
+	recast.OBJLoader('../../fixtures/nav_test.obj', () => {
+		recast.loadTileMesh('../../fixtures/nav_test.bin', recast.cb(() => {
 
 			recast.initCrowd(1000, 1.0);
 
