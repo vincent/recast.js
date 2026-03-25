@@ -140,7 +140,7 @@ window.addEventListener('resize', () => {
 			recast.initCrowd(1000, 1.0);
 
 			// Sync agent positions from recast update events
-			recast.vent.on('update', (agents) => {
+			recast.events.on('update', (agents) => {
 				for (const agent of agents) {
 					const obj = agentsObjects[agent.idx];
 					obj.position.set(agent.position.x, agent.position.y, agent.position.z);

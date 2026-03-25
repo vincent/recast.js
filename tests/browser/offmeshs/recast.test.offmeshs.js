@@ -130,7 +130,7 @@ loader.load('../../fixtures/nav_test.obj', function(object){
  */
 recast.OBJLoader('../../fixtures/nav_test.obj', function(){
 
-    recast.vent.on('update', function (agentsList) {
+    recast.events.on('update', function (agentsList) {
         for (var i = 0; i < agentsList.length; i++) {
             var ag = agentsList[i];
 

@@ -264,7 +264,7 @@
 
 					recast.initCrowd(1000, 1.0);
 
-					recast.vent.on('update', function (agents) {
+					recast.events.on('update', function (agents) {
 						for (var i = 0; i < agents.length; i++) {
 							var agent = agents[i];
 

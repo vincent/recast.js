@@ -154,7 +154,7 @@ objLoader.load('doors.obj', async function(object){
             door3: { name: 'door3', refs: [ 84  ], flags: [ 16 ] }
         });
 
-        recast.vent.on('update', function (agents) {
+        recast.events.on('update', function (agents) {
             if (agents[0]) agent.position.set(
                 agents[0].position.x,
                 agents[0].position.y,

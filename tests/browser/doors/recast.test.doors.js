@@ -227,7 +227,7 @@ exports['handle doors'] = function(test) {
                 );
             }
 
-            recast.vent.on('update', function (agents) {
+            recast.events.on('update', function (agents) {
                 agent.position.set(
                     agents[0].position.x, 
                     agents[0].position.y, 

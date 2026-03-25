@@ -155,7 +155,7 @@ exports['recast is present'] = function(test) {
 //      */
 //     recast.OBJLoader(ENVIRONMENT_IS_WEB ? '../tests/nav_test.obj' : '../tests/nav_test.obj', recast.cb(function () {
 
-//         recast.vent.on('update', function (agents) {
+//         recast.events.on('update', function (agents) {
 //             test.ok(agents && typeof agents.length !== 'undefined', 'crowd has ' + agents.length + ' agent');
 //             test.strictEqual(agents.length, 1);
 //         });
