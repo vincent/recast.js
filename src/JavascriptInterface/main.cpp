@@ -716,9 +716,14 @@ void debugOffMeshConnections() {
 
 void cleanup()
 {
-    // dtFreeNavMeshQuery(m_navQuery);
-    // dtFreeNavMesh(m_navMesh);
-    // dtFreeCrowd(m_crowd);
+    dtFreeNavMeshQuery(m_navQuery);  m_navQuery = nullptr;
+    dtFreeNavMesh(m_navMesh);        m_navMesh = nullptr;
+    dtFreeCrowd(m_crowd);            m_crowd = nullptr;
+    dtFreeTileCache(m_tileCache);    m_tileCache = nullptr;
+    dtFree(agents);                  agents = nullptr;
+    delete m_talloc;                 m_talloc = nullptr;
+    delete m_tcomp;                  m_tcomp = nullptr;
+    delete m_tmproc;                 m_tmproc = nullptr;
 }
 
 
@@ -727,10 +732,6 @@ void getNavMeshVertices(int callback){
     const float cs = m_pmesh->cs;
     const float ch = m_pmesh->ch;
     const float* orig = m_pmesh->bmin;
-
-    char buff[m_pmesh->npolys * 1000];
-
-    sprintf(buff, " ");
 
     std::string data;
     data = "[";
@@ -798,9 +799,6 @@ void getNavHeightfieldRegions(int callback)
 
     int height = m_chf->height;
     int width = m_chf->width;
-
-    char buff[height * width * 1000];
-    sprintf(buff, "");
 
     data = "[";
     // ((y == height - 1) && (x == width - 1) && (i == ni - 1) ? "" : ","
@@ -907,7 +905,7 @@ std::string recastjsPolyJSON(const dtPoly* poly, const dtMeshTile* tile, dtPolyR
     std::string data;
     data = "{";
 
-    char successbuff[128 * poly->vertCount];
+    char successbuff[512];
 
     sprintf(successbuff, "\"ref\":%u,\"x\":%u,\"y\":%u,\"layer\":%u,\"flags\":%u,\"area\":%u,", ref, tile->header->x, tile->header->y, tile->header->layer, poly->flags, poly->getArea());
     data += successbuff;
@@ -1280,6 +1278,7 @@ bool initCrowd(const int maxAgents, const float maxAgentRadius)
     m_crowd->init(maxAgents, maxAgentRadius, m_navMesh);
 
     emscripten_log("allocate agents");
+    dtFree(agents);
     agents = (dtCrowdAgent**)dtAlloc(sizeof(dtCrowdAgent*)*maxAgents, DT_ALLOC_PERM);
 
     // Make polygons with 'disabled' flag invalid.
@@ -1554,6 +1553,9 @@ bool buildTiled()
         return false;
     }
 
+    delete m_talloc;
+    delete m_tcomp;
+    delete m_tmproc;
     m_talloc = new LinearAllocator(32000);
     m_tcomp = new FastLZCompressor;
     m_tmproc = new MeshProcess;
@@ -1661,7 +1663,6 @@ bool buildTiled()
     m_navQuery = dtAllocNavMeshQuery();
     if (!m_navQuery)
     {
-        dtFree(m_navQuery);
         emscripten_log_error("Could not allocate NavMeshQuery");
         return false;
     }
@@ -1746,7 +1747,6 @@ bool buildTiled()
     m_crowd = dtAllocCrowd();
     if (!m_crowd)
     {
-        dtFree(m_crowd);
         emscripten_log_error("Could not create Detour Crowd");
         return false;
     }
@@ -2140,7 +2140,6 @@ bool buildSolo()
     m_crowd = dtAllocCrowd();
     if (!m_crowd)
     {
-        dtFree(m_crowd);
         m_ctx->log(RC_LOG_ERROR, "Could not create Detour Crowd");
         return false;
     }
@@ -2330,7 +2329,6 @@ void _loadTileMesh(std::string path, int callback_id)
     m_navQuery = dtAllocNavMeshQuery();
     if (!m_navQuery)
     {
-        dtFree(m_navQuery);
         emscripten_log_error("Could not allocate NavMeshQuery");
         return;
     }
@@ -2338,7 +2336,8 @@ void _loadTileMesh(std::string path, int callback_id)
     status = m_navQuery->init(m_navMesh, 2048);
     if (dtStatusFailed(status))
     {
-        dtFree(m_navQuery);
+        dtFreeNavMeshQuery(m_navQuery);
+        m_navQuery = nullptr;
         emscripten_log_error("Could not init Detour navmesh query");
         return;
     }
@@ -2346,7 +2345,6 @@ void _loadTileMesh(std::string path, int callback_id)
     m_crowd = dtAllocCrowd();
     if (!m_crowd)
     {
-        dtFree(m_crowd);
         emscripten_log_error("Could not create Detour Crowd");
         return;
     }
@@ -2493,6 +2491,9 @@ void _loadTileCache(std::string path, int callback_id)
         return;
     }
 
+    delete m_talloc;
+    delete m_tcomp;
+    delete m_tmproc;
     m_talloc = new LinearAllocator(32000);
     m_tcomp = new FastLZCompressor;
     m_tmproc = new MeshProcess;
@@ -2550,7 +2551,6 @@ void _loadTileCache(std::string path, int callback_id)
     m_navQuery = dtAllocNavMeshQuery();
     if (!m_navQuery)
     {
-        dtFree(m_navQuery);
         emscripten_log_error("Could not allocate NavMeshQuery");
         return;
     }
@@ -2558,7 +2558,8 @@ void _loadTileCache(std::string path, int callback_id)
     status = m_navQuery->init(m_navMesh, 2048);
     if (dtStatusFailed(status))
     {
-        dtFree(m_navQuery);
+        dtFreeNavMeshQuery(m_navQuery);
+        m_navQuery = nullptr;
         emscripten_log_error("Could not init Detour navmesh query");
         return;
     }
@@ -2566,7 +2567,6 @@ void _loadTileCache(std::string path, int callback_id)
     m_crowd = dtAllocCrowd();
     if (!m_crowd)
     {
-        dtFree(m_crowd);
         emscripten_log_error("Could not create Detour Crowd");
         return;
     }
