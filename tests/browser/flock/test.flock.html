@@ -1,0 +1,218 @@
+<html>
+
+<head>
+	<title>Recast.js Flock Demo</title>
+	<script type="importmap">
+	{
+		"imports": {
+			"recast.mjs": "../../../lib/recast.mjs",
+			"three": "../shared/three/build/three.module.js",
+			"three/addons/": "../shared/three/examples/jsm/"
+		}
+	}
+	</script>
+	<style>
+		body, a {
+			margin: 0;
+			padding: 0;
+			color: #fff;
+		}
+
+		#wrapper {
+			position: absolute;
+			top: 0;
+		}
+
+		#text {
+			padding: 1em;
+			position: absolute;
+			top: 0;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="wrapper"></div>
+
+	<div id="text">
+		<h1>Flocking demo</h1>
+		<p>Choose a formation</p>
+		<ul>
+			<li><label><input type="radio" name="formation" value=""/> default</label></li>
+			<li><label><input type="radio" name="formation" value="flock"/> flock</label></li>
+			<li><label><input type="radio" name="formation" value="circle"/> circle</label></li>
+			<li><label><input type="radio" name="formation" value="line"/> line</label></li>
+			<li><label><input type="radio" name="formation" value="square"/> square</label></li>
+			<li><label><input type="radio" name="formation" value="arc"/> arc</label></li>
+		</ul>
+		<p>Click on the mesh to send the flock to a new destination</p>
+	</div>
+
+	<script type="module">
+		'use strict';
+
+		import Recast from 'recast.mjs';
+		import * as THREE from 'three';
+		import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+		import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+		const renderer = new THREE.WebGLRenderer({ antialias: true });
+		renderer.setSize(document.body.clientWidth, document.body.clientWidth * 3 / 4);
+		document.getElementById('wrapper').appendChild(renderer.domElement);
+		renderer.setClearColor(0x111827, 1.0);
+
+		const width = renderer.domElement.width;
+		const height = renderer.domElement.height;
+		const camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
+		camera.position.y = 40;
+		camera.position.z = 100;
+		camera.lookAt(new THREE.Vector3());
+
+		const controls = new OrbitControls(camera, renderer.domElement);
+		controls.addEventListener('change', render);
+
+		const scene = new THREE.Scene();
+		const light = new THREE.AmbientLight(0x334155, 5.0);
+		light.position.set(20, 100, 0);
+		scene.add(light);
+		const light2 = new THREE.DirectionalLight(0xffffff, 2.0);
+		light2.position.set(20, 100, 0);
+		scene.add(light2);
+
+		const mouse = new THREE.Vector2();
+		const raycaster = new THREE.Raycaster();
+		var terrain;
+
+		function render() {
+			renderer.render(scene, camera);
+		}
+
+		const NUM_AGENTS = 20;
+		const agentMaterial = new THREE.MeshStandardMaterial({ color: 0x38bdff });
+		const agentGeometry = new THREE.CylinderGeometry(0.2, 0.5, 2);
+		const agentMeshes = [];
+
+		for (var i = 0; i < NUM_AGENTS; i++) {
+			const mesh = new THREE.Mesh(agentGeometry, agentMaterial);
+			scene.add(mesh);
+			agentMeshes.push(mesh);
+		}
+
+		(async () => {
+			const recast = await Recast({ logger: console });
+
+			recast.withPlugin(recast.FlockGroup);
+			recast.withPlugin(recast.Formation);
+
+			recast.set_cellSize(0.3);
+			recast.set_cellHeight(0.2);
+			recast.set_agentHeight(0.8);
+			recast.set_agentRadius(0.2);
+			recast.set_agentMaxClimb(4.0);
+			recast.set_agentMaxSlope(30.0);
+
+			// Load visual terrain
+			new OBJLoader().load('../../fixtures/plane.obj', function (object) {
+				terrain = object;
+				object.traverse(function (child) {
+					if (child instanceof THREE.Mesh) {
+						child.geometry.computeVertexNormals();
+						child.material.side = THREE.DoubleSide;
+					}
+				});
+				scene.add(object);
+			});
+
+			// Load navmesh and start simulation
+			recast.OBJLoader('../../fixtures/plane.obj', function () {
+				recast.loadTileCache('../../fixtures/plane.tilecache', recast.cb(function () {
+
+					recast.initCrowd(1000, 1.0);
+
+					const agentIds = [];
+					for (var i = 0; i < NUM_AGENTS; i++) {
+						recast.findNearestPoint(0, 0, 0, 3, 3, 3, recast.cb(function(x, y, z) {
+							agentIds.push(recast.addAgent({
+								position: { x, y, z },
+								radius: 0.8,
+								height: 0.5,
+								maxAcceleration: 1.0,
+								maxSpeed: 2.0,
+								updateFlags: 0,
+								separationWeight: 20.0
+							}));
+						}))
+					}
+
+					var currentGroup = recast.createFlockGroup({ agentIds, cohesionWeight: 0.5 });
+					var lastTarget = null;
+					var lastFormationType = '';
+
+					function switchGroup(formationType) {
+						currentGroup?.destroy();
+						lastFormationType = formationType;
+
+						if (formationType === 'flock') {
+							currentGroup = recast.createFlockGroup({ agentIds, cohesionWeight: 0.5 });
+						} else if (formationType) {
+							currentGroup = recast.createFormation({ agentIds, type: formationType, spacing: 0.5 });
+						} else {
+							currentGroup = null;
+						}
+					}
+
+					document.querySelectorAll('input[name="formation"]').forEach(function (radio) {
+						radio.addEventListener('change', function () {
+							switchGroup(this.value);
+						});
+					});
+
+					recast.events.on('update', function (agents) {
+						for (var i = 0; i < agents.length; i++) {
+							var agent = agents[i];
+							agentMeshes[agent.idx].position.set(
+								agent.position.x,
+								agent.position.y + 1,
+								agent.position.z
+							);
+						}
+					});
+
+					renderer.domElement.addEventListener('click', function (e) {
+						if (!terrain) return;
+						var rect = e.currentTarget.getBoundingClientRect();
+						mouse.x = ((e.clientX - rect.left) / e.currentTarget.width) * 2 - 1;
+						mouse.y = -((e.clientY - rect.top) / e.currentTarget.height) * 2 + 1;
+						raycaster.setFromCamera(mouse, camera);
+						var intersects = raycaster.intersectObjects(terrain.children, true);
+						if (intersects.length) {
+							var p = intersects[0].point;
+							recast.findNearestPoint(p.x, p.y, p.z, 2, 2, 2,
+								recast.cb(function (x, y, z) {
+									lastTarget = { x, y, z };
+
+									if (lastFormationType === '') {
+										agentIds.forEach(aid => recast.crowdRequestMoveTarget(aid, x, y, z));
+									} else if (currentGroup) {
+										currentGroup.requestMoveTarget(x, y, z);
+									}
+
+								})
+							);
+						}
+					});
+
+					(function animate() {
+						setTimeout(function () {
+							recast.crowdUpdate(0.1);
+						}, 0);
+						window.requestAnimationFrame(animate);
+						render();
+					})();
+				}));
+			});
+		})();
+	</script>
+</body>
+
+</html>

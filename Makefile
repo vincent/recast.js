@@ -87,7 +87,7 @@ FILES = recastnavigation/DebugUtils/Source/DebugDraw.cpp \
 FLAGS =
 PRELOAD =
 
-PREJS     = --pre-js src/pre.module.js
+PREJS     = --pre-js src/pre.module.js --pre-js src/plugins/flock.js --pre-js src/plugins/formation.js
 POSTJS    = --post-js src/post.module.js
 LIBRARYJS = --js-library src/library_recast.js
 
@@ -107,6 +107,8 @@ build-esm:
 build-debug:
 	mkdir -p $(BUILDDIR)
 	$(CC) $(FLAGS) $(DEFINES) $(INCLUDES) $(CFLAGS_DEBUG) $(FILES) $(LIBRARYJS) -s EXPORTED_FUNCTIONS='[]' $(PREJS) $(POSTJS) -o $(BUILDDIR)/recast.debug.js $(PRELOAD)
+
+build-all: clean build build-esm build-debug
 
 docs:
 	npx typedoc lib/recast.d.ts --plugin typedoc-github-theme

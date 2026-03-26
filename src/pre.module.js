@@ -665,6 +665,20 @@ recast.crowdUpdate = function (dt) {
   recast._crowdGetActiveAgents(-1);
 };
 
+/**
+ * Registers a steering behavior plugin on this recast instance.
+ * The plugin class must implement a static install(recastInstance) method.
+ * Returns the recast instance for chaining.
+ *
+ * @example
+ * recast.withPlugin(FlockGroup).withPlugin(Formation);
+ * const flock = recast.createFlockGroup({ agentIds: [...] });
+ */
+recast.withPlugin = function(PluginClass) {
+  PluginClass.install(recast);
+  return recast;
+};
+
 recast.queryPolygons = function(posX, posY, posZ, extX, extY, extZ, maxPolys, callback_id) {
   if (typeof callback_id === 'undefined' && typeof maxPolys === 'number') {
     callback_id = maxPolys;
