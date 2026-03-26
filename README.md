@@ -12,16 +12,24 @@ If you decide to use it to animate your scene characters aka "agents", it also p
 
 ## What can you do with it
 
+### Navmesh building
 * load any mesh in `.obj` format
 * compute its navigation mesh with configurable parameters (cell size, agent height, slope angle, ...)
 * build a solo navmesh or a tiled navmesh (better for large scenes and dynamic obstacles)
 * save and load the computed navmesh to skip recomputation
+
+### Pathfinding
 * find the shortest path between two points
 * find the nearest navigable point or polygon to any world position
 * get a random point guaranteed to be on the navmesh
-* place and remove temporary obstacles with a radius
+
+### Obstacles & navigation areas
+* place and remove temporary obstacles
 * define off-mesh connections (jump links, doors, portals)
 * assign polygon flags and group them into zones to influence pathfinding
+* with instant effect, no rebuild needed
+
+### Crowd simulation
 * add agents to the navmesh and drive them with a full crowd simulation
 * update agents individually (speed, radius, separation weight, ...)
 
