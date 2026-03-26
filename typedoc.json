@@ -4,4 +4,12 @@
     "readme": "src/README.md",
     "sort": ["source-order", "alphabetical"],
     "out": "docs",
+    "navigation": {
+        "includeCategories": true,
+        "includeGroups": false,
+        "includeFolders": true,
+        "compactFolders": false,
+        "excludeReferences": true
+    },
+    "categorizeByGroup": true
 }

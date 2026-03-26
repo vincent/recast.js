@@ -8,6 +8,15 @@
 // All steering is applied through crowdRequestMoveTarget (navmesh-aware),
 // not crowdRequestMoveVelocity, so agents stay on valid polygons.
 
+/**
+ * Loose emergent group behavior: cohesion + optional alignment.
+ * Separation is handled natively by Detour's DT_CROWD_SEPARATION flag.
+ * Install via `recast.withPlugin(FlockGroup)`, then use `recast.createFlockGroup(options)`.
+ * 
+ * @category Flock
+ * @param {object} recastInstance - The recast module instance.
+ * @param {FlockGroupOptions} options
+ */
 function FlockGroup(recastInstance, options) {
   this._recast = recastInstance;
   this._agentIds = new Set(options.agentIds || []);
@@ -19,24 +28,34 @@ function FlockGroup(recastInstance, options) {
   recastInstance.events.on('update', this._bound);
 }
 
+/** Set the target destination for the whole flock.
+ * @param {number} x @param {number} y @param {number} z */
 FlockGroup.prototype.requestMoveTarget = function(x, y, z) {
   this._destination = { x: x, y: y, z: z };
 };
 
+/** Add an agent to the flock. @param {number} id */
 FlockGroup.prototype.addAgent = function(id) {
   this._agentIds.add(id);
 };
 
+/** Remove an agent from the flock. @param {number} id */
 FlockGroup.prototype.removeAgent = function(id) {
   this._agentIds.delete(id);
 };
 
+/** Stop updating and clean up event listeners. */
 FlockGroup.prototype.destroy = function() {
   this._recast.events.off('update', this._bound);
   this._agentIds.clear();
   this._destination = null;
 };
 
+/**
+ * @private
+ * Called on each crowd `update` event. Applies cohesion and alignment forces.
+ * @param {CrowdAgent[]} agents - Active agent snapshot from crowdUpdate.
+ */
 FlockGroup.prototype._onUpdate = function(agents) {
   if (!this._destination || this._agentIds.size === 0) return;
 
@@ -102,9 +121,9 @@ FlockGroup.prototype._onUpdate = function(agents) {
 };
 
 /**
- * Registers FlockGroup on a recast instance.
- * Called via recast.withPlugin(FlockGroup).
- * @param {object} recast - recast instance
+ * Register this plugin on a recast instance. Called internally by `withPlugin`.
+ * Adds `recast.createFlockGroup(options)`.
+ * @param {object} recast - The recast module instance.
  */
 FlockGroup.install = function(recast) {
   recast.createFlockGroup = function(options) {

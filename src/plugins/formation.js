@@ -1,10 +1,23 @@
 /* global recast */
 
-// ─── Formation ────────────────────────────────────────────────────────────────
-// Directed geometric formation: each agent holds a numbered slot whose offset
-// rotates with the direction of travel (centroid → destination in XZ).
-// Supported types: 'circle', 'line', 'square', 'arc'.
+/**
+ * @categoryDescription Formation
+ * Directed geometric formation: each agent holds a numbered slot whose offset
+ * rotates with the direction of travel (centroid → destination in XZ).
+ * Supported types: 'circle', 'line', 'square', 'arc'.
+ * @showCategories
+ * @module
+ */
 
+/**
+ * @private
+ * Compute the local (pre-rotation) XZ offset for a slot in a formation.
+ * @param {'circle'|'line'|'square'|'arc'} type
+ * @param {number} slotIndex
+ * @param {number} totalSlots
+ * @param {number} spacing
+ * @returns {{ x: number, z: number }}
+ */
 function _formationOffset(type, slotIndex, totalSlots, spacing) {
   var i = slotIndex, n = totalSlots, s = spacing;
   switch (type) {
@@ -42,6 +55,15 @@ function _formationOffset(type, slotIndex, totalSlots, spacing) {
   }
 }
 
+/**
+ * Directed geometric formation where each agent holds a numbered slot.
+ * The formation rotates to face the direction of travel (centroid → destination).
+ * Install via `recast.withPlugin(Formation)`, then use `recast.createFormation(options)`.
+ * 
+ * @category Formation
+ * @param {object} recastInstance - The recast module instance.
+ * @param {FormationOptions} options
+ */
 function Formation(recastInstance, options) {
   this._recast = recastInstance;
   this._agents = (options.agentIds || []).slice(); // ordered array; index = slot number
@@ -53,25 +75,46 @@ function Formation(recastInstance, options) {
   recastInstance.events.on('update', this._bound);
 }
 
+/** Set the target destination for the whole formation.
+ * @category Formation
+ * @param {number} x @param {number} y @param {number} z */
 Formation.prototype.requestMoveTarget = function(x, y, z) {
   this._destination = { x: x, y: y, z: z };
 };
 
+/** Add an agent to the next available slot.
+ * @category Formation
+ * @param {number} id
+ */
 Formation.prototype.addAgent = function(id) {
   if (this._agents.indexOf(id) === -1) this._agents.push(id);
 };
 
+/**
+ * Remove an agent by ID, freeing its slot.
+ * @category Formation
+ * @param {number} id
+ */
 Formation.prototype.removeAgent = function(id) {
   var idx = this._agents.indexOf(id);
   if (idx !== -1) this._agents.splice(idx, 1);
 };
 
+/**
+ * Stop updating and clean up event listeners.
+ * @category Formation
+ */
 Formation.prototype.destroy = function() {
   this._recast.events.off('update', this._bound);
   this._agents = [];
   this._destination = null;
 };
 
+/**
+ * @private
+ * Called on each crowd `update` event. Computes per-slot world-space targets.
+ * @param {CrowdAgent[]} agents - Active agent snapshot from crowdUpdate.
+ */
 Formation.prototype._onUpdate = function(agents) {
   if (!this._destination || this._agents.length === 0) return;
 
@@ -121,13 +164,14 @@ Formation.prototype._onUpdate = function(agents) {
 };
 
 /**
- * Registers Formation on a recast instance.
- * Called via recast.withPlugin(Formation).
- * @param {object} recast - recast instance
+ * Register this plugin on a recast instance. Called internally by `withPlugin`.
+ * Adds `recast.createFormation(options)`.
+ * @category Formation
+ * @param {object} r - The recast module instance.
  */
-Formation.install = function(recast) {
-  recast.createFormation = function(options) {
-    return new Formation(recast, options || {});
+Formation.install = function(r) {
+  r.createFormation = function(options) {
+    return new Formation(r, options || {});
   };
 };
 

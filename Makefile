@@ -87,7 +87,7 @@ FILES = recastnavigation/DebugUtils/Source/DebugDraw.cpp \
 FLAGS =
 PRELOAD =
 
-PREJS     = --pre-js src/pre.module.js --pre-js src/plugins/flock.js --pre-js src/plugins/formation.js
+PREJS     = --pre-js src/pre.module.js
 POSTJS    = --post-js src/post.module.js
 LIBRARYJS = --js-library src/library_recast.js
 
