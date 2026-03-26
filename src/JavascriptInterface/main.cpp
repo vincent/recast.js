@@ -39,9 +39,21 @@ using namespace emscripten;
 #include <zlib.h>
 
 
+// Log levels — must match values used in library_recast.js
+static const int RECAST_LOG_DEBUG = 0;
+static const int RECAST_LOG_INFO  = 1;
+static const int RECAST_LOG_ERROR = 2;
+
+// Forward declaration so the helpers below can use it
+extern "C" { extern void recast_log_callback(int level, const char* message); }
+
 void emscripten_log(const char* string, bool escape = true)
 {
-    printf("%s\n", string);
+    recast_log_callback(RECAST_LOG_INFO, string);
+}
+void emscripten_log_error(const char* string, bool escape = true)
+{
+    recast_log_callback(RECAST_LOG_ERROR, string);
 }
 void emscripten_debugger()
 {
@@ -92,6 +104,7 @@ extern "C" {
     extern void recast_generic_callback_string(int callback_id, const char* data);
     extern void recast_path_callback(int callback_id, const float* data, int count);
     extern void recast_build_callback(const char* navmeshType);
+    extern void recast_log_callback(int level, const char* message);
     extern void gl_create_object(const char* objectName);
     extern void gl_draw_object(const char* objectName);
 }
@@ -284,7 +297,7 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
 {
     if (!geom || !geom->getMesh() || !geom->getChunkyMesh())
     {
-        emscripten_log("buildTile: Input mesh is not specified.");
+        emscripten_log_error("buildTile: Input mesh is not specified.");
         return 0;
     }
 
@@ -318,12 +331,12 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
     rc.solid = rcAllocHeightfield();
     if (!rc.solid)
     {
-        emscripten_log("buildNavigation: Out of memory 'solid'.");
+        emscripten_log_error("buildNavigation: Out of memory 'solid'.");
         return 0;
     }
     if (!rcCreateHeightfield(ctx, *rc.solid, tcfg.width, tcfg.height, tcfg.bmin, tcfg.bmax, tcfg.cs, tcfg.ch))
     {
-        emscripten_log("buildNavigation: Could not create solid heightfield.");
+        emscripten_log_error("buildNavigation: Could not create solid heightfield.");
         return 0;
     }
 
@@ -333,7 +346,7 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
     rc.triareas = new unsigned char[chunkyMesh->maxTrisPerChunk];
     if (!rc.triareas)
     {
-        emscripten_log("buildNavigation: Out of memory 'm_triareas' (%d).", chunkyMesh->maxTrisPerChunk);
+        emscripten_log_error("buildNavigation: Out of memory 'm_triareas' (%d).", chunkyMesh->maxTrisPerChunk);
         return 0;
     }
 
@@ -378,19 +391,19 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
     rc.chf = rcAllocCompactHeightfield();
     if (!rc.chf)
     {
-        emscripten_log("buildNavigation: Out of memory 'chf'.");
+        emscripten_log_error("buildNavigation: Out of memory 'chf'.");
         return 0;
     }
     if (!rcBuildCompactHeightfield(ctx, tcfg.walkableHeight, tcfg.walkableClimb, *rc.solid, *rc.chf))
     {
-        emscripten_log("buildNavigation: Could not build compact data.");
+        emscripten_log_error("buildNavigation: Could not build compact data.");
         return 0;
     }
 
     // Erode the walkable area by agent radius.
     if (!rcErodeWalkableArea(ctx, tcfg.walkableRadius, *rc.chf))
     {
-        emscripten_log("buildNavigation: Could not erode.");
+        emscripten_log_error("buildNavigation: Could not erode.");
         return 0;
     }
 
@@ -409,17 +422,17 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
     rc.lset = rcAllocHeightfieldLayerSet();
     if (!rc.lset)
     {
-        emscripten_log("buildNavigation: Out of memory 'lset'.");
+        emscripten_log_error("buildNavigation: Out of memory 'lset'.");
         return 0;
     }
     if (!rcBuildHeightfieldLayers(ctx, *rc.chf, tcfg.borderSize, tcfg.walkableHeight, *rc.lset))
     {
-        emscripten_log("buildNavigation: Could not build heighfield layers.");
+        emscripten_log_error("buildNavigation: Could not build heighfield layers.");
         return 0;
     }
 
-    // sprintf(buff, "found %u layers", rc.lset->nlayers);
-    // emscripten_log(buff);
+    sprintf(buff, "found %u layers", rc.lset->nlayers);
+    emscripten_log(buff);
 
     rc.ntiles = 0;
     for (int i = 0; i < rcMin(rc.lset->nlayers, MAX_LAYERS); ++i)
@@ -453,7 +466,7 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
                                                 &tile->data, &tile->dataSize);
         if (dtStatusFailed(status))
         {
-            emscripten_log("Cannot dtBuildTileCacheLayer");
+            emscripten_log_error("Cannot dtBuildTileCacheLayer");
             return 0;
         } else {
             // sprintf(buff, "Got an header of size %ux%u", header.width, header.height);
@@ -471,8 +484,8 @@ static int rasterizeTileLayers(BuildContext* ctx, InputGeom* geom,
         rc.tiles[i].dataSize = 0;
     }
 
-    // sprintf(buff, "return %u tiles", n);
-    // emscripten_log(buff);
+    sprintf(buff, "return %u tiles", n);
+    emscripten_log(buff);
 
     return n;
 }
@@ -838,9 +851,9 @@ void getNavHeightfieldRegions(int callback)
     }
     data += "]";
 
-    // char buff2[512];
-    // sprintf(buff2, "cs=%f, ch=%f, height=%u, width=%u, len=%u", cs, ch, height, width, strlen(buff));
-    // emscripten_log(buff2);
+    char buff2[512];
+    sprintf(buff2, "cs=%f, ch=%f, height=%u, width=%u", cs, ch, height, width);
+    emscripten_log(buff2);
 
     // sprintf(buff, "[%s]", buff);
 
@@ -876,7 +889,8 @@ void getRandomPoint(int callback)
     dtStatus status = m_navQuery->findRandomPoint(&filter, randZeroToOne, &ref, randomPt);
 
     if (dtStatusFailed(status)) {
-        printf("Cannot find a random point: %u\n", status);
+        sprintf(buff, "Cannot find a random point: %u", status);
+        emscripten_log_error(buff);
 
        recast_vector_callback(callback, NULL, NULL, NULL);
 
@@ -924,7 +938,7 @@ void findNearestPoly(float cx, float cy, float cz,
                     int callback)
 {
     if (! m_navQuery) {
-        emscripten_log("NavMeshQuery is not ready");
+        emscripten_log_error("NavMeshQuery is not ready");
         return;
     }
 
@@ -944,14 +958,14 @@ void findNearestPoly(float cx, float cy, float cz,
     if (dtStatusFailed(status) || ref == 0) {
 
         sprintf(buffer, "Cannot find a polygon near [%f, %f, %f]", cx, cy, cz);
-        emscripten_log(buffer);
+        emscripten_log_error(buffer);
 
         recast_generic_callback_string(callback, "null");
 
     } else {
 
-        // sprintf(buffer, "Found a polygon near [%f, %f, %f] : %u", cx, cy, cz, ref);
-        // emscripten_log(buffer);
+        sprintf(buffer, "Found a polygon near [%f, %f, %f] : %u", cx, cy, cz, ref);
+        emscripten_log(buffer);
 
         const dtMeshTile* tile = 0;
         const dtPoly* poly = 0;
@@ -972,7 +986,7 @@ void findNearestPoint(float cx, float cy, float cz,
     char buffer[128];
 
     if (! m_navQuery) {
-        emscripten_log("NavMeshQuery is not ready");
+        emscripten_log_error("NavMeshQuery is not ready");
         return;
     }
 
@@ -991,7 +1005,7 @@ void findNearestPoint(float cx, float cy, float cz,
 
     if (dtStatusFailed(status)) {
         sprintf(buffer, "Cannot find a point near [%f, %f, %f]", cx, cy, cz);
-        emscripten_log(buffer);
+        emscripten_log_error(buffer);
         recast_vector_callback(callback, NULL, NULL, NULL);
 
     } else {
@@ -1003,7 +1017,7 @@ void findNearestPoint(float cx, float cy, float cz,
 void setPolyFlagsByRef(int ref, unsigned short flags)
 {
     if (! m_navMesh) {
-        emscripten_log("NavMesh is not ready");
+        emscripten_log_error("NavMesh is not ready");
         return;
     }
 
@@ -1011,19 +1025,19 @@ void setPolyFlagsByRef(int ref, unsigned short flags)
     dtStatus status;
     status = m_navMesh->setPolyFlags((dtPolyRef)ref, flags);
 
-    // if (dtStatusFailed(status)) {
-    //     sprintf(buff, "cannot set flag %u on %u", flags, ref);
-    //     emscripten_log(buff);
-    // } else {
-    //     sprintf(buff, "found poly %u set flags %u ", ref, flags);
-    //     emscripten_log(buff);
-    // }
+    if (dtStatusFailed(status)) {
+        sprintf(buff, "cannot set flag %u on %u", flags, ref);
+        emscripten_log_error(buff);
+    } else {
+        sprintf(buff, "found poly %u set flags %u ", ref, flags);
+        emscripten_log(buff);
+    }
 }
 
 void setPolyFlags(float posX, float posY, float posZ, float extendX, float extendY, float extendZ, unsigned short flags)
 {
     if (! m_navQuery) {
-        emscripten_log("NavMeshQuery is not ready");
+        emscripten_log_error("NavMeshQuery is not ready");
         return;
     }
 
@@ -1044,7 +1058,7 @@ void setPolyFlags(float posX, float posY, float posZ, float extendX, float exten
 
     if (dtStatusFailed(status)) {
         sprintf(buff, "Cannot find a poly near: %f, %f, %f ", posX, posY, posZ);
-        emscripten_log(buff);
+        emscripten_log_error(buff);
 
     } else {
         setPolyFlagsByRef((int)ref, flags);
@@ -1085,7 +1099,7 @@ void _queryPolygons(float posX, float posY, float posZ,
                     const int maxPolys, int callback)
 {
     if (! m_navQuery) {
-        emscripten_log("NavMeshQuery is not ready");
+        emscripten_log_error("NavMeshQuery is not ready");
         return;
     }
 
@@ -1107,7 +1121,9 @@ void _queryPolygons(float posX, float posY, float posZ,
     data = "[";
 
     if (dtStatusFailed(status)) {
-        printf("Cannot query polygons: %u\n", status);
+        char errbuff[64];
+        sprintf(errbuff, "Cannot query polygons: %u", status);
+        emscripten_log_error(errbuff);
 
     } else {
 
@@ -1133,7 +1149,7 @@ void findPath(float startPosX, float startPosY, float startPosZ,
                 int callback)
 {
     if (! m_navQuery) {
-        emscripten_log("NavMeshQuery is not ready");
+        emscripten_log_error("NavMeshQuery is not ready");
         return;
     }
 
@@ -1189,7 +1205,9 @@ void findPath(float startPosX, float startPosY, float startPosZ,
                                     straightPathFlags, straightPathRefs, &straightPathCount, maxStraightPath, options);
 
         if (dtStatusFailed(status)) {
-            printf("Cannot find a straight path: %u\n", status);
+            char errbuff[64];
+            sprintf(errbuff, "Cannot find a straight path: %u", status);
+            emscripten_log_error(errbuff);
             recast_path_callback(callback, nullptr, 0);
 
         } else {
@@ -1258,10 +1276,10 @@ bool initWithFileContent(std::string contents)
 
 bool initCrowd(const int maxAgents, const float maxAgentRadius)
 {
-    // emscripten_log("initCrowd");
+    emscripten_log("init crowd");
     m_crowd->init(maxAgents, maxAgentRadius, m_navMesh);
 
-    // emscripten_log("allocate agents");
+    emscripten_log("allocate agents");
     agents = (dtCrowdAgent**)dtAlloc(sizeof(dtCrowdAgent*)*maxAgents, DT_ALLOC_PERM);
 
     // Make polygons with 'disabled' flag invalid.
@@ -1358,12 +1376,12 @@ int addCrowdAgent(float posX, float posY, float posZ, float radius, float height
     /* So we do this ?? */
     updateCrowdAgentParameters(idx, posX, posY, posZ, radius, height, maxAcceleration, maxSpeed, updateFlags, separationWeight);
 
-    // char buff[512];
-    // const dtCrowdAgent* ag = m_crowd->getAgent(idx);
-    // const float* p = ag->npos;
-    // const float r = ag->params.radius;
-    // sprintf(buff, "debug('new agent', { idx:%d });", idx);
-    // emscripten_run_script(buff);
+    char buff[128];
+    const dtCrowdAgent* ag = m_crowd->getAgent(idx);
+    const float* p = ag->npos;
+    const float r = ag->params.radius;
+    sprintf(buff, "new agent idx:%d", idx);
+    emscripten_log(buff);
 
     return idx;
 }
@@ -1454,7 +1472,7 @@ bool _crowdGetActiveAgents(int callback_id)
 int addTempObstacle(const float posX, const float posY, const float posZ, const float radius)
 {
     if (!m_tileCache) {
-        emscripten_log("TileCache is not ready");
+        emscripten_log_error("TileCache is not ready");
         return -1;
     }
     float p[3] = { posX, posY, posZ };
@@ -1465,7 +1483,7 @@ int addTempObstacle(const float posX, const float posY, const float posZ, const 
     if (dtStatusFailed(status)) {
         char buff[64];
         sprintf(buff, "Cannot add an obstacle: %u", status);
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return -1;
     }
     return (int)ref;
@@ -1475,7 +1493,7 @@ void removeTempObstacle(const float spX, const float spY, const float spZ,
                         const float sqX, const float sqY, const float sqZ)
 {
     if (!m_tileCache) {
-        emscripten_log("TileCache is not ready");
+        emscripten_log_error("TileCache is not ready");
         return;
     }
     float sp[3] = { spX, spY, spZ };
@@ -1487,7 +1505,7 @@ void removeTempObstacle(const float spX, const float spY, const float spZ,
 void getAllTempObstacles(int callback_id)
 {
     if (!m_tileCache) {
-        emscripten_log("TileCache is not ready");
+        emscripten_log_error("TileCache is not ready");
         return;
     }
 
@@ -1515,7 +1533,7 @@ void getAllTempObstacles(int callback_id)
 void removeAllTempObstacles()
 {
     if (!m_tileCache) {
-        emscripten_log("TileCache is not ready");
+        emscripten_log_error("TileCache is not ready");
         return;
     }
     for (int i = 0; i < m_tileCache->getObstacleCount(); ++i)
@@ -1532,7 +1550,7 @@ bool buildTiled()
 
     if (!m_geom || !m_geom->getMesh())
     {
-        emscripten_log("Geometry is not ready");
+        emscripten_log_error("Geometry is not ready");
         return false;
     }
 
@@ -1557,8 +1575,8 @@ bool buildTiled()
     m_maxTiles = 1 << tileBits;
     m_maxPolysPerTile = 1 << polyBits;
 
-    // sprintf(buff, "bmin=%f  bmax=%f  gw=%u  gh=%u  ts=%u  tw=%u  th=%u  m_maxTiles=%u  m_maxPolysPerTile=%u  offMeshCons=%u", *bmin, *bmax, gw, gh, ts, tw, th, m_maxTiles, m_maxPolysPerTile, m_geom->getOffMeshConnectionCount());
-    // emscripten_log(buff);
+    sprintf(buff, "bmin=%f  bmax=%f  gw=%u  gh=%u  ts=%u  tw=%u  th=%u  m_maxTiles=%u  m_maxPolysPerTile=%u  offMeshCons=%u", *bmin, *bmax, gw, gh, ts, tw, th, m_maxTiles, m_maxPolysPerTile, m_geom->getOffMeshConnectionCount());
+    emscripten_log(buff);
 
     // Generation params.
     rcConfig cfg;
@@ -1603,13 +1621,13 @@ bool buildTiled()
     m_tileCache = dtAllocTileCache();
     if (!m_tileCache)
     {
-        emscripten_log("Could not allocate tile cache.");
+        emscripten_log_error("Could not allocate tile cache.");
         return false;
     }
     status = m_tileCache->init(&tcparams, m_talloc, m_tcomp, m_tmproc);
     if (dtStatusFailed(status))
     {
-        emscripten_log("Could not init tile cache.");
+        emscripten_log_error("Could not init tile cache.");
         return false;
     }
 
@@ -1618,7 +1636,7 @@ bool buildTiled()
     m_navMesh = dtAllocNavMesh();
     if (!m_navMesh)
     {
-        emscripten_log("Could not allocate navmesh.");
+        emscripten_log_error("Could not allocate navmesh.");
         return false;
     }
 
@@ -1630,13 +1648,13 @@ bool buildTiled()
     params.maxTiles = m_maxTiles;
     params.maxPolys = m_maxPolysPerTile;
 
-    // sprintf(buff, "initNavMesh  tileWidth=%f  tileHeight=%f  maxTiles=%u  maxPolys=%u", params.tileWidth, params.tileHeight, params.maxTiles, params.maxPolys);
-    // emscripten_log(buff);
+    sprintf(buff, "initNavMesh  tileWidth=%f  tileHeight=%f  maxTiles=%u  maxPolys=%u", params.tileWidth, params.tileHeight, params.maxTiles, params.maxPolys);
+    emscripten_log(buff);
 
     status = m_navMesh->init(&params);
     if (dtStatusFailed(status))
     {
-        emscripten_log("Could not init navmesh.");
+        emscripten_log_error("Could not init navmesh.");
         return false;
     }
 
@@ -1644,14 +1662,14 @@ bool buildTiled()
     if (!m_navQuery)
     {
         dtFree(m_navQuery);
-        emscripten_log("Could not allocate NavMeshQuery");
+        emscripten_log_error("Could not allocate NavMeshQuery");
         return false;
     }
 
     status = m_navQuery->init(m_navMesh, 2048);
     if (dtStatusFailed(status))
     {
-        emscripten_log("Could not init Detour navmesh query");
+        emscripten_log_error("Could not init Detour navmesh query");
         return false;
     }
 
@@ -1669,8 +1687,8 @@ bool buildTiled()
             memset(tiles, 0, sizeof(tiles));
             int ntiles = rasterizeTileLayers(m_ctx, m_geom, x, y, cfg, tiles, MAX_LAYERS);
 
-            // sprintf(buff, "found %i rasterized tiles", ntiles);
-            // emscripten_log(buff);
+            sprintf(buff, "found %i rasterized tiles", ntiles);
+            emscripten_log(buff);
 
             for (int i = 0; i < ntiles; ++i)
             {
@@ -1706,12 +1724,12 @@ bool buildTiled()
             if (dtStatusFailed(status))
             {
                 sprintf(buff, "Failed to buildNavMeshTilesAt %ux%u", x, y);
-                emscripten_log(buff);
+                emscripten_log_error(buff);
             }
         }
     }
 
-    // emscripten_log("Build initial meshes done");
+    emscripten_log("Build initial meshes done");
 
     m_cacheBuildMemUsage = m_talloc->high;
 
@@ -1729,12 +1747,12 @@ bool buildTiled()
     if (!m_crowd)
     {
         dtFree(m_crowd);
-        emscripten_log("Could not create Detour Crowd");
+        emscripten_log_error("Could not create Detour Crowd");
         return false;
     }
 
-    // sprintf(buff, "navmeshTileMemUsage = %u B  m_cacheCompressedSize = %u B  %u tiles over %ux%u", navmeshMemUsage, m_cacheCompressedSize, nav->getMaxTiles(), th, tw);
-    // emscripten_log(buff);
+    sprintf(buff, "navmeshTileMemUsage = %u B  m_cacheCompressedSize = %u B  %u tiles over %ux%u", navmeshMemUsage, m_cacheCompressedSize, nav->getMaxTiles(), th, tw);
+    emscripten_log(buff);
 
     recast_build_callback("tiled");
 
@@ -1751,7 +1769,6 @@ bool buildSolo()
 
     if (!m_geom || !m_geom->getMesh())
     {
-        printf("buildNavigation: Input mesh is not specified.");
         m_ctx->log(RC_LOG_ERROR, "buildNavigation: Input mesh is not specified.");
         return false;
     }
@@ -1816,18 +1833,16 @@ bool buildSolo()
     m_solid = rcAllocHeightfield();
     if (!m_solid)
     {
-        printf("buildNavigation: Out of memory 'solid'. \n");
         m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'solid'.");
         return false;
     }
     if (!rcCreateHeightfield(m_ctx, *m_solid, m_cfg.width, m_cfg.height, m_cfg.bmin, m_cfg.bmax, m_cfg.cs, m_cfg.ch))
     {
-        printf("buildNavigation: Could not create solid heightfield. \n");
         m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not create solid heightfield.");
         return false;
     }
 
-    // emscripten_log("Heightfield polygon soup");
+    emscripten_log("heightfield polygon soup");
 
     // Allocate array that can hold triangle area types.
     // If you have multiple meshes you need to process, allocate
@@ -1839,7 +1854,7 @@ bool buildSolo()
         return false;
     }
 
-    // emscripten_log("rcMarkWalkableTriangles");
+    emscripten_log("rcMarkWalkableTriangles");
 
     // sprintf(buff, "m_ctx=%d", m_ctx);
     // emscripten_log(buff);
@@ -1851,7 +1866,7 @@ bool buildSolo()
     rcMarkWalkableTriangles(m_ctx, m_cfg.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas);
     // printf("%u Walkable Triangles\n", sizeof(m_triareas)/sizeof(unsigned char));
 
-    // sprintf(buff, "m_ctx=%d, WalkableTriangles=%u, verts=%d, nverts=%d, trds=%d, m_trdareas=%x, ntrds=%d, m_soldd=%d, walkableClimb=%u", m_ctx, sizeof(m_triareas)/sizeof(unsigned char), verts, nverts, tris, m_triareas, ntris, m_solid, m_cfg.walkableClimb);
+    // sprintf(buff, "m_ctx=%d, WalkableTriangles=%lu, verts=%d, nverts=%d, trds=%d, m_trdareas=%x, ntrds=%d, m_soldd=%d, walkableClimb=%u", &m_ctx, sizeof(&m_triareas)/sizeof(unsigned char), verts, nverts, tris, m_triareas, ntris, m_solid, m_cfg.walkableClimb);
     // emscripten_log(buff);
     // dumpConfig();
 
@@ -1867,7 +1882,7 @@ bool buildSolo()
     // Step 3. Filter walkables surfaces.
     //
 
-    // emscripten_log("rcFilterLowHangingWalkableObstacles");
+    emscripten_log("rcFilterLowHangingWalkableObstacles");
 
     // Once all geoemtry is rasterized, we do initial pass of filtering to
     // remove unwanted overhangs caused by the conservative rasterization
@@ -1880,7 +1895,7 @@ bool buildSolo()
     // Step 4. Partition walkable surface to simple regions.
     //
 
-    // emscripten_log("rcBuildCompactHeightfield");
+    emscripten_log("rcBuildCompactHeightfield");
 
     // Compact the heightfield so that it is faster to handle from now on.
     // This will result more cache coherent data as well as the neighbours
@@ -1903,7 +1918,7 @@ bool buildSolo()
         m_solid = 0;
     }
 
-    // emscripten_log("rcErodeWalkableArea");
+    emscripten_log("rcErodeWalkableArea");
 
     // Erode the walkable area by agent radius.
     if (!rcErodeWalkableArea(m_ctx, m_cfg.walkableRadius, *m_chf))
@@ -1912,7 +1927,7 @@ bool buildSolo()
         return false;
     }
 
-    // emscripten_log("rcMarkConvexPolyArea");
+    emscripten_log("rcMarkConvexPolyArea");
 
     // (Optional) Mark areas.
     const ConvexVolume* vols = m_geom->getConvexVolumes();
@@ -1950,7 +1965,7 @@ bool buildSolo()
     // Step 5. Trace and simplify region contours.
     //
 
-    // emscripten_log("rcBuildContours");
+    emscripten_log("rcBuildContours");
 
     // Create contours.
     m_cset = rcAllocContourSet();
@@ -1984,7 +1999,7 @@ bool buildSolo()
         return false;
     }
 
-    // printf("Build polygons mesh from contours. \n");
+    emscripten_log("built polygons mesh from contours");
 
     //
     // Step 7. Create detail mesh which allows to access approximate height on each polygon.
@@ -2011,7 +2026,7 @@ bool buildSolo()
         m_cset = 0;
     }
 
-    // printf("Create detail mesh. \n");
+    emscripten_log("Create detail mesh");
 
     // At this point the navigation mesh data is ready, you can access it from m_pmesh.
     // See duDebugDrawPolyMesh or dtCreateNavMeshData as examples how to access the data.
@@ -2091,7 +2106,7 @@ bool buildSolo()
             return false;
         }
 
-        // printf("Built Detour navdata. %p \n", navData);
+        emscripten_log("dtAllocNavMesh");
 
         m_navMesh = dtAllocNavMesh();
         if (!m_navMesh)
@@ -2101,7 +2116,7 @@ bool buildSolo()
             return false;
         }
 
-        // printf("Created Detour navmesh. %p \n", m_navMesh);
+        emscripten_log("created Detour navmesh");
 
         // status = m_navMesh->init(&nmparams);
         status = m_navMesh->init(navData, navDataSize, DT_TILE_FREE_DATA);
@@ -2109,18 +2124,14 @@ bool buildSolo()
         if (dtStatusFailed(status))
         {
             dtFree(navData);
-            printf("Could not init Detour navmesh (%u) \n", status);
             m_ctx->log(RC_LOG_ERROR, "Could not init Detour navmesh");
             return false;
         }
-
-        // printf("Init Detour navmesh. %p \n", navData);
 
         m_navQuery = dtAllocNavMeshQuery();
         status = m_navQuery->init(m_navMesh, 2048);
         if (dtStatusFailed(status))
         {
-            printf("Could not init Detour navmesh query (%u) \n", status);
             m_ctx->log(RC_LOG_ERROR, "Could not init Detour navmesh query");
             return false;
         }
@@ -2174,7 +2185,7 @@ void _saveTileMesh(std::string path, int callback_id)
     FILE* fp = fopen(path.c_str(), "wb");
     if (!fp) {
         sprintf(buff, "cannot open %s", path.c_str());
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
 
@@ -2193,9 +2204,9 @@ void _saveTileMesh(std::string path, int callback_id)
     memcpy(&header.params, mesh->getParams(), sizeof(dtNavMeshParams));
     fwrite(&header, sizeof(NavMeshSetHeader), 1, fp);
 
-    // dtNavMeshParams* params = &header.params;
-    // sprintf(buff, "write params: tiles=%d tileWidth=%f tileHeight=%f maxTiles=%d maxPolys=%d ", header.numTiles, params->tileWidth, params->tileHeight, params->maxTiles, params->maxPolys);
-    // emscripten_log(buff);
+    dtNavMeshParams* params = &header.params;
+    sprintf(buff, "write params: tiles=%d tileWidth=%f tileHeight=%f maxTiles=%d maxPolys=%d ", header.numTiles, params->tileWidth, params->tileHeight, params->maxTiles, params->maxPolys);
+    emscripten_log(buff);
 
     // Store tiles.
     for (int i = 0; i < mesh->getMaxTiles(); ++i)
@@ -2222,13 +2233,13 @@ void _loadTileMesh(std::string path, int callback_id)
 {
     char buff[1024];
 
-    // sprintf(buff, "load tile mesh from %s", path.c_str());
-    // emscripten_log(buff);
+    sprintf(buff, "load tile mesh from %s", path.c_str());
+    emscripten_log(buff);
 
     FILE* fp = fopen(path.c_str(), "rb");
     if (!fp) {
         sprintf(buff, "cannot open %s", path.c_str());
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
 
@@ -2240,21 +2251,21 @@ void _loadTileMesh(std::string path, int callback_id)
     {
         fclose(fp);
         sprintf(buff, "cannot read header");
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
     if (header.magic != NAVMESHSET_MAGIC)
     {
         fclose(fp);
         sprintf(buff, "cannot read magic: %d", header.magic);
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
     if (header.version != NAVMESHSET_VERSION)
     {
         fclose(fp);
         sprintf(buff, "cannot read version: %d", header.version);
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
 
@@ -2263,19 +2274,19 @@ void _loadTileMesh(std::string path, int callback_id)
     m_navMesh = dtAllocNavMesh();
     if (!m_navMesh)
     {
-        emscripten_log("cannot allocate navmesh");
+        emscripten_log_error("cannot allocate navmesh");
         return;
     }
 
     dtStatus status = m_navMesh->init(&header.params);
     if (dtStatusFailed(status))
     {
-        emscripten_log("cannot init navmesh");
+        emscripten_log_error("cannot init navmesh");
         return;
     }
 
-    // sprintf(buff, "reading %d tiles", header.numTiles);
-    // emscripten_log(buff);
+    sprintf(buff, "reading %d tiles", header.numTiles);
+    emscripten_log(buff);
 
     // Read tiles.
     int i = 0;
@@ -2287,35 +2298,32 @@ void _loadTileMesh(std::string path, int callback_id)
         NavMeshTileHeader tileHeader;
         readLen = fread(&tileHeader, sizeof(tileHeader), 1, fp);
         if (readLen != 1) {
-            emscripten_log("error while reading data");
+            emscripten_log_error("error while reading data");
             return;
         }
 
         if (!tileHeader.tileRef || !tileHeader.dataSize) {
             sprintf(buff, "tile %u: cannot read ref (%u) or data size (%d)", tileHeader.tileRef, tileHeader.tileRef, tileHeader.dataSize);
-            emscripten_log(buff);
+            emscripten_log_error(buff);
             break;
         }
 
         unsigned char* data = (unsigned char*)dtAlloc(tileHeader.dataSize, DT_ALLOC_PERM);
         if (!data) {
             sprintf(buff, "tile %u: cannot allocate memory to hold data (%u bytes)", tileHeader.tileRef, tileHeader.dataSize);
-            emscripten_log(buff);
+            emscripten_log_error(buff);
             break;
         }
         memset(data, 0, tileHeader.dataSize);
         readLen = fread(data, tileHeader.dataSize, 1, fp);
         if (readLen != 1) {
             sprintf(buff, "tile %u: error while reading tile data (%u bytes)", tileHeader.tileRef, tileHeader.dataSize);
-            emscripten_log(buff);
+            emscripten_log_error(buff);
             return;
         }
 
         m_navMesh->addTile(data, tileHeader.dataSize, DT_TILE_FREE_DATA, tileHeader.tileRef, 0);
     }
-
-    // sprintf(buff, "%d tiles loaded", i);
-    // emscripten_log(buff);
 
     fclose(fp);
 
@@ -2323,7 +2331,7 @@ void _loadTileMesh(std::string path, int callback_id)
     if (!m_navQuery)
     {
         dtFree(m_navQuery);
-        emscripten_log("Could not allocate NavMeshQuery");
+        emscripten_log_error("Could not allocate NavMeshQuery");
         return;
     }
 
@@ -2331,7 +2339,7 @@ void _loadTileMesh(std::string path, int callback_id)
     if (dtStatusFailed(status))
     {
         dtFree(m_navQuery);
-        emscripten_log("Could not init Detour navmesh query");
+        emscripten_log_error("Could not init Detour navmesh query");
         return;
     }
 
@@ -2339,11 +2347,10 @@ void _loadTileMesh(std::string path, int callback_id)
     if (!m_crowd)
     {
         dtFree(m_crowd);
-        emscripten_log("Could not create Detour Crowd");
+        emscripten_log_error("Could not create Detour Crowd");
         return;
     }
 
-    // emscripten_log("finished to load file");
     recast_generic_callback_string(callback_id, "{ \"status\":\"done\" }");
 }
 
@@ -2379,7 +2386,7 @@ void _saveTileCache(std::string path, int callback_id)
     FILE* fp = fopen(path.c_str(), "wb");
     if (!fp) {
         sprintf(buff, "cannot open %s", path.c_str());
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
 
@@ -2421,13 +2428,13 @@ void _loadTileCache(std::string path, int callback_id)
 {
     char buff[1024];
 
-    // sprintf(buff, "load tile cache from %s", path.c_str());
-    // emscripten_log(buff);
+    sprintf(buff, "load tile cache from %s", path.c_str());
+    emscripten_log(buff);
 
     FILE* fp = fopen(path.c_str(), "rb");
     if (!fp) {
         sprintf(buff, "cannot open %s", path.c_str());
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
 
@@ -2439,21 +2446,21 @@ void _loadTileCache(std::string path, int callback_id)
     {
         fclose(fp);
         sprintf(buff, "cannot read header");
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
     if (header.magic != TILECACHESET_MAGIC)
     {
         fclose(fp);
         sprintf(buff, "cannot read magic %d", header.magic);
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
     if (header.version != TILECACHESET_VERSION)
     {
         fclose(fp);
         sprintf(buff, "cannot read version %d", header.version);
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
 
@@ -2464,7 +2471,7 @@ void _loadTileCache(std::string path, int callback_id)
     {
         fclose(fp);
         sprintf(buff, "cannot allocate navmesh");
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
 
@@ -2473,7 +2480,7 @@ void _loadTileCache(std::string path, int callback_id)
     {
         fclose(fp);
         sprintf(buff, "cannot init navmesh");
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
 
@@ -2482,7 +2489,7 @@ void _loadTileCache(std::string path, int callback_id)
     {
         fclose(fp);
         sprintf(buff, "cannot allocate tilecache");
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
 
@@ -2496,12 +2503,12 @@ void _loadTileCache(std::string path, int callback_id)
     {
         fclose(fp);
         sprintf(buff, "cannot init tilecache");
-        emscripten_log(buff);
+        emscripten_log_error(buff);
         return;
     }
 
-    // sprintf(buff, "reading %d tiles", header.numTiles);
-    // emscripten_log(buff);
+    sprintf(buff, "reading %d tiles", header.numTiles);
+    emscripten_log(buff);
 
     // Read tiles.
     for (int i = 0; i < header.numTiles; ++i)
@@ -2512,20 +2519,20 @@ void _loadTileCache(std::string path, int callback_id)
         TileCacheTileHeader tileHeader;
         readLen = fread(&tileHeader, sizeof(tileHeader), 1, fp);
         if (readLen != 1) {
-            emscripten_log("error while reading data");
+            emscripten_log_error("error while reading data");
             return;
         }
 
         if (!tileHeader.tileRef || !tileHeader.dataSize) {
             sprintf(buff, "tile %u: cannot read ref (%u) or data size (%d)", tileHeader.tileRef, tileHeader.tileRef, tileHeader.dataSize);
-            emscripten_log(buff);
+            emscripten_log_error(buff);
             break;
         }
 
         unsigned char* data = (unsigned char*)dtAlloc(tileHeader.dataSize, DT_ALLOC_PERM);
         if (!data) {
             sprintf(buff, "tile %u: cannot allocate memory to hold data (%u bytes)", tileHeader.tileRef, tileHeader.dataSize);
-            emscripten_log(buff);
+            emscripten_log_error(buff);
             break;
         }
         memset(data, 0, tileHeader.dataSize);
@@ -2544,7 +2551,7 @@ void _loadTileCache(std::string path, int callback_id)
     if (!m_navQuery)
     {
         dtFree(m_navQuery);
-        emscripten_log("Could not allocate NavMeshQuery");
+        emscripten_log_error("Could not allocate NavMeshQuery");
         return;
     }
 
@@ -2552,7 +2559,7 @@ void _loadTileCache(std::string path, int callback_id)
     if (dtStatusFailed(status))
     {
         dtFree(m_navQuery);
-        emscripten_log("Could not init Detour navmesh query");
+        emscripten_log_error("Could not init Detour navmesh query");
         return;
     }
 
@@ -2560,11 +2567,10 @@ void _loadTileCache(std::string path, int callback_id)
     if (!m_crowd)
     {
         dtFree(m_crowd);
-        emscripten_log("Could not create Detour Crowd");
+        emscripten_log_error("Could not create Detour Crowd");
         return;
     }
 
-    // emscripten_log("finished to load file");
     recast_generic_callback_string(callback_id, "{ \"status\":\"done\" }");
 }
 

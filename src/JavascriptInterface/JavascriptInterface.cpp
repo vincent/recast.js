@@ -22,7 +22,12 @@
 
 extern "C" {
     extern void gl_add_to_object();
+    extern void recast_log_callback(int level, const char* message);
 }
+
+static const int RECAST_LOG_DEBUG = 0;
+static const int RECAST_LOG_INFO  = 1;
+static const int RECAST_LOG_ERROR = 2;
 
 // EM_JS helper: initialise __RECAST_GLOBAL_DATA with mode and flat float array
 EM_JS(void, js_set_debug_data, (const float* dataPtr, int count, int mode), {
@@ -57,7 +62,9 @@ void BuildContext::doLog(const rcLogCategory category, const char* msg, const in
 	if (m_messageCount >= MAX_MESSAGES)
 		return;
 
-	printf("%s\n", msg);
+	int level = (category == RC_LOG_ERROR)   ? RECAST_LOG_ERROR :
+	            (category == RC_LOG_WARNING)  ? RECAST_LOG_INFO  : RECAST_LOG_DEBUG;
+	recast_log_callback(level, msg);
 }
 
 void BuildContext::doResetTimers()

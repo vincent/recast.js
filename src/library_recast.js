@@ -86,6 +86,15 @@
 
     agentPool_get: function (idx, position_x, position_y, position_z, velocity_x, velocity_y, velocity_z, radius, active, state, neighbors, partial, desiredSpeed) {
       agentPoolBuffer.push(agentPool.get(idx, position_x, position_y, position_z, velocity_x, velocity_y, velocity_z, radius, active, state, neighbors, partial, desiredSpeed));
+    },
+
+    // Log levels: 0=debug, 1=info, 2=error — must match RECAST_LOG_* constants in main.cpp
+    recast_log_callback: function (level, messagePtr) {
+      if (!Module.logger) return;
+      var message = Module.UTF8ToString(messagePtr);
+      if (level === 2 && Module.logger.error) Module.logger.error(message);
+      else if (level === 1 && Module.logger.info) Module.logger.info(message);
+      else if (Module.logger.debug) Module.logger.debug(message);
     }
 
   });

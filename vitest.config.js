@@ -8,8 +8,8 @@ export default defineConfig({
     // Run test files sequentially to avoid shared state / WASM memory issues
     pool: 'threads',
     includeTaskLocation: true,
-    poolOptions: {
-      threads: { singleThread: true }
-    }
+  },
+  poolOptions: {
+    threads: { singleThread: true }
   }
 });

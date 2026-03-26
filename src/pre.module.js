@@ -129,6 +129,20 @@ recast.on   = recast.events.on.bind(recast.events);
 recast.off  = recast.events.off.bind(recast.events);
 recast.emit = recast.events.emit.bind(recast.events);
 
+// Log levels — must match RECAST_LOG_* constants in main.cpp and library_recast.js
+var LOG_DEBUG = 0, LOG_INFO = 1, LOG_ERROR = 2;
+
+/**
+ * Internal log helper. Reads recast.logger at call time (late binding).
+ */
+function _log(level, msg) {
+  var logger = recast.logger;
+  if (!logger) return;
+  if (level === LOG_ERROR && logger.error) logger.error(msg);
+  else if (level === LOG_INFO && logger.info) logger.info(msg);
+  else if (level === LOG_DEBUG && logger.debug) logger.debug(msg);
+}
+
 /**
  * Fetch helper — replaces the old XMLHttpRequest _ajax helper.
  * Returns a Promise that resolves with text or ArrayBuffer.
@@ -142,7 +156,9 @@ function _fetch(url, type) {
 }
 
 var _OBJDataLoader = function(contents, callback) {
+  _log(LOG_INFO, 'loading obj geometry');
   recast.initWithFileContent(contents.toString());
+  _log(LOG_INFO, 'obj geometry loaded');
   callback(recast);
 };
 
@@ -484,6 +500,7 @@ var workerMain = function(event) {
       break;
 
     default:
+      _log(LOG_ERROR, 'Unknown worker message type: ' + message.type);
       throw new Error(message.type + ' is not a known Recast method');
   }
 };
@@ -565,6 +582,7 @@ recast.OBJDataLoader = function(data, callback) {
 };
 
 recast.OBJLoader = function(path, callback) {
+  _log(LOG_INFO, 'obj loader: loading ' + path);
   if (ENVIRONMENT_IS_NODE) {
     const fs = require('fs');
     fs.readFile(path, function(err, data) {
@@ -599,6 +617,7 @@ recast.crowdRequestMoveVelocity = function(agentId, x, y, z) {
 // Install wrappers over C++ bindings after WASM/embind init.
 var _prevOnRuntimeInitialized = Module.onRuntimeInitialized;
 Module.onRuntimeInitialized = function() {
+  _log(LOG_INFO, 'Recast WASM module initialized');
   if (_prevOnRuntimeInitialized) _prevOnRuntimeInitialized();
 
   var _rawUpdateParams = recast.updateCrowdAgentParameters;
@@ -655,10 +674,12 @@ recast.queryPolygons = function(posX, posY, posZ, extX, extY, extZ, maxPolys, ca
 };
 
 recast.saveTileMesh = function(path, callback_id) {
+  _log(LOG_INFO, 'saveTileMesh: ' + path);
   recast._saveTileMesh(path, callback_id);
 };
 
 recast.loadTileMesh = function(path, callback_id) {
+  _log(LOG_INFO, 'loadTileMesh: ' + path);
   const fsPath = '/tmp/' + path.split('/').pop();
   if (ENVIRONMENT_IS_NODE) {
     const fs = require('fs');
@@ -676,10 +697,12 @@ recast.loadTileMesh = function(path, callback_id) {
 };
 
 recast.saveTileCache = function(path, callback_id) {
+  _log(LOG_INFO, 'saveTileCache: ' + path);
   recast._saveTileCache(path, callback_id);
 };
 
 recast.loadTileCache = function(path, callback_id) {
+  _log(LOG_INFO, 'loadTileCache: ' + path);
   const fsPath = '/tmp/' + path.split('/').pop();
   if (ENVIRONMENT_IS_NODE) {
     const fs = require('fs');
@@ -712,21 +735,32 @@ recast.OBJDataLoaderAsync = function(data) {
 
 recast.buildSoloAsync = function() {
   return new Promise(function(resolve) {
-    recast.events.once('built', resolve);
+    _log(LOG_INFO, 'buildSolo: starting');
+    recast.events.once('built', function(type) {
+      _log(LOG_INFO, 'buildSolo: complete');
+      resolve(type);
+    });
     recast.buildSolo();
   });
 };
 
 recast.buildTiledAsync = function() {
   return new Promise(function(resolve) {
-    recast.events.once('built', resolve);
+    _log(LOG_INFO, 'buildTiled: starting');
+    recast.events.once('built', function(type) {
+      _log(LOG_INFO, 'buildTiled: complete');
+      resolve(type);
+    });
     recast.buildTiled();
   });
 };
 
 recast.findPathAsync = function(start, end, max) {
   return new Promise(function(resolve) {
-    recast.findPath(start.x, start.y, start.z, end.x, end.y, end.z, max || 100, recast.cb(resolve));
+    recast.findPath(start.x, start.y, start.z, end.x, end.y, end.z, max || 100, recast.cb(function(path) {
+      _log(LOG_DEBUG, 'findPath: ' + (path ? path.length : 0) + ' waypoints');
+      resolve(path);
+    }));
   });
 };
 
