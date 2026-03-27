@@ -58,7 +58,8 @@ function _formationOffset(type, slotIndex, totalSlots, spacing) {
 /**
  * Directed geometric formation where each agent holds a numbered slot.
  * The formation rotates to face the direction of travel (centroid → destination).
- * Install via `recast.withPlugin(Formation)`, then use `recast.createFormation(options)`.
+ * 
+ * * Install via `recast.withPlugin(Formation)`, then use `recast.createFormation(options)`.
  * 
  * @category Formation
  * @param {object} recastInstance - The recast module instance.

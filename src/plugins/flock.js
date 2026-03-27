@@ -10,7 +10,7 @@
 
 /**
  * Loose emergent group behavior: cohesion + optional alignment.
- * Separation is handled natively by Detour's DT_CROWD_SEPARATION flag.
+ * 
  * Install via `recast.withPlugin(FlockGroup)`, then use `recast.createFlockGroup(options)`.
  * 
  * @category Flock

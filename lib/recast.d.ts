@@ -16,8 +16,53 @@
  */
 
 /**
- * @categoryDescription Recast.js
- * Recast description.
+ * @categoryDescription Getting started
+ * Configure navmesh build parameters and logging.
+ *
+ * @categoryDescription Geometry
+ * Load scene geometry from OBJ files or in-memory data.
+ *
+ * @categoryDescription Navmesh
+ * Build and manage the navigation mesh.
+ *
+ * @categoryDescription Pathfinding
+ * Query paths, nearest points, and polygons on the navmesh.
+ *
+ * @categoryDescription Polygon Flags
+ * Set traversal flags on navmesh polygons and polygon flag constants.
+ *
+ * @categoryDescription Crowd
+ * Simulate multiple agents navigating the navmesh with steering behaviors.
+ *
+ * @categoryDescription Obstacles
+ * Add and remove dynamic cylindrical obstacles on a tile cache navmesh.
+ *
+ * @categoryDescription Off-Mesh Connections
+ * Register jump/ladder connections between disconnected areas.
+ *
+ * @categoryDescription Zones
+ * Named polygon groups with shared traversal flags.
+ *
+ * @categoryDescription Persistence
+ * Save and load navmesh and tile cache data to/from disk.
+ *
+ * @categoryDescription Events
+ * Listen to navmesh build and crowd update events.
+ *
+ * @categoryDescription Rendering
+ * WebGL debug drawing (browser only).
+ *
+ * @categoryDescription Plugins
+ * Extend recast instances with steering behavior plugins.
+ *
+ * @categoryDescription Flock
+ * Emergent group behavior using cohesion and optional alignment.
+ * Install via `recast.withPlugin(FlockGroup)`.
+ *
+ * @categoryDescription Formation
+ * Directed geometric formation with slot-based agent positioning.
+ * Install via `recast.withPlugin(Formation)`.
+ *
  * @showCategories
  * @module
  */
@@ -43,12 +88,16 @@
  */
 declare function Recast(): Promise<RecastModule>;
 
+/**
+ * The main Recast namespace.
+ * @license Apache-2.0
+ * @category Getting started
+ */
 export interface RecastModule {
-
-  // ── Configuration ──────────────────────────────────────────────────────────
 
   /**
    * Set all navmesh build parameters at once.
+   * @group Setup
    * @example
    * recast.settings({
    *  cellSize: 0.3,
@@ -61,48 +110,80 @@ export interface RecastModule {
    */
   settings(options: RecastSettings): void;
 
-  /** Voxel width/depth of a cell. Smaller = higher resolution. */
+  /**
+   * Voxel width/depth of a cell. Smaller = higher resolution.
+   * @group Setup
+   */
   set_cellSize(value: number): void;
-  /** Voxel height. */
+  /**
+   * Voxel height.
+   * @group Setup
+   */
   set_cellHeight(value: number): void;
-  /** Minimum floor-to-ceiling clearance for a walkable area. */
+  /**
+   * Minimum floor-to-ceiling clearance for a walkable area.
+   * @group Setup
+   */
   set_agentHeight(value: number): void;
-  /** Agent clearance radius from walls. */
+  /**
+   * Agent clearance radius from walls.
+   * @group Setup
+   */
   set_agentRadius(value: number): void;
-  /** Maximum step height an agent can climb. */
+  /**
+   * Maximum step height an agent can climb.
+   * @group Setup
+   */
   set_agentMaxClimb(value: number): void;
-  /** Maximum walkable slope in degrees. */
+  /**
+   * Maximum walkable slope in degrees.
+   * @group Setup
+   */
   set_agentMaxSlope(value: number): void;
-
-  // ── Logging ────────────────────────────────────────────────────────────────
 
   /**
    * Optional logger instance for diagnostic output.
    * Assign any object with `debug`, `info`, and/or `error` methods.
    * When `null` or `undefined`, all internal logging is silenced (default).
+   * @group Setup
    * @example
    * recast.logger = console;
    * recast.logger = { info: (msg) => myLogger.log('recast', msg) };
    */
   logger: RecastLogger | null | undefined;
 
+  /**
+   * The navmesh type last built: `solo` or `tiled`.
+   * Set after the `built` event fires.
+   * @group Setup
+   */
+  navmeshType?: 'solo' | 'tiled';
+
   // ── Geometry loading ───────────────────────────────────────────────────────
 
   /**
    * Load geometry from an OBJ file at `path`.
    * In Node.js reads from disk; in the browser fetches via HTTP.
+   * @group Geometry
    */
   OBJLoader(path: string, callback: (module: RecastModule) => void): void;
 
-  /** Async version of {@link RecastModule.OBJLoader}. */
+  /**
+   * Async version of {@link RecastModule.OBJLoader}.
+   * @group Geometry
+   */
   OBJLoaderAsync(path: string): Promise<void>;
 
   /**
    * Load geometry from an OBJ string or buffer already in memory.
+   * @group Geometry
    */
   OBJDataLoader(data: string | ArrayBuffer, callback: (module: RecastModule) => void): void;
 
-  /** Async version of {@link RecastModule.OBJDataLoader}. */
+  /**
+   * Async version of {@link RecastModule.OBJDataLoader}.
+   * @group Geometry
+   */
   OBJDataLoaderAsync(data: string | ArrayBuffer): Promise<void>;
 
   // ── Navmesh building ───────────────────────────────────────────────────────
@@ -110,23 +191,32 @@ export interface RecastModule {
   /**
    * Build a single-tile (solo) navmesh from the loaded geometry.
    * Emits `built` on {@link RecastModule.events} when done.
+   * @group Navmesh
    */
   buildSolo(): void;
 
-  /** Async version of {@link RecastModule.buildSolo}. Resolves with the navmesh type string. */
+  /**
+   * Async version of {@link RecastModule.buildSolo}. Resolves with the navmesh type string.
+   * @group Navmesh
+   */
   buildSoloAsync(): Promise<string>;
 
   /**
    * Build a tiled navmesh from the loaded geometry.
    * Emits `built` on {@link RecastModule.events} when done.
+   * @group Navmesh
    */
   buildTiled(): void;
 
-  /** Async version of {@link RecastModule.buildTiled}. Resolves with the navmesh type string. */
+  /**
+   * Async version of {@link RecastModule.buildTiled}. Resolves with the navmesh type string.
+   * @group Navmesh
+   */
   buildTiledAsync(): Promise<string>;
 
   /**
    * Rebuild all tiles in the tiled navmesh (e.g. after adding off-mesh connections or obstacles).
+   * @group Navmesh
    */
   rebuildAllTiles(): void;
 
@@ -136,24 +226,28 @@ export interface RecastModule {
    * Async pathfinding between two points.
    * Resolves with an array of waypoints along the path.
    * @param max - Maximum number of waypoints (default: 100).
+   * @group Pathfinding
    */
   findPathAsync(start: Vec3, end: Vec3, max?: number): Promise<Vec3[]>;
 
   /**
    * Find the navmesh point nearest to the given position within an extent box.
    * Resolves with the nearest point.
+   * @group Pathfinding
    */
   findNearestPointAsync(position: Vec3, extent: Vec3): Promise<Vec3>;
 
   /**
    * Find the polygon nearest to the given position within an extent box.
    * Resolves with the polygon object, or `null` if none is found.
+   * @group Pathfinding
    */
   findNearestPolyAsync(position: Vec3, extent: Vec3): Promise<NavPoly | null>;
 
   /**
    * Get a random walkable point on the navmesh.
    * Resolves with the point.
+   * @group Pathfinding
    */
   getRandomPointAsync(): Promise<Vec3>;
 
@@ -161,34 +255,62 @@ export interface RecastModule {
    * Find all polygons within a bounding-box centred at the given position.
    * Resolves with an array of polygon objects, or `null` on failure.
    * @param maxPolys - Maximum number of polygons to return (default: 1000).
+   * @group Pathfinding
    */
   queryPolygonsAsync(posX: number, posY: number, posZ: number, extX: number, extY: number, extZ: number, maxPolys?: number): Promise<NavPoly[] | null>;
 
   // ── Polygon flags ──────────────────────────────────────────────────────────
 
   /**
-   * Set traversal flags on all polygons within an bounding-box.
+   * Set traversal flags on all polygons within a bounding-box.
    * Use the `FLAG_*` constants for the `flags` bitmask.
+   * @group Pathfinding
    */
   setPolyFlags(posX: number, posY: number, posZ: number, extX: number, extY: number, extZ: number, flags: number): void;
 
   /**
    * Set traversal flags on a specific polygon by its reference.
+   * @group Pathfinding
    */
   setPolyFlagsByRef(ref: number, flags: number): void;
 
+  /** Poly flag: walkable surface. @group Pathfinding */
+  readonly FLAG_WALK: 0x01;
+  /** Poly flag: swimmable surface. @group Pathfinding */
+  readonly FLAG_SWIM: 0x02;
+  /** Poly flag: door (can be opened/closed). @group Pathfinding */
+  readonly FLAG_DOOR: 0x04;
+  /** Poly flag: jumpable surface. @group Pathfinding */
+  readonly FLAG_JUMP: 0x08;
+  /** Poly flag: disabled (agents cannot traverse). @group Pathfinding */
+  readonly FLAG_DISABLED: 0x10;
+  /** Poly flag: all flags set. @group Pathfinding */
+  readonly FLAG_ALL: 0xffff;
+
   // ── Persistence ────────────────────────────────────────────────────────────
 
-  /** Save the current tiled navmesh to `path` on disk (Node.js / Emscripten FS). */
+  /**
+   * Save the current tiled navmesh to `path` on disk (Node.js / Emscripten FS).
+   * @group Persistence
+   */
   saveTileMeshAsync(path: string): Promise<void>;
 
-  /** Load a previously saved navmesh from `path`. */
+  /**
+   * Load a previously saved navmesh from `path`.
+   * @group Persistence
+   */
   loadTileMeshAsync(path: string): Promise<void>;
 
-  /** Save the tile cache (dynamic obstacles + navmesh) to `path`. */
+  /**
+   * Save the tile cache (dynamic obstacles + navmesh) to `path`.
+   * @group Persistence
+   */
   saveTileCacheAsync(path: string): Promise<void>;
 
-  /** Load a previously saved tile cache from `path`. */
+  /**
+   * Load a previously saved tile cache from `path`.
+   * @group Persistence
+   */
   loadTileCacheAsync(path: string): Promise<void>;
 
   // ── Crowd simulation ───────────────────────────────────────────────────────
@@ -198,12 +320,14 @@ export interface RecastModule {
    * Must be called once before adding agents.
    * @param maxAgents - Maximum number of simultaneous agents.
    * @param maxAgentRadius - Maximum agent radius (used to size internal buffers).
+   * @group Crowd
    */
   initCrowd(maxAgents: number, maxAgentRadius: number): void;
 
   /**
    * Add a crowd agent.
    * Returns the agent index used to identify it in subsequent calls.
+   * @group Crowd
    * @example
    * const id = recast.addAgent({
    *  position: { x: 0, y: 0, z: 0 },
@@ -219,12 +343,14 @@ export interface RecastModule {
    * All fields are required — unspecified fields are reset to `0`.
    * Use {@link RecastModule.mergeCrowdAgentParameters} to perform a partial update.
    * Position is managed by the crowd simulation and cannot be set directly.
+   * @group Crowd
    */
   updateCrowdAgentParameters(agentId: number, options: Omit<AgentOptions, 'position'>): void;
 
   /**
    * Read the current behavioral parameters of a crowd agent as a JSON string.
    * Returns `"null"` if the agent index is invalid or the agent is inactive.
+   * @group Crowd
    */
   getCrowdAgentParameters(agentId: number): string;
 
@@ -232,54 +358,77 @@ export interface RecastModule {
    * Update a subset of crowd agent parameters.
    * Reads the agent's current parameters first and merges with the provided options,
    * so unspecified fields retain their current values.
+   * @group Crowd
    */
   mergeCrowdAgentParameters(agentId: number, options: Partial<Omit<AgentOptions, 'position'>>): void;
 
   /**
    * Remove a crowd agent by its index.
+   * @group Crowd
    */
   removeCrowdAgent(agentId: number): void;
 
   /**
    * Request an agent to move toward a target position.
+   * @group Crowd
    */
   crowdRequestMoveTarget(agentId: number, x: number, y: number, z: number): void;
 
   /**
    * Request an agent to move with a specific velocity vector.
+   * @group Crowd
    */
   crowdRequestMoveVelocity(agentId: number, x: number, y: number, z: number): void;
 
   /**
    * Advance the crowd simulation by `dt` seconds.
    * Triggers an `update` event on {@link RecastModule.events} with the active agent list.
+   * @group Crowd
    */
   crowdUpdate(dt: number): void;
 
   /**
    * Retrieve all currently active agents via callback.
+   * @group Crowd
    */
   crowdGetActiveAgents(callback_id?: number): void;
+
+  /** Crowd update flag: enable anticipation of turns. @group Crowd */
+  readonly CROWD_ANTICIPATE_TURNS: 1;
+  /** Crowd update flag: enable obstacle avoidance. @group Crowd */
+  readonly CROWD_OBSTACLE_AVOIDANCE: 2;
+  /** Crowd update flag: enable separation between agents. @group Crowd */
+  readonly CROWD_SEPARATION: 4;
+  /** Crowd update flag: enable path visibility optimisation. @group Crowd */
+  readonly CROWD_OPTIMIZE_VIS: 8;
+  /** Crowd update flag: enable path topology optimisation. @group Crowd */
+  readonly CROWD_OPTIMIZE_TOPO: 16;
 
   // ── Temporary obstacles ────────────────────────────────────────────────────
 
   /**
    * Add a cylindrical obstacle to the tile cache.
    * Returns the obstacle reference ID, or `-1` on failure.
+   * @group Obstacles
    */
   addTempObstacle(x: number, y: number, z: number, radius: number): number;
 
   /**
    * Remove a temporary obstacle by its reference.
+   * @group Obstacles
    */
   removeTempObstacle(obstacleRef: number): void;
 
   /**
    * Remove all temporary obstacles.
+   * @group Obstacles
    */
   removeAllTempObstacles(): void;
 
-  /** Async: resolves with all active obstacles. */
+  /**
+   * Async: resolves with all active obstacles.
+   * @group Obstacles
+   */
   getAllTempObstaclesAsync(): Promise<TempObstacle[]>;
 
   // ── Off-mesh connections ───────────────────────────────────────────────────
@@ -287,6 +436,7 @@ export interface RecastModule {
   /**
    * Add a custom off-mesh connection (e.g. a jump or ladder link).
    * @param bidirectional - `true` for bidirectional, `false` for one-way.
+   * @group Off-Mesh Connections
    */
   addOffMeshConnection(startX: number, startY: number, startZ: number, endX: number, endY: number, endZ: number, radius: number, bidirectional: boolean): void;
 
@@ -295,11 +445,13 @@ export interface RecastModule {
   /**
    * Named zones keyed by zone name.
    * Populated by {@link RecastModule.setZones}.
+   * @group Zones
    */
   zones: Record<string, Zone>;
 
   /**
    * Create named zones with initial polygon references and flags.
+   * @group Zones
    * @example
    * recast.setZones({
    *  water: {
@@ -310,7 +462,10 @@ export interface RecastModule {
    */
   setZones(zones: Record<string, ZoneData>): void;
 
-  /** The Zone constructor — use to create zones manually. */
+  /**
+   * The Zone constructor — use to create zones manually.
+   * @group Zones
+   */
   Zone: typeof Zone;
 
   // ── Plugin system ──────────────────────────────────────────────────────────
@@ -319,6 +474,7 @@ export interface RecastModule {
    * Install a steering behavior plugin on this recast instance.
    * The plugin class must implement a static `install(recastInstance)` method.
    * Returns the recast instance for chaining.
+   * @group Plugins
    * @example
    * import { FlockGroup } from 'recastjs/plugins/flock';
    * import { Formation } from 'recastjs/plugins/formation';
@@ -326,25 +482,33 @@ export interface RecastModule {
    */
   withPlugin(PluginClass: RecastPlugin): this;
 
-  /** The FlockGroup constructor, available after `recast.withPlugin(FlockGroup)`. */
+  // ── Flock ──────────────────────────────────────────────────────────────────
+
+  /**
+   * The FlockGroup constructor, available after `recast.withPlugin(FlockGroup)`.
+   * @group Flock
+   */
   FlockGroup?: typeof FlockGroup;
 
   /**
    * Create a new flock group.
    * Available after `recast.withPlugin(FlockGroup)`.
+   * @group Flock
    */
   createFlockGroup?(options?: FlockGroupOptions): FlockGroup;
 
+  // ── Formation ─────────────────────────────────────────────────────────────
+
   /**
    * The Formation constructor, available after `recast.withPlugin(Formation)`.
-   * @category Formation
+   * @group Formation
    */
   Formation?: typeof Formation;
- 
+
   /**
    * Create a new formation.
    * Available after `recast.withPlugin(Formation)`.
-   * @category Formation
+   * @group Formation
    */
   createFormation?(options?: FormationOptions): Formation;
 
@@ -355,69 +519,51 @@ export interface RecastModule {
    * Emits:
    * - `built` (type: string) — after `buildSolo()` or `buildTiled()` completes.
    * - `update` (agents: CrowdAgent[]) — after each `crowdUpdate()` call.
+   * @group Events
    */
   events: RecastEventEmitter;
 
-  /** Shorthand for `recast.events.on(type, listener)`. */
+  /**
+   * Shorthand for `recast.events.on(type, listener)`.
+   * @group Events
+   */
   on(type: string, listener: (...args: any[]) => void): void;
-  /** Shorthand for `recast.events.off(type, listener)`. */
+  /**
+   * Shorthand for `recast.events.off(type, listener)`.
+   * @group Events
+   */
   off(type: string, listener: (...args: any[]) => void): void;
-  /** Shorthand for `recast.events.emit(type, ...args)`. */
+  /**
+   * Shorthand for `recast.events.emit(type, ...args)`.
+   * @group Events
+   */
   emit(type: string, ...args: any[]): void;
 
   // ── GL rendering (browser only) ────────────────────────────────────────────
 
   /**
    * Provide a WebGL rendering context for debug drawing.
+   * @group Rendering
    */
   setGLContext(glContext: WebGLRenderingContext): void;
 
-  /** The current WebGL context set via {@link RecastModule.setGLContext}. */
+  /**
+   * The current WebGL context set via {@link RecastModule.setGLContext}.
+   * @group Rendering
+   */
   glContext?: WebGLRenderingContext;
 
   /**
    * Draw a named GL object using the current {@link RecastModule.glContext}.
+   * @group Rendering
    */
   drawObject(objectName: string): void;
-
-  // ── State ─────────────────────────────────────────────────────────────────
-
-  /**
-   * The navmesh type last built: `solo` or `tiled`.
-   * Set after the `built` event fires.
-   */
-  navmeshType?: 'solo' | 'tiled';
-
-  // ── Crowd update flags ────────────────────────────────────────────────────
-
-  /** Crowd update flag: enable anticipation of turns. */
-  readonly CROWD_ANTICIPATE_TURNS: 1;
-  /** Crowd update flag: enable obstacle avoidance. */
-  readonly CROWD_OBSTACLE_AVOIDANCE: 2;
-  /** Crowd update flag: enable separation between agents. */
-  readonly CROWD_SEPARATION: 4;
-  /** Crowd update flag: enable path visibility optimisation. */
-  readonly CROWD_OPTIMIZE_VIS: 8;
-  /** Crowd update flag: enable path topology optimisation. */
-  readonly CROWD_OPTIMIZE_TOPO: 16;
-
-  // ── Polygon traversal flags ───────────────────────────────────────────────
-
-  /** Poly flag: walkable surface. */
-  readonly FLAG_WALK: 0x01;
-  /** Poly flag: swimmable surface. */
-  readonly FLAG_SWIM: 0x02;
-  /** Poly flag: door (can be opened/closed). */
-  readonly FLAG_DOOR: 0x04;
-  /** Poly flag: jumpable surface. */
-  readonly FLAG_JUMP: 0x08;
-  /** Poly flag: disabled (agents cannot traverse). */
-  readonly FLAG_DISABLED: 0x10;
-  /** Poly flag: all flags set. */
-  readonly FLAG_ALL: 0xffff;
 }
 
-/** Navigation mesh configuration passed to {@link RecastModule.settings}. */
+/**
+ * Navigation mesh configuration passed to {@link RecastModule.settings}.
+ * @group Setup
+ */
 export interface RecastSettings {
   /**
    * Cell size in world units, should be >= 0.0001.
@@ -457,6 +603,7 @@ export interface RecastSettings {
 /**
  * Logger interface for {@link RecastModule.logger}.
  * All methods are optional — only the methods you provide will be called.
+ * @group Setup
  */
 export interface RecastLogger {
   debug?(message: string): void;
@@ -464,7 +611,10 @@ export interface RecastLogger {
   error?(message: string): void;
 }
 
-/** Options for adding a crowd agent via {@link RecastModule.addAgent}. */
+/**
+ * Options for adding a crowd agent via {@link RecastModule.addAgent}.
+ * @group Crowd
+ */
 export interface AgentOptions {
   /** Agent position */
   position: Vec3;
@@ -486,7 +636,10 @@ export interface AgentOptions {
   separationWeight?: number;
 }
 
-/** An active crowd agent returned by {@link RecastModule.crowdGetActiveAgents}. */
+/**
+ * An active crowd agent returned by {@link RecastModule.crowdGetActiveAgents}.
+ * @group Crowd
+ */
 export interface CrowdAgent {
   /** Agent index in the crowd. */
   idx: number;
@@ -518,6 +671,10 @@ export interface CrowdAgent {
   desiredSpeed: number;
 }
 
+/**
+ * Event emitter interface exposed as {@link RecastModule.events}.
+ * @group Events
+ */
 export interface RecastEventEmitter {
   on(type: string, listener: (...args: any[]) => void): this;
   once(type: string, listener: (...args: any[]) => void): this;
@@ -530,7 +687,10 @@ export interface RecastEventEmitter {
   eventNames(): string[];
 }
 
-/** A temporary cylindrical obstacle as returned by {@link RecastModule.getAllTempObstaclesAsync}. */
+/**
+ * A temporary cylindrical obstacle as returned by {@link RecastModule.getAllTempObstaclesAsync}.
+ * @group Obstacles
+ */
 export interface TempObstacle {
   position: Vec3;
   radius: number;
@@ -542,6 +702,7 @@ export interface TempObstacle {
 /**
  * A named group of polygons sharing the same traversal flags.
  * Instances are created internally by {@link RecastModule.setZones}.
+ * @group Zones
  */
 export declare class Zone {
   constructor(name: string, data: ZoneData);
@@ -565,7 +726,10 @@ export declare class Zone {
   syncFlags(): this;
 }
 
-/** Zone data passed to {@link RecastModule.setZones}. */
+/**
+ * Zone data passed to {@link RecastModule.setZones}.
+ * @group Zones
+ */
 export interface ZoneData {
   /** Polygon references belonging to this zone. */
   refs: number[];
@@ -573,7 +737,10 @@ export interface ZoneData {
   initialFlags: number[];
 }
 
-/** A navigation mesh polygon as returned by {@link RecastModule.findNearestPolyAsync} and {@link RecastModule.queryPolygonsAsync}. */
+/**
+ * A navigation mesh polygon as returned by {@link RecastModule.findNearestPolyAsync} and {@link RecastModule.queryPolygonsAsync}.
+ * @group Pathfinding
+ */
 export interface NavPoly {
   /** Polygon reference ID. */
   ref: number;
@@ -591,7 +758,10 @@ export interface NavPoly {
   vertices: Vec3[];
 }
 
-/** A 3D point or vector as a plain object. */
+/**
+ * A 3D point or vector as a plain object.
+ * @group Pathfinding
+ */
 export interface Vec3 {
   x: number;
   y: number;
@@ -600,14 +770,20 @@ export interface Vec3 {
 
 // ── Plugin system ─────────────────────────────────────────────────────────────
 
-/** Interface that plugin classes must implement for use with {@link RecastModule.withPlugin}. */
+/**
+ * Interface that plugin classes must implement for use with {@link RecastModule.withPlugin}.
+ * @group Plugins
+ */
 export interface RecastPlugin {
   install(recast: RecastModule): void;
 }
 
 // ── FlockGroup plugin ─────────────────────────────────────────────────────────
 
-/** Options for {@link RecastModule.createFlockGroup}. */
+/**
+ * Options for {@link RecastModule.createFlockGroup}.
+ * @group Flock
+ */
 export interface FlockGroupOptions {
   /** Initial agent IDs to include in the flock. */
   agentIds?: number[];
@@ -630,8 +806,10 @@ export interface FlockGroupOptions {
 
 /**
  * Loose emergent group behavior using cohesion and optional alignment.
- * Separation is handled natively by Detour's `DT_CROWD_SEPARATION` flag.
+ * 
  * Install via `recast.withPlugin(FlockGroup)`, then use `recast.createFlockGroup(options)`.
+ * 
+ * @group Flock
  */
 export declare class FlockGroup {
   constructor(recastInstance: RecastModule, options: FlockGroupOptions);
@@ -656,24 +834,17 @@ export declare class FlockGroup {
   static install(recast: RecastModule): void;
 }
 
-/**
- * @categoryDescription Formation
- * Directed geometric formation: each agent holds a numbered slot whose offset
- * rotates with the direction of travel (centroid → destination in XZ).
- * Supported types: 'circle', 'line', 'square', 'arc'.
- * @showCategories
- * @module
- */
+// ── Formation plugin ──────────────────────────────────────────────────────────
 
 /**
  * Formation shape types supported by {@link Formation}.
- * @category Formation
+ * @group Formation
  */
 export type FormationType = 'circle' | 'line' | 'square' | 'arc';
 
 /**
  * Options for {@link RecastModule.createFormation}.
- * @category Formation
+ * @group Formation
  */
 export interface FormationOptions {
   /** Ordered array of agent IDs; index determines slot number. */
@@ -693,8 +864,10 @@ export interface FormationOptions {
 /**
  * Directed geometric formation where each agent holds a numbered slot.
  * The formation rotates to face the direction of travel.
+ * 
  * Install via `recast.withPlugin(Formation)`, then use `recast.createFormation(options)`.
- * @category Formation
+ * 
+ * @group Formation
  */
 export declare class Formation {
   constructor(recastInstance: RecastModule, options: FormationOptions);

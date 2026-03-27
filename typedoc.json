@@ -1,15 +1,38 @@
 {
+    "out": "docs",
     "name": "Recast.js",
     "router": "structure",
-    "readme": "src/README.md",
+    "readme": "src/docs/Home.md",
     "sort": ["source-order", "alphabetical"],
-    "out": "docs",
+    "sortEntryPoints": false,
+    "groupOrder": [
+        "Setup",
+        "Geometry",
+        "Persistence",
+        "Navmesh",
+        "Pathfinding",
+        "Obstacles",
+        "Zones",
+        "Off-Mesh Connections",
+        "Crowd",
+        "Plugins",
+        "Flock",
+        "Formation",
+        "Events",
+        "Rendering",
+        "*"
+    ],
+    "projectDocuments": [
+        "src/docs/Overview.md",
+        "src/docs/Getting started.md",
+        "src/docs/Plugins.md",
+        "src/docs/CLI.md",
+    ],
+    "navigationLinks": {
+        "Demo": "https://vincent.github.io/recast.js/tests/browser/webgl/test.webgl",
+        "GitHub": "https://vincent.github.io/recast.js/",
+    },
     "navigation": {
         "includeCategories": true,
-        "includeGroups": false,
-        "includeFolders": true,
-        "compactFolders": false,
-        "excludeReferences": true
-    },
-    "categorizeByGroup": true
+    }
 }

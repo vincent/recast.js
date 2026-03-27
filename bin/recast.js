@@ -13,9 +13,16 @@ const SETTINGS = [
 ];
 
 const DEFAULTS = {
-  cellSize: 0.3, cellHeight: 0.2, agentHeight: 2.0, agentRadius: 0.4,
-  agentMaxClimb: 0.9, agentMaxSlope: 30, regionMinSize: 8, regionMergeSize: 20,
-  edgeMaxLen: 12, edgeMaxError: 1.3,
+  cellSize: 0.3,
+  cellHeight: 0.2,
+  agentHeight: 2.0,
+  agentRadius: 0.4,
+  agentMaxClimb: 0.9,
+  agentMaxSlope: 30,
+  regionMinSize: 8,
+  regionMergeSize: 20,
+  edgeMaxLen: 12,
+  edgeMaxError: 1.3,
 };
 
 function applySettings(recast, overrides) {
