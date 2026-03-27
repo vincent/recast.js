@@ -156,7 +156,7 @@
 						if (formationType === 'flock') {
 							currentGroup = recast.createFlockGroup({ agentIds, cohesionWeight: 0.5 });
 						} else if (formationType) {
-							currentGroup = recast.createFormation({ agentIds, type: formationType, spacing: 0.5 });
+							currentGroup = recast.createFormation({ agentIds, type: formationType, spacing: 2.0 });
 						} else {
 							currentGroup = null;
 						}

@@ -37,9 +37,10 @@ function _formationOffset(type, slotIndex, totalSlots, spacing) {
     }
     case 'square': {
       var cols = Math.ceil(Math.sqrt(n));
+      var rows = Math.ceil(n / cols);
       return {
-        x: s * (i % cols),
-        z: s * Math.floor(i / cols)
+        x: s * (i % cols) - (cols - 1) * s / 2,
+        z: s * Math.floor(i / cols) - (rows - 1) * s / 2
       };
     }
     case 'arc': {
