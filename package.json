@@ -3,10 +3,10 @@
   "version": "0.3.0",
   "description": "A wrapper for the RecastDetour navigation library for node and the browser",
   "main": "./lib/recast.js",
-  "types": "./lib/recast.d.ts",
+  "types": "./src/recast.d.ts",
   "exports": {
     ".": {
-      "types": "./lib/recast.d.ts",
+      "types": "./src/recast.d.ts",
       "import": "./lib/recast.mjs",
       "require": "./lib/recast.js"
     }

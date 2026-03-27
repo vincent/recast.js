@@ -44,6 +44,12 @@
 			<li><label><input type="radio" name="formation" value="line"/> line</label></li>
 			<li><label><input type="radio" name="formation" value="square"/> square</label></li>
 			<li><label><input type="radio" name="formation" value="arc"/> arc</label></li>
+			<li><label><input type="radio" name="formation" value="v"/> v</label></li>
+			<li><label><input type="radio" name="formation" value="wedge"/> wedge</label></li>
+			<li><label><input type="radio" name="formation" value="hex"/> hex</label></li>
+			<li><label><input type="radio" name="formation" value="rings"/> rings</label></li>
+			<li><label><input type="radio" name="formation" value="spiral"/> spiral</label></li>
+			<li><label><input type="radio" name="formation" value="wave"/> wave</label></li>
 		</ul>
 		<p>Click on the mesh to send the flock to a new destination</p>
 	</div>
@@ -87,7 +93,7 @@
 			renderer.render(scene, camera);
 		}
 
-		const NUM_AGENTS = 20;
+		const NUM_AGENTS = 10;
 		const agentMaterial = new THREE.MeshStandardMaterial({ color: 0x38bdff });
 		const agentGeometry = new THREE.CylinderGeometry(0.2, 0.5, 2);
 		const agentMeshes = [];
@@ -156,7 +162,7 @@
 						if (formationType === 'flock') {
 							currentGroup = recast.createFlockGroup({ agentIds, cohesionWeight: 0.5 });
 						} else if (formationType) {
-							currentGroup = recast.createFormation({ agentIds, type: formationType, spacing: 2.0 });
+							currentGroup = recast.createFormation({ agentIds, type: formationType, spacing: 1.9 });
 						} else {
 							currentGroup = null;
 						}

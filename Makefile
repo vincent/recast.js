@@ -111,7 +111,7 @@ build-debug:
 build-all: clean build build-esm build-debug
 
 docs:
-	npx typedoc lib/recast.d.ts --plugin typedoc-github-theme
+	npx typedoc src/recast.d.ts --plugin typedoc-github-theme
 
 lint:
 	npm run lint

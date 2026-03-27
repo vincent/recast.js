@@ -4,7 +4,8 @@
  * @categoryDescription Formation
  * Directed geometric formation: each agent holds a numbered slot whose offset
  * rotates with the direction of travel (centroid → destination in XZ).
- * Supported types: 'circle', 'line', 'square', 'arc'.
+ * Supported types: 'circle', 'line', 'square', 'arc', 'v', 'wedge',
+ * 'hex', 'rings', 'spiral', 'wave'.
  * @showCategories
  * @module
  */
@@ -12,7 +13,7 @@
 /**
  * @private
  * Compute the local (pre-rotation) XZ offset for a slot in a formation.
- * @param {'circle'|'line'|'square'|'arc'} type
+ * @param {'circle'|'line'|'square'|'arc'|'v'|'wedge'|'hex'|'rings'|'spiral'|'wave'} type
  * @param {number} slotIndex
  * @param {number} totalSlots
  * @param {number} spacing
@@ -48,6 +49,69 @@ function _formationOffset(type, slotIndex, totalSlots, spacing) {
       return {
         x: Math.cos(angle) * r,
         z: Math.sin(angle) * r
+      };
+    }
+    case 'v': {
+      if (i === 0) return { x: 0, z: 0 };
+      var rank = Math.ceil(i / 2);
+      var side = (i % 2 === 1) ? -1 : 1;
+      return {
+        x: side * rank * s,
+        z: -rank * s
+      };
+    }
+    case 'wedge': {
+      var remaining = i;
+      var row = 0;
+      while (remaining >= (row * 2 + 1)) {
+        remaining -= (row * 2 + 1);
+        row++;
+      }
+      return {
+        x: (remaining - row) * s,
+        z: -row * s
+      };
+    }
+    case 'hex': {
+      var hexRowHeight = Math.sqrt(3) * 0.5 * s;
+      var cols = Math.max(1, Math.ceil(Math.sqrt(n)));
+      var row = Math.floor(i / cols);
+      var col = i % cols;
+      return {
+        x: (col + 0.5 * (row % 2)) * s,
+        z: row * hexRowHeight
+      };
+    }
+    case 'rings': {
+      if (i === 0) return { x: 0, z: 0 };
+      var ring = 1;
+      var start = 1;
+      while (start + ring * 6 <= i) {
+        start += ring * 6;
+        ring++;
+      }
+      var ringIndex = i - start;
+      var ringSlots = ring * 6;
+      var ringAngle = (ringIndex / ringSlots) * 2 * Math.PI;
+      return {
+        x: Math.cos(ringAngle) * ring * s,
+        z: Math.sin(ringAngle) * ring * s
+      };
+    }
+    case 'spiral': {
+      var goldenAngle = Math.PI * (3 - Math.sqrt(5));
+      var theta = i * goldenAngle;
+      var r = s * Math.sqrt(i);
+      return {
+        x: Math.cos(theta) * r,
+        z: Math.sin(theta) * r
+      };
+    }
+    case 'wave': {
+      var waveX = (i - (n - 1) * 0.5) * s;
+      return {
+        x: waveX,
+        z: Math.sin(i * 0.75) * s
       };
     }
     default:
@@ -124,6 +188,17 @@ Formation.prototype.destroy = function() {
 /**
  * @private
  * Called on each crowd `update` event. Computes per-slot world-space targets.
+ * 
+ * Non-centered formations: the stability mechanism locks _lastForward only when fdLen ≤ spacing (centroid near destination),
+ * which requires the formation's slot centroid to be at (0,0). Only circle satisfied this. 
+ * => Compute the actual centroid of all n slot offsets dynamically in _onUpdate and subtract it from each slot before rotation.
+ *    Works correctly for all types and any n (including partial grids like n=5 where a formula-based approach fails).
+ * 
+ * Continuous target overwriting (the real jitter cause): the formation issued new crowdRequestMoveTarget calls every frame,
+ * even as the forward direction oscillated during the approach phase.
+ * This kept slot positions changing, so agents could never converge.
+ * => The "destroy trick" worked by stopping all target issuance.
+ * 
  * @param {CrowdAgent[]} agents - Active agent snapshot from crowdUpdate.
  */
 Formation.prototype._onUpdate = function(agents) {
