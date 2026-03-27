@@ -72,6 +72,7 @@ function Formation(recastInstance, options) {
   this.spacing = options.spacing !== undefined ? options.spacing : 2.0;
   this._destination  = null;
   this._lastForward  = { x: 1, z: 0 }; // used when centroid ≈ destination
+  this._lastTargets  = {}; // agentIdx → { x, z } — last dispatched target
   this._bound = this._onUpdate.bind(this);
   recastInstance.events.on('update', this._bound);
 }
@@ -81,6 +82,7 @@ function Formation(recastInstance, options) {
  * @param {number} x @param {number} y @param {number} z */
 Formation.prototype.requestMoveTarget = function(x, y, z) {
   this._destination = { x: x, y: y, z: z };
+  this._lastTargets = {};
 };
 
 /** Add an agent to the next available slot.
@@ -146,12 +148,13 @@ Formation.prototype._onUpdate = function(agents) {
   var fdx = dst.x - cx;
   var fdz = dst.z - cz;
   var fdLen = Math.sqrt(fdx * fdx + fdz * fdz);
-  if (fdLen > 0.1) {
+  if (fdLen > this.spacing) {
     this._lastForward = { x: fdx / fdLen, z: fdz / fdLen };
   }
   var fwd   = this._lastForward;
   var right = { x: fwd.z, z: -fwd.x }; // 90° clockwise rotation in XZ
 
+  var EPS = 0.1;
   var n = this._agents.length; // total slots (including inactive) for stable geometry
   for (var i = 0; i < members.length; i++) {
     var slot = members[i].slot;
@@ -160,7 +163,13 @@ Formation.prototype._onUpdate = function(agents) {
     // Rotate local offset into world space
     var wx = right.x * off.x + fwd.x * off.z;
     var wz = right.z * off.x + fwd.z * off.z;
-    this._recast.crowdRequestMoveTarget(a.idx, dst.x + wx, dst.y, dst.z + wz);
+    var tx = dst.x + wx;
+    var tz = dst.z + wz;
+    var prev = this._lastTargets[a.idx];
+    if (!prev || Math.abs(tx - prev.x) > EPS || Math.abs(tz - prev.z) > EPS) {
+      this._lastTargets[a.idx] = { x: tx, z: tz };
+      this._recast.crowdRequestMoveTarget(a.idx, tx, dst.y, tz);
+    }
   }
 };
 

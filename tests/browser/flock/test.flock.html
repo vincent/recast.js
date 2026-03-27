@@ -101,8 +101,9 @@
 		(async () => {
 			const recast = await Recast({ logger: console });
 
-			recast.withPlugin(recast.FlockGroup);
-			recast.withPlugin(recast.Formation);
+			recast
+				.withPlugin(recast.FlockGroup)
+				.withPlugin(recast.Formation);
 
 			recast.set_cellSize(0.3);
 			recast.set_cellHeight(0.2);

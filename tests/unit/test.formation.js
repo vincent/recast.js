@@ -166,6 +166,32 @@ describe('Formation', () => {
     recast.removeCrowdAgent(id);
   });
 
+  it('circle formation agents are stable after arriving', async () => {
+    const r = await freshCrowd();
+    const pts = await Promise.all([
+      r.getRandomPointAsync(),
+      r.getRandomPointAsync(),
+      r.getRandomPointAsync(),
+    ]);
+    const ids = pts.map((pt) => r.addAgent({ position: pt, ...AGENT_OPTS }));
+    const formation = r.createFormation({ agentIds: ids, type: 'circle', spacing: 2.0 });
+    const dst = await r.getRandomPointAsync();
+    formation.requestMoveTarget(dst.x, dst.y, dst.z);
+
+    await stepN(r, 200);
+    const snap1 = await stepN(r, 1);
+    const snap2 = await stepN(r, 10);
+
+    formation.destroy();
+    ids.forEach((id) => r.removeCrowdAgent(id));
+
+    for (const id of ids) {
+      const a1 = snap1.find((a) => a.idx === id);
+      const a2 = snap2.find((a) => a.idx === id);
+      expect(distXZ(a1.position, a2.position)).toBeLessThan(0.2);
+    }
+  });
+
   it('arc formation: single agent gets center slot without error', async () => {
     const pt = await recast.getRandomPointAsync();
     const id = recast.addAgent({ position: pt, ...AGENT_OPTS });
