@@ -37,10 +37,9 @@ function _formationOffset(type, slotIndex, totalSlots, spacing) {
     }
     case 'square': {
       var cols = Math.ceil(Math.sqrt(n));
-      var rows = Math.ceil(n / cols);
       return {
-        x: s * (i % cols) - (cols - 1) * s / 2,
-        z: s * Math.floor(i / cols) - (rows - 1) * s / 2
+        x: s * (i % cols),
+        z: s * Math.floor(i / cols)
       };
     }
     case 'arc': {
@@ -74,6 +73,7 @@ function Formation(recastInstance, options) {
   this._destination  = null;
   this._lastForward  = { x: 1, z: 0 }; // used when centroid ≈ destination
   this._lastTargets  = {}; // agentIdx → { x, z } — last dispatched target
+  this._arrived      = false; // true once all agents have reached their slots
   this._bound = this._onUpdate.bind(this);
   recastInstance.events.on('update', this._bound);
 }
@@ -84,6 +84,7 @@ function Formation(recastInstance, options) {
 Formation.prototype.requestMoveTarget = function(x, y, z) {
   this._destination = { x: x, y: y, z: z };
   this._lastTargets = {};
+  this._arrived = false;
 };
 
 /** Add an agent to the next available slot.
@@ -91,7 +92,10 @@ Formation.prototype.requestMoveTarget = function(x, y, z) {
  * @param {number} id
  */
 Formation.prototype.addAgent = function(id) {
-  if (this._agents.indexOf(id) === -1) this._agents.push(id);
+  if (this._agents.indexOf(id) === -1) {
+    this._agents.push(id);
+    this._arrived = false;
+  }
 };
 
 /**
@@ -101,7 +105,10 @@ Formation.prototype.addAgent = function(id) {
  */
 Formation.prototype.removeAgent = function(id) {
   var idx = this._agents.indexOf(id);
-  if (idx !== -1) this._agents.splice(idx, 1);
+  if (idx !== -1) {
+    this._agents.splice(idx, 1);
+    this._arrived = false;
+  }
 };
 
 /**
@@ -121,6 +128,7 @@ Formation.prototype.destroy = function() {
  */
 Formation.prototype._onUpdate = function(agents) {
   if (!this._destination || this._agents.length === 0) return;
+  if (this._arrived) return;
 
   // Build a lookup from agent idx → snapshot
   var agentMap = {};
@@ -155,23 +163,60 @@ Formation.prototype._onUpdate = function(agents) {
   var fwd   = this._lastForward;
   var right = { x: fwd.z, z: -fwd.x }; // 90° clockwise rotation in XZ
 
-  var EPS = 0.1;
+  // Compute the centroid of ALL n slot offsets in local space so we can center
+  // the formation around the destination regardless of formation type or n.
   var n = this._agents.length; // total slots (including inactive) for stable geometry
+  var localCX = 0, localCZ = 0;
+  for (var i = 0; i < n; i++) {
+    var lo = _formationOffset(this.type, i, n, this.spacing);
+    localCX += lo.x;
+    localCZ += lo.z;
+  }
+  localCX /= n;
+  localCZ /= n;
+
+  // How close an agent must be to its assigned target before we consider it
+  // "arrived" and allow re-evaluation of the slot position.
+  var ARRIVE_EPS = this.spacing * 0.4;
+  var allArrived = true;
+
   for (var i = 0; i < members.length; i++) {
     var slot = members[i].slot;
     var a    = members[i].agent;
     var off  = _formationOffset(this.type, slot, n, this.spacing);
-    // Rotate local offset into world space
-    var wx = right.x * off.x + fwd.x * off.z;
-    var wz = right.z * off.x + fwd.z * off.z;
+    // Center offset and rotate into world space
+    var ox = off.x - localCX;
+    var oz = off.z - localCZ;
+    var wx = right.x * ox + fwd.x * oz;
+    var wz = right.z * ox + fwd.z * oz;
     var tx = dst.x + wx;
     var tz = dst.z + wz;
+
     var prev = this._lastTargets[a.idx];
-    if (!prev || Math.abs(tx - prev.x) > EPS || Math.abs(tz - prev.z) > EPS) {
+    if (!prev) {
+      // First target for this agent — issue immediately.
       this._lastTargets[a.idx] = { x: tx, z: tz };
       this._recast.crowdRequestMoveTarget(a.idx, tx, dst.y, tz);
+      allArrived = false;
+    } else {
+      var atPrev = Math.abs(a.position.x - prev.x) <= ARRIVE_EPS &&
+                   Math.abs(a.position.z - prev.z) <= ARRIVE_EPS;
+      if (atPrev) {
+        // Agent reached its last target.  Re-issue only if the ideal slot has
+        // drifted far enough that a correction is worthwhile.
+        if (Math.abs(tx - prev.x) > 0.1 || Math.abs(tz - prev.z) > 0.1) {
+          this._lastTargets[a.idx] = { x: tx, z: tz };
+          this._recast.crowdRequestMoveTarget(a.idx, tx, dst.y, tz);
+          allArrived = false;
+        }
+        // else: agent is at its slot and the slot hasn't moved — fully arrived.
+      } else {
+        // Still navigating to the previously issued target — don't interfere.
+        allArrived = false;
+      }
     }
   }
+  if (allArrived) this._arrived = true;
 };
 
 /**
